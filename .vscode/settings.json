@@ -1,0 +1,8 @@
+{
+    "python.defaultInterpreterPath": "/Users/sachadrevet/anaconda3/bin/python",
+    "python.analysis.extraPaths": [
+        "${workspaceFolder}/venv/lib/python3.x/site-packages"
+    ],
+    "files.autoSave": "afterDelay",
+    "files.autoSaveDelay": 1000,
+}

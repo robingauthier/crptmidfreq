@@ -1,0 +1,192 @@
+import os
+import pickle
+
+import numpy as np
+from numba import njit
+from numba import types
+from numba.typed import Dict
+
+from config_loc import get_data_folder
+
+
+@njit
+def calculate_restype(restype, price, entrylevel, maxlevel, minlevel, direction, nan):
+    """
+    Calculate the value for a specific restype.
+    """
+    if restype == 1:
+        return price
+    elif restype == 2:
+        return (maxlevel / entrylevel - 1) if direction > 0 else (maxlevel / entrylevel - 1)
+    elif restype == 3:
+        return (maxlevel / minlevel - 1) if direction > 0 else -(minlevel / maxlevel - 1)
+    elif restype == 4:
+        return direction
+    elif restype == 5:
+        return maxlevel
+    elif restype == 6:
+        return entrylevel
+    elif restype == 7:
+        return maxlevel if direction > 0 else nan
+    elif restype == 8:
+        return nan if direction > 0 else maxlevel
+    return nan
+
+
+@njit
+def test():
+    pass
+
+
+def update_pfp_values(dts, dscodes, prices, nbrev, last_pfp_states):
+    """
+    Incremental update of PFP values for each dscode.
+    """
+
+    # pfp rounded price
+    res_price = np.empty(len(prices), dtype=np.float64)
+    # direction
+    res_dir = np.empty(len(prices), dtype=np.float64)
+    # entry level
+    res_el = np.empty(len(prices), dtype=np.float64)
+    # performance since entry
+    res_perf = np.empty(len(prices), dtype=np.float64)
+    res_perf2 = np.empty(len(prices), dtype=np.float64)
+    # duration in state
+    res_dur = np.empty(len(prices), dtype=np.float64)
+
+    for i in range(len(prices)):
+        code = dscodes[i]
+        price = prices[i]
+        ts = dts[i]
+
+        # Initialize or fetch the last state for this dscode
+        if code not in last_pfp_states:
+            last_pfp_states[code] = Dict.empty(types.unicode_type, types.float64)
+            last_pfp_states[code]["direction"] = 1.0
+            last_pfp_states[code]["entrytime"] = ts
+            last_pfp_states[code]["entrylevel"] = price
+            last_pfp_states[code]["minlevel"] = price
+            last_pfp_states[code]["maxlevel"] = price
+        state = last_pfp_states[code]
+        entrytime = state["entrytime"]
+        direction = state["direction"]
+        entrylevel = state["entrylevel"]
+        minlevel = state["minlevel"]
+        maxlevel = state["maxlevel"]
+
+        if direction > 0:
+            if price > maxlevel:
+                maxlevel = price
+            if price <= maxlevel - nbrev:
+                direction = -1
+                entrylevel = price
+                minlevel = price
+                maxlevel = price
+                entrytime = ts
+        else:  # direction < 0
+            if price < minlevel:
+                minlevel = price
+            if price >= minlevel + nbrev:
+                direction = 1
+                entrylevel = price
+                minlevel = price
+                maxlevel = price
+                entrytime = ts
+
+        # Update the state for this dscode
+        state["direction"] = direction
+        state["entrylevel"] = entrylevel
+        state["entrytime"] = entrytime
+        state["minlevel"] = minlevel
+        state["maxlevel"] = maxlevel
+        last_pfp_states[code] = state
+        res_price[i] = price
+        # direction
+        res_dir[i] = direction
+        # entry level
+        res_el[i] = entrylevel
+        if entrylevel != 0:
+            # performance since entry
+            res_perf[i] = price / entrylevel - 1
+        else:
+            res_perf[i] = 0.0
+        res_perf2[i] = price - entrylevel
+        # duration in state
+        res_dur[i] = ts - entrytime
+    return res_price, res_dir, res_el, res_perf, res_perf2, res_dur
+
+
+class PfPStepper:
+    def __init__(self, folder='', name='', nbrev=1, tick=1e-4):
+        self.folder = os.path.join(get_data_folder(), folder)
+        self.name = name
+        self.nbrev = nbrev
+        self.tick = tick
+
+        # Initialize empty state
+        self.last_pfp_states = Dict.empty(
+            key_type=types.int64,
+            value_type=types.DictType(
+                types.unicode_type, types.float64
+            )
+        )
+
+    def save(self):
+        """Save internal state to file."""
+        if not os.path.exists(self.folder):
+            os.makedirs(self.folder)
+
+        state = {code: dict(state) for code, state in self.last_pfp_states.items()}
+        filepath = os.path.join(self.folder, self.name + '.pkl')
+        with open(filepath, 'wb') as f:
+            pickle.dump({'states': state, 'nbrev': self.nbrev, 'tick': self.tick}, f)
+
+    @classmethod
+    def load(cls, folder, name, nbrev=None, tick=None):
+        """Load instance from saved state or create new if not exists."""
+        folder_path = os.path.join(get_data_folder(), folder)
+        filepath = os.path.join(folder_path, name + '.pkl')
+
+        if not os.path.exists(filepath):
+            return cls(folder=folder, name=name, nbrev=nbrev, tick=tick)
+
+        with open(filepath, 'rb') as f:
+            state = pickle.load(f)
+
+        instance = cls(folder=folder, name=name, nbrev=state['nbrev'], tick=state['tick'])
+        for code, s in state['states'].items():
+            dict_loc = Dict.empty(key_type=types.unicode_type, value_type=types.float64)
+            for k, v in s.items():
+                dict_loc[k] = v
+            instance.last_pfp_states[code] = dict_loc
+        return instance
+
+    def update(self, dts, dscodes, prices):
+        """
+        Update PFP values for each code and return the PFP values for all restypes.
+
+        Args:
+            prices: numpy array of prices.
+            dscodes: numpy array of categorical codes.
+
+        Returns:
+            Dict mapping each restype to numpy arrays of results.
+        """
+        if len(dts) != len(dscodes) or len(dts) != len(prices):
+            raise ValueError("All inputs must have the same length")
+
+        if not dts.dtype == 'int64':
+            # Convert datetime64 to int64 nanoseconds for Numba
+            timestamps = dts.astype('datetime64[ns]').astype('int64')
+        else:
+            timestamps = dts
+        # code does not work with non nan prices
+        assert np.sum(np.isnan(prices)) == 0
+        prices_int = (prices // self.tick)
+        res_price, res_dir, res_el, res_perf, res_perf2, res_dur = update_pfp_values(
+            timestamps, dscodes, prices_int,
+            self.nbrev, self.last_pfp_states
+        )
+        self.save()
+        return res_price * self.tick, res_dir, res_el * self.tick, res_perf, res_perf2, res_dur

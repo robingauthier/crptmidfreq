@@ -1,9 +1,10 @@
 import numpy as np
 
 from stepper import *
-from feature_ob import *
 from utils.common import clean_folder
 
+
+g_steppers={} # list of sessions steppers 
 
 def keep_import():
     clean_folder()
@@ -15,6 +16,19 @@ def check_cols(featd, wcols):
             print(f'Missing col {col} in featd')
             assert False
 
+def perform_save():
+    """must be called before shutting down the ipython
+    so that on restart we can continue from where we were
+    """
+    for k,step in g_steppers.items():
+        step.save()
+
+def add_to_stepper_register(stepper):
+    # requires every stepper to have a __hash__ method
+    if hash(stepper) in g_steppers:
+        return 
+    g_steppers[hash(stepper)]=stepper
+    
 
 def perform_ewm(featd, feats=[], windows=[1], folder=None, name=None):
     """
@@ -33,6 +47,8 @@ def perform_ewm(featd, feats=[], windows=[1], folder=None, name=None):
             ewm_val = cls_ewm.update(featd['dtsi'], featd['dscode'], featd[col])
             featd[f'{col}_ewm{hl}'] = ewm_val
             nfeats += [f'{col}_ewm{hl}']
+            # keeping track for saving down before shut-down
+            add_to_stepper_register(cls_ewm)
     return featd, nfeats
 
 
@@ -682,3 +698,40 @@ def perform_orderbook_depth_func(featd, levels=[100], op='depth', folder=None, n
             f'ob_{op}_ask_l{level}',
             f'ob_{op}_l{level}']
     return featd, nfeats
+
+
+
+# ipython -i -m featurelib.lib_v1
+if __name__=='__main__':
+    import numpy as np
+
+    # Sample test data
+    test_featd = {
+        "dtsi": np.array([1, 2, 3, 4, 5], dtype=np.int64),  # Ensures sorted timestamps
+        "dscode": np.array([1, 1, 1, 1, 1]),  # Asset code
+        "price": np.array([100, 101, 103, 107, 110], dtype=np.float64),  # Example feature
+        "volume": np.array([10, 12, 15, 20, 25], dtype=np.float64),  # Another feature
+    }
+
+    # Parameters for testing
+    test_feats = ["price", "volume"]  # Features to compute diff
+    test_windows = [1, 2]  # Windows for differencing
+    test_folder = "test_folder"
+    test_name = "test_diff"
+
+    # Call the function
+    output_featd, output_nfeats = perform_diff(
+        featd=test_featd,
+        feats=test_feats,
+        windows=test_windows,
+        folder=test_folder,
+        name=test_name
+    )
+
+    # Print the results
+    print("Updated Dictionary:")
+    for key, value in output_featd.items():
+        print(f"{key}: {value}")
+
+    print("\nNew Features Created:", output_nfeats)
+    

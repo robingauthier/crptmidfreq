@@ -1,0 +1,218 @@
+import numpy as np
+from numba import njit
+from numba.typed import Dict
+from numba import types
+import os
+import pickle
+from config_loc import get_data_folder
+
+
+@njit
+def update_cs_std_values(codes, values, bys,wgts,timestamps,
+                         last_timestamps,last_sums,last_sums2,last_wgts,last_cnts,mincnt):
+    """
+
+    """
+    result = np.empty(len(codes), dtype=np.float64)
+
+    g_last_ts = 0
+    for k,v in last_timestamps.items():
+        g_last_ts = max(v,g_last_ts)
+        
+    # j is a second iterator
+    j=0 
+    for i in range(len(codes)):
+        code = codes[i]
+        value = values[i]
+        by = bys[i]
+        wgt = wgts[i]
+        ts = timestamps[i]
+        
+        if by not in last_sums:
+            last_sums[by]=0.0  
+            last_sums2[by]=0.0
+            last_wgts[by]=0.0
+            last_cnts[by]=0
+
+        # Check timestamp is increasing for this code
+        last_ts = last_timestamps.get(code, np.int64(0))
+        if ts < last_ts:  # Important to have strictly increasing 
+            print('code')
+            print(code)
+            print('ts')
+            print(ts)
+            print('last_ts')
+            print(last_ts)
+            raise ValueError("DateTime must be strictly increasing per code")
+
+        # Check timestamp is increasing accross dscode
+        if ts < g_last_ts:  # Important to have strictly increasing 
+            print('code')
+            print(code)
+            print('ts')
+            print(ts)
+            print('last_ts')
+            print(last_ts)
+            raise ValueError("DateTime must be strictly increasing accross instruments")
+
+
+        if ts!=g_last_ts:
+            # we must not fill for j=i
+            while j<i:
+                # Store result for this row
+                by2 = bys[j] 
+                if last_wgts[by2]>0 and last_cnts[by2]>=mincnt:
+                    vart=last_sums2[by2]-last_sums[by2]*last_sums[by2]
+                    result[j] = np.sqrt(vart/last_wgts[by2])
+                else:
+                    result[j] = 0.0
+                j+=1
+            # reset everything
+            for k,v in last_sums.items():
+                last_sums[k]=0
+                last_sums2[k]=0
+                last_wgts[k]=0
+                last_cnts[k]=0
+
+        # Store updates
+        last_timestamps[code] = ts
+        g_last_ts= ts
+        last_sums[by]+=value*wgt
+        last_sums2[by]+=value*value*wgt
+        last_wgts[by]+=wgt        
+        last_cnts[by]+=1
+    # the last value is not assigned 
+    by2 = bys[j] 
+    if last_wgts[by2]>0 and last_cnts[by2]>=mincnt:
+        vart=last_sums2[by2]-last_sums[by2]*last_sums[by2]
+        result[j] = np.sqrt(vart/last_wgts[by2])
+    else:
+        result[j] = 0.0
+    return result
+
+
+class csStdStepper:
+    _instances = {}  # Class variable to track loaded instances
+    
+    def __init__(self, folder='', name='',mincnt=1):
+        self.folder = os.path.join(get_data_folder(), folder)
+        self.name = name
+        self.mincnt=mincnt # std not defined with 1 sample 
+        
+        # Initialize empty state
+        self.last_sums = Dict.empty(
+            key_type=types.int64,
+            value_type=types.float64
+        )
+        self.last_sums2 = Dict.empty(
+            key_type=types.int64,
+            value_type=types.float64
+        )
+        self.last_wgts = Dict.empty(
+            key_type=types.int64,
+            value_type=types.float64
+        )
+        self.last_cnts = Dict.empty(
+            key_type=types.int64,
+            value_type=types.int64
+        )
+        self.last_timestamps = Dict.empty(
+            key_type=types.int64,
+            value_type=types.int64
+        )
+
+    def save(self):
+        """Save internal state to file"""
+        if not os.path.exists(self.folder):
+            os.makedirs(self.folder)
+
+        state = {
+            'last_timestamps': dict(self.last_timestamps),
+            'last_sums': dict(self.last_sums),
+            'last_sums2': dict(self.last_sums2),
+            'last_wgts': dict(self.last_wgts),
+            'last_cnts': dict(self.last_cnts),
+            'mincnt':self.mincnt,
+        }
+        filepath = os.path.join(self.folder, self.name + '.pkl')
+        with open(filepath, 'wb') as f:
+            pickle.dump(state, f)
+
+    @classmethod
+    def load(cls, folder, name):
+        """Load instance from saved state or create new if not exists"""
+        instance_key = f"{folder}/{name}"
+        #if instance_key in cls._instances:
+        #    return cls._instances[instance_key]
+
+        folder_path = os.path.join(get_data_folder(), folder)
+        filepath = os.path.join(folder_path, name + '.pkl')
+        
+        try:
+            with open(filepath, 'rb') as f:
+                print(f'loading {filepath}')
+                state = pickle.load(f)
+
+            # Create a new instance
+            instance = cls(folder=folder_path, name=name)
+            instance.mincnt=state['mincnt']
+            # Convert regular dicts back to numba Dicts
+            for k, v in state['last_sums'].items():
+                instance.last_sums[k] = v
+            for k, v in state['last_sums2'].items():
+                instance.last_sums2[k] = v
+            for k, v in state['last_cnts'].items():
+                instance.last_cnts[k] = v
+            for k, v in state['last_wgts'].items():
+                instance.last_wgts[k] = v
+            for k, v in state['last_timestamps'].items():
+                instance.last_timestamps[k] = v
+        except (FileNotFoundError, ValueError):
+            print('Cannot load the Stepper- will create one')
+            instance = cls(folder=folder, name=name)
+        
+        cls._instances[instance_key] = instance
+        return instance
+
+    def update(self, dt, dscode, serie,by=None,wgt=None):
+        """
+        Update difference values for each code and return the difference values for each input row
+
+        Args:
+            dt: numpy array of datetime64 values
+            dscode: numpy array of categorical codes
+            serie: numpy array of values to process
+            by : numpy array of by values ( all, sector, cluster)
+            wgt : numpy array of weight/univ flag [0-1]
+
+        Returns:
+            numpy array of same length as input arrays containing difference values
+        """
+        if wgt is None:
+            wgt = np.ones_like(serie)
+        if by is None:
+            by = np.ones_like(serie)
+        # Input validation
+        if not isinstance(dt, np.ndarray) or not isinstance(dscode, np.ndarray) or not isinstance(serie, np.ndarray):
+            raise ValueError("All inputs must be numpy arrays")
+
+        if not isinstance(dt, np.ndarray) or not isinstance(by, np.ndarray) or not isinstance(wgt, np.ndarray):
+            raise ValueError("All inputs must be numpy arrays")
+
+        if len(dt) != len(dscode) or len(dt) != len(serie):
+            raise ValueError("All inputs must have the same length")
+
+        if len(dt) != len(by) or len(dt) != len(wgt):
+            raise ValueError("All inputs must have the same length")
+
+        # Convert datetime64 to int64 nanoseconds for Numba
+        timestamps = dt.astype('datetime64[ns]').astype('int64')
+        # by must be integers 
+        by = by.astype('int64')
+        
+        # Update values and timestamps using numba function
+        return update_cs_std_values(
+            dscode, serie, by , wgt, timestamps,
+            self.last_timestamps,self.last_sums,self.last_sums2,self.last_wgts,self.last_cnts,self.mincnt
+        )
+

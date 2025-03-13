@@ -6,6 +6,8 @@ import os
 import pickle
 from config_loc import get_data_folder
 
+## runs a stepper that calls model.predict
+
 @njit
 def update_diff_values(codes, values, timestamps, window, diff_values, last_timestamps):
     """

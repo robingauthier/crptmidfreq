@@ -19,3 +19,5 @@ from stepper.rolling_max import RollingMaxStepper
 from stepper.rolling_mean import RollingMeanStepper
 from stepper.rolling_min import RollingMinStepper
 from stepper.rolling_reg import RollingRidgeStepper
+
+from stepper.incr_clip import ClipStepper

@@ -77,8 +77,9 @@ def download_data(date_str='2024-12-17',
     assert instr in ['futures', 'spot']
     root_url = 'https://data.binance.vision/data'
     url_loc = f'/{instr}/{ucm}/{period}/{kind}/{ticker}/{ticker}-{kind}-{date_str}.zip'
-    if kind=='kline':
-        url_loc = f'/{instr}/{ucm}/{period}/{kind}/{ticker}/{klinefreq}/{ticker}-{kind}-{date_str}.zip'
+    if kind=='klines':
+        # there is a klinefreq to add
+        url_loc = f'/{instr}/{ucm}/{period}/{kind}/{ticker}/{klinefreq}/{ticker}-{klinefreq}-{date_str}.zip'
     url = root_url + url_loc
     
     # Define the output file path
@@ -96,7 +97,7 @@ def download_data(date_str='2024-12-17',
     print(f'Calling {url}')
     response = requests.get(url)
     if response.status_code != 200:
-        raise Exception(f"Failed to download: Status code {response.status_code}")
+        raise ValueError(f"Failed to download: Status code {response.status_code}")
 
     # Create a zip file object from the downloaded content
     with zipfile.ZipFile(io.BytesIO(response.content)) as zip_ref:
@@ -136,8 +137,7 @@ def download_data(date_str='2024-12-17',
 
 # Syntax to run the download of BTCUSDT futures for 2024-12-21:
 # python datahub/binance_hist.py --date_str 2024-12-21 --kind trades --ticker BTCUSDT --instr futures --ucm um --period daily
-# python datahub/binance_hist.py --date_str 2024-12-21 --kind klines --ticker BTCUSDT --instr futures --ucm um --period daily
-
+# python datahub/binance_hist.py --date_str 2024-12-21 --kind klines --ticker all --instr futures --ucm um --period daily
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Download Binance historical data.')
     parser.add_argument('--date_str', type=str, default='2024-12-17',

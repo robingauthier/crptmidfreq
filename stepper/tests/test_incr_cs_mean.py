@@ -1,9 +1,11 @@
 import pandas as pd
 
-from stepper.incr_ewm import *
+from stepper.incr_cs_mean import *
 
 
-# pytest ./stepper/tests/test_incr_ewm.py --pdb --maxfail=1
+# pytest ./stepper/tests/test_incr_cs_mean.py --pdb --maxfail=1
+
+
 
 def generate_data(n_samples, n_codes):
     """Generate test data"""
@@ -17,20 +19,21 @@ def generate_data(n_samples, n_codes):
 
     # Generate increasing datetime
     base = np.datetime64('2024-01-01')
-    dt = np.array([base + np.timedelta64(i, 'm') for i in range(n_samples)])
-
+    dt0 = np.array([base + np.timedelta64(i, 'm') for i in range(n_samples)])
+    dt = np.sort(np.random.choice(dt0,size=n_samples,replace=True))
     return dt, dscode, serie
 
 
 def test_against_pandas():
+    import pandas as pd
     # Generate test data
     n_samples = 1000
     n_codes = 10
-    window = 5
+
     dt, dscode, serie = generate_data(n_samples, n_codes)
 
     # Create and run EwmStepper on first half
-    ewm = EwmStepper(folder='test_data', name='test_ewm', window=window)
+    ewm = csMeanStepper(folder='test_data', name='test_ewm')
     seriec = ewm.update(dt, dscode, serie)
 
     # Create pandas DataFrame for comparison
@@ -43,39 +46,19 @@ def test_against_pandas():
     })
 
     # Calculate pandas EWM
-    df['serier'] = df.groupby('dscode')['serie'].transform(
-        lambda x: x.ewm(halflife=window, min_periods=1).mean()
+    df['serier'] = df.groupby('dt')['serie'].transform(
+        lambda x: x.mean()
     )
 
+    check_ts=df['dt'].value_counts().index[0]
+    print(df[df['dt']==check_ts])
+    print(df.tail())
+    
     # Compare results using correlation
     correlation = df['serier'].corr(df['seriec'])
     print(f"Correlation between pandas and implementation: {correlation}")
     assert correlation > 0.9, f"Expected correlation >0.9, got {correlation}"
-
-    return True
-
-
-def test_save_load():
-    """Test save and load functionality"""
-    n_samples = 1000
-    n_codes = 10
-    dt, dscode, serie = generate_data(n_samples, n_codes)
-    window = 20
-
-    # Create and update original instance
-    ewm = EwmStepper(folder='test_data', name='test_ewm', window=window)
-    ewm.update(dt, dscode, serie)
-    ewm.save()
-
-    # Load saved state
-    ewm_loaded = EwmStepper.load('test_data', 'test_ewm')
-
-    # Compare states
-    assert ewm.window == ewm_loaded.window
-    assert ewm.alpha == ewm_loaded.alpha
-    for code in ewm.last_sum.keys():
-        assert ewm.last_sum[code] == ewm_loaded.last_sum[code]
-        assert ewm.last_timestamps[code] == ewm_loaded.last_timestamps[code]
+    
 
 
 def test_save_load_result():
@@ -87,17 +70,15 @@ def test_save_load_result():
 
     # Create EwmStepper instance
     window = 5
-    ewm = EwmStepper(folder='test_data', name='test_ewm', window=window)
+    ewm = csMeanStepper(folder='test_data2', name='test_ewm')
     # Update with full data
     serie1 = ewm.update(dt[:half], dscode[:half], serie[:half])
     ewm.save()
 
     # Load saved state
-    ewm_loaded = EwmStepper.load('test_data', 'test_ewm')
+    ewm_loaded = csMeanStepper(folder='test_data2', name='test_ewm')
     serie2 = ewm_loaded.update(dt[half:], dscode[half:], serie[half:])
 
-    assert ewm.window == ewm_loaded.window
-    assert ewm.alpha == ewm_loaded.alpha
 
     # Create pandas DataFrame for comparison
     df = pd.DataFrame({
@@ -108,13 +89,11 @@ def test_save_load_result():
     })
 
     # Calculate pandas EWM
-    df['serier'] = df.groupby('dscode')['serie'].transform(
-        lambda x: x.ewm(halflife=window, min_periods=1, adjust=False).mean()
+    df['serier'] = df.groupby('dt')['serie'].transform(
+        lambda x: x.mean()
     )
 
     # Compare results using correlation
     correlation = df['serier'].corr(df['seriec'])
     print(f"Correlation between pandas and implementation: {correlation}")
     assert correlation > 0.9, f"Expected correlation >0.9, got {correlation}"
-
-    return True

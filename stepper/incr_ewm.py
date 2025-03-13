@@ -248,6 +248,10 @@ class EwmStepper:
             value_type=types.int64
         )
 
+    def __hash__(self):
+        # Use a tuple of the important attributes to compute the hash
+        return hash((self.folder, self.name,self.window))
+    
     def save(self):
         """Save internal state to file"""
         if not os.path.exists(self.folder):

@@ -1,4 +1,5 @@
 import logging
+import pandas as pd
 
 # Configure the logging
 logging.basicConfig(
@@ -7,7 +8,19 @@ logging.basicConfig(
     datefmt='%Y-%m-%d::%H:%M:%S'  # Format for the timestamp
 )
 
+def lvals(df,level):
+    return df.index.get_level_values(level)
 
+def filter_date_df(df,start_date=None,end_date=None):
+    if isinstance(df.index,pd.MultiIndex):
+        if start_date is not None:
+            df=df[lvals(df,'date')>=start_date]
+        if end_date is not None:
+            df=df[lvals(df,'date')<=end_date]
+    else:
+        print('filter_date_df :: Not implemented yet')
+    return df
+        
 def set_pandas_display():
     import pandas as pd
 

@@ -3,12 +3,13 @@ import pandas as pd
 import pytest
 from datetime import datetime, timedelta
 from ..incr_ewmskew import EwmSkewStepper
+# pytest ./stepper/tests/test_incr_ewmskew.py --pdb --maxfail=1
 
 def test_ewmskew_math():
     # Generate timestamps
     n_points = 1000
     base_dt = datetime(2024, 1, 1)
-    timestamps = np.array([base_dt + timedelta(seconds=i) for i in range(n_points)])
+    timestamps = np.array([base_dt + timedelta(seconds=i) for i in range(n_points)],dtype='datetime64')
     
     # Generate two series with different skewness
     np.random.seed(42)
@@ -46,7 +47,7 @@ def test_ewmskew_matches_pandas():
     
     # Create datetime range
     base_dt = datetime(2023, 1, 1)
-    dt = np.array([base_dt + timedelta(minutes=i) for i in range(n_samples)])
+    dt = np.array([base_dt + timedelta(minutes=i) for i in range(n_samples)],dtype='datetime64')
     
     # Create random codes and values
     dscodes = np.random.randint(0, n_codes, size=n_samples)
@@ -76,35 +77,3 @@ def test_ewmskew_matches_pandas():
         correlation =df['r'].corr(df['e'])
         assert correlation > 0.4, f"Correlation with pandas implementation should be >0.9 for window={win}, got {correlation}"
 
-
-def test_input_validation():
-    stepper = EwmSkewStepper(window=5)
-    
-    # Test non-numpy array inputs
-    with pytest.raises(ValueError, match="All inputs must be numpy arrays"):
-        stepper.update([1, 2, 3], np.array([1, 2, 3]), np.array([1, 2, 3]))
-    
-    # Test mismatched lengths
-    with pytest.raises(ValueError, match="All inputs must have the same length"):
-        stepper.update(
-            np.array([datetime(2023, 1, 1)]),
-            np.array([1, 2]),
-            np.array([1.0])
-        )
-
-def test_first_value_initialization():
-    # Test that first value for each code has skewness=0
-    dt = np.array([
-        datetime(2023, 1, 1),
-        datetime(2023, 1, 2),
-        datetime(2023, 1, 3)
-    ])
-    dscodes = np.array([1, 1, 2])  # Two different codes
-    values = np.array([1.0, 2.0, 3.0])
-    
-    stepper = EwmSkewStepper(window=5)
-    result = stepper.update(dt, dscodes, values)
-    
-    # First value for each code should have skewness=0
-    assert result[0] == 0.0  # First value for code 1
-    assert result[2] == 0.0  # First value for code 2

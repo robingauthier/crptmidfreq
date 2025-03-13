@@ -10,18 +10,9 @@ class DetrendEwmStepper(EwmStepper):
         """
 
         """
-        # Input validation
-        if not isinstance(dt, np.ndarray) or not isinstance(dscode, np.ndarray) or not isinstance(serie, np.ndarray):
-            raise ValueError("All inputs must be numpy arrays")
-
-        if len(dt) != len(dscode) or len(dt) != len(serie):
-            raise ValueError("All inputs must have the same length")
-
-        # Convert datetime64 to int64 nanoseconds for Numba
-        timestamps = dt.astype('datetime64[ns]').astype('int64')
-
+        self.validate_input(dt,dscode,serie)
         # Update values and timestamps using numba function
         return serie-update_ewm_values(
-            dscode, serie, timestamps,
+            dscode, serie, dt.view(np.int64),
             self.alpha, self.last_sum,self.last_wgt_sum, self.last_timestamps
         )

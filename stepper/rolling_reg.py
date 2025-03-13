@@ -6,7 +6,7 @@ from numba import njit
 from numba import types
 from numba.typed import Dict
 
-from config_loc import get_data_folder
+from .base_stepper import BaseStepper
 
 
 @njit
@@ -105,10 +105,10 @@ def update_rolling_reg(timestamps,
     return result_alpha, result_beta, result_resid
 
 
-class RollingRidgeStepper:
+class RollingRidgeStepper(BaseStepper):
     def __init__(self, folder='', name='', window=1, lam=0.):
-        self.folder = os.path.join(get_data_folder(), folder)
-        self.name = name
+        super().__init__(folder,name)
+
         self.window = window
         self.lam = lam
         self.position = Dict.empty(
@@ -129,79 +129,18 @@ class RollingRidgeStepper:
         )
 
     def save(self):
-        """Save internal state to file"""
-        if not os.path.exists(self.folder):
-            os.makedirs(self.folder)
-
-        state = {
-            'last_ts': {k: v for k, v in self.last_ts.items()},
-            'position': {k: v for k, v in self.position.items()},
-            'values1': {k: list(v) for k, v in self.values1.items()},
-            'values2': {k: list(v) for k, v in self.values2.items()},
-            'window': self.window,
-            'lam': self.lam
-        }
-
-        filepath = os.path.join(self.folder, self.name + '.pkl')
-        with open(filepath, 'wb') as f:
-            pickle.dump(state, f)
+        self.save_utility()
 
     @classmethod
-    def load(cls, folder, name='', window=None, lam=None):
+    def load(cls, folder, name='', window=1,lam=0.1):
         """Load instance from saved state or create new if not exists"""
-        folder_path = os.path.join(get_data_folder(), folder)
-        filepath = os.path.join(folder_path, name + '.pkl')
+        return RollingRidgeStepper.load_utility(cls,folder=folder,name=name,
+                                                window=window,lam=lam)
 
-        if not os.path.exists(filepath):
-            print(f'RollingStepper creating instance {folder} {name} {window}')
-            return cls(folder=folder, name=name, window=window)
-
-        print(f'RollingStepper loading instance {folder} {name}')
-        with open(filepath, 'rb') as f:
-            state = pickle.load(f)
-
-        instance = cls(folder=folder_path, name=name, window=state['window'], lam=state['lam'])
-        instance.values1 = Dict.empty(
-            key_type=types.int64,
-            value_type=types.Array(types.float64, 1, 'C')
-        )
-        instance.values2 = Dict.empty(
-            key_type=types.int64,
-            value_type=types.Array(types.float64, 1, 'C')
-        )
-        instance.last_ts = Dict.empty(
-            key_type=types.int64,
-            value_type=types.int64
-        )
-        instance.position = Dict.empty(
-            key_type=types.int64,
-            value_type=types.int64
-        )
-        for k, v in state['values1'].items():
-            instance.values1[k] = np.array(v)
-        for k, v in state['values2'].items():
-            instance.values2[k] = np.array(v)
-        for k, v in state['last_ts'].items():
-            instance.last_ts[k] = v
-        for k, v in state['position'].items():
-            instance.position[k] = v
-        return instance
 
     def update(self, dt, dscode, values1, values2):
-        if len(dscode) != len(values1):
-            raise ValueError("Codes and values arrays must have the same length")
-        if len(dt) != len(values1):
-            raise ValueError("Codes and values arrays must have the same length")
-        if len(values2) != len(values1):
-            raise ValueError("Codes and values arrays must have the same length")
-
-        if not dt.dtype == 'int64':
-            timestamps = dt.astype('datetime64[ns]').astype('int64')
-        else:
-            timestamps = dt
-
-        alpha, beta, resid = update_rolling_reg(timestamps, dscode, values1, values2,
+        self.validate_input(dt,dscode,values1,serie2=values2)
+        alpha, beta, resid = update_rolling_reg(dt.view(np.int64), dscode, values1, values2,
                                                 self.position, self.values1, self.values2,
                                                 self.last_ts, self.window, self.lam)
-        self.save()
         return alpha, beta, resid

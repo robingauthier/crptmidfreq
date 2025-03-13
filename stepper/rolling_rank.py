@@ -47,71 +47,7 @@ def update_rolling_rank(timestamps,
 
 class RollingRankStepper(RollingStepper):
     def update(self, dt, dscode, values):
-        if len(dscode) != len(values):
-            raise ValueError("Codes and values arrays must have the same length")
-        if len(dt) != len(values):
-            raise ValueError("Codes and values arrays must have the same length")
-
-        if not dt.dtype == 'int64':
-            timestamps = dt.astype('datetime64[ns]').astype('int64')
-        else:
-            timestamps = dt
-
-        res = update_rolling_rank(timestamps, dscode, values,
+        self.validate_input(dt,dscode,values)
+        res = update_rolling_rank(dt.view(np.int64), dscode, values,
                                   self.position, self.values, self.last_ts, self.window)
         return res
-
-### Below should move in the test folder
-
-def generate_data(n_samples, n_codes):
-    """Generate test data"""
-    np.random.seed(42)
-
-    # Generate random codes
-    dscode = np.random.randint(0, n_codes, n_samples)
-
-    # Generate random series
-    serie = np.random.randn(n_samples)
-
-    # Generate increasing datetime
-    base = np.datetime64('2024-01-01')
-    dt = np.array([base + np.timedelta64(i, 'm') for i in range(n_samples)])
-
-    return dt, dscode, serie
-
-
-def example_against_pandas():
-    import pandas as pd
-    # Generate test data
-    n_samples = 1000
-    n_codes = 10
-    window = 10
-    dt, dscode, serie = generate_data(n_samples, n_codes)
-
-    # Create and run EwmStepper on first half
-    ewm = RollingRankStepper(folder='test_data', name='test_ewm', window=window)
-    seriec = ewm.update(dt, dscode, serie)
-
-    # Create pandas DataFrame for comparison
-    df = pd.DataFrame({
-        'dt': dt,
-        'dscode': dscode,
-        'serie': serie,
-        'seriec': seriec,
-
-    })
-
-    # Calculate pandas EWM
-    df['serier'] = df.groupby('dscode')['serie'].transform(
-        lambda x: x.rolling(window=window).rank()
-    )
-
-    # Compare results using correlation
-    correlation = df['serier'].corr(df['seriec'])
-    print(f"Correlation between pandas and implementation: {correlation}")
-    assert correlation > 0.9, f"Expected correlation >0.9, got {correlation}"
-
-    return True
-# ipython -i -m stepper.rolling_rank
-if __name__=='__main__':
-    example_against_pandas()

@@ -8,6 +8,7 @@ from datahub.binance_univ import download_univ
 from datahub.binance_hist import download_data
 from datahub.binance_univ_startstop import  TokenQueryTracker
 from config_loc import get_data_folder
+from config_loc import get_data_db_folder
 
 def stats_on_univ(dfuniv):
     # Stats on dfuniv
@@ -15,19 +16,10 @@ def stats_on_univ(dfuniv):
     print(dfuniv['kind'].value_counts()) # mainly SPOT
     print(dfuniv['base'].value_counts()) # USDT and then BTC
     
+def main(args):
+    assume_duckdb_updated=True
     
-# python datahub/binance_hist_wrap.py --sdate_str 2024-12-21 
-if __name__=='__main__':
-    parser = argparse.ArgumentParser(description='Download Binance historical data.')
-    parser.add_argument('--sdate_str', type=str, default='2025-01-01',
-                        help='Date string for the data (e.g., 2024-12-21)')
-    parser.add_argument('--edate_str', type=str, default='2025-03-11',
-                        help='Date string for the data (e.g., 2024-12-21)')
-    parser.add_argument('--kind', type=str, default='klines',
-                        help='Type of data to download (e.g., trades, aggTrades, bookTicker, bookDepth)')
-    args = parser.parse_args()
-
-    con = duckdb.connect(os.path.join(get_data_folder(),"my_database.db"))
+    con = duckdb.connect(os.path.join(get_data_db_folder(),"my_database.db"))
     con.execute("PRAGMA enable_checkpoint_on_shutdown;")
     
     # Ensure table exists
@@ -70,7 +62,6 @@ if __name__=='__main__':
             if not tracker.should_query(ticker, dt):
                 continue
             
-            
             # Adding the ticker            
             if row['kind']=='future_um':
                 ticker_db = ticker
@@ -87,9 +78,7 @@ if __name__=='__main__':
             if nb_existing_rows>0:
                 continue
             
-            
-            try:
-                df = download_data(
+            data_args=dict(                    
                     date_str=dt.strftime('%Y-%m-%d'),
                     kind=args.kind,
                     ticker=ticker,
@@ -97,14 +86,25 @@ if __name__=='__main__':
                     ucm='um',
                     #period='monthly'
                     period='daily' # on ETHUSDT it starts on 2019-12-31
-                )
+            )   
+            raw_data_fname=download_data(**data_args,return_filename=True)
+            if os.path.exists(raw_data_fname) and assume_duckdb_updated:
+                continue
+            
+            # Try to download the data
+            try:
+                df = download_data(**data_args)
             except ValueError as e:
+                # Handling the case the url does not exists / no such file
                 print(e)
                 df=None
+            
+            # making sure we track what we tried
             success = df is not None
             tracker.log_query(ticker,dt,success=success)
             if not success:
                 continue
+            
             # Insert into DuckDB
             df["open_time"] = pd.to_datetime(df["open_time"], unit="ms", errors="coerce")
             df["close_time"] = pd.to_datetime(df["close_time"], unit="ms", errors="coerce")
@@ -126,3 +126,15 @@ if __name__=='__main__':
             
             time.sleep(0.5)
     con.close()
+    
+# python datahub/binance_hist_wrap.py --sdate_str 2024-12-21 
+if __name__=='__main__':
+    parser = argparse.ArgumentParser(description='Download Binance historical data.')
+    parser.add_argument('--sdate_str', type=str, default='2025-01-01',
+                        help='Date string for the data (e.g., 2024-12-21)')
+    parser.add_argument('--edate_str', type=str, default='2025-03-11',
+                        help='Date string for the data (e.g., 2024-12-21)')
+    parser.add_argument('--kind', type=str, default='klines',
+                        help='Type of data to download (e.g., trades, aggTrades, bookTicker, bookDepth)')
+    args = parser.parse_args()
+    main(args=args)

@@ -3,8 +3,10 @@ import numpy as np
 from utils.common import clean_folder
 from ..rolling_corr import RollingCorrStepper
 
+# pytest ./stepper/tests/test_rolling_corr.py --pdb --maxfail=1
 
-def test_coo_stepper_update():
+
+def test_rcor_stepper_update():
     clean_folder('test_corr')
     stepper = RollingCorrStepper(folder='test_corr', window=10)
 
@@ -20,7 +22,7 @@ def test_coo_stepper_update():
     np.testing.assert_array_almost_equal(res_corr, expected)
 
 
-def test_pfp_stepper_save_and_load(tmp_path):
+def test_rcor_stepper_save_and_load(tmp_path):
     clean_folder('test_corr')
     c = 5
     dt = np.array([1, 2, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], dtype=np.int64)
@@ -30,6 +32,7 @@ def test_pfp_stepper_save_and_load(tmp_path):
 
     stepper1 = RollingCorrStepper.load(folder='test_corr', window=10)
     res_corr1 = stepper1.update(dt[:c], dscode[:c], serie1[:c], serie2[:c])
+    stepper1.save()
     stepper2 = RollingCorrStepper.load(folder='test_corr')
     res_corr2 = stepper2.update(dt[c:], dscode[c:], serie1[c:], serie2[c:])
     res_corr = np.concatenate([res_corr1, res_corr2])

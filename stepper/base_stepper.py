@@ -1,7 +1,12 @@
 import os
 import pickle
-from config_loc import get_feature_folder
 
+import numpy as np
+from numba import njit
+from numba import types
+from numba.typed import Dict
+
+from config_loc import get_feature_folder
 
 class BaseStepper:
     
@@ -9,18 +14,41 @@ class BaseStepper:
     _instances = {}  # Class variable to track loaded instances
     verbose=3
     
-    @classmethod
-    def load_old(cls, folder: str, name: str, window: float):
-        instance_key = f"{folder}/{name}"
-        try:
-            instance = cls._load_from_file(folder, name)
-        except (FileNotFoundError, ValueError):
-            instance = cls(folder=folder, name=name, window=window)
-        
-        cls._instances[instance_key] = instance
-        return instance
     
+    def __init__(self, folder='', name=''):
+        self.folder = os.path.join(get_feature_folder(), folder)
+        self.name = name
 
+    def __hash__(self):
+        # Use a tuple of the important attributes to compute the hash
+        return hash((self.folder, self.name))
+    
+    def save_utility(self):
+        """Save internal state to file."""
+        # Ensure the folder exists
+        if not os.path.exists(self.folder):
+            os.makedirs(self.folder)
+        
+        # Dynamically get the state of the instance by filtering out callable objects
+        state = {}
+        
+        for key, value in self.__dict__.items():
+            if not callable(value):
+                if isinstance(value, Dict):  # Check if it's a numba Dict
+                    # Convert numba Dict to a Python dict
+                    state[key] = dict(value)
+                else:
+                    state[key] = value
+        
+        # Filepath where the state will be saved
+        filepath = os.path.join(self.folder, self.name + '.pkl')
+
+        # Save the state using pickle
+        with open(filepath, 'wb') as f:
+            pickle.dump(state, f)
+        
+
+    @classmethod
     def load_utility(self,cls, folder='', name='',**kwargs):
         """Load instance from saved state or create new if not exists"""
         folder_path = os.path.join(get_feature_folder(), folder)
@@ -28,32 +56,58 @@ class BaseStepper:
 
         if not os.path.exists(filepath):
             if self.verbose>0:
-                print(f'RollingStepper creating instance {folder} {name}')
+                print(f'Stepper creating instance {folder} {name}')
             return cls(folder=folder, name=name, **kwargs)
 
-        print(f'RollingStepper loading instance {folder} {name}')
+        if self.verbose>0:
+            print(f'gStepper loading instance {folder} {name}')
         with open(filepath, 'rb') as f:
             state = pickle.load(f)
 
-        instance = cls(folder=folder_path, name=name)
+        instance = cls(folder=folder_path, name=name, **kwargs)
 
         # Iterate over all items in the state dictionary and create corresponding instance variables
         for key, value in state.items():
-            if isinstance(value, dict):  # For nested dictionary types
-                # For keys like 'values1', 'values2', etc., that are supposed to be numba Dicts
-                setattr(instance, key, Dict.empty(
-                    key_type=types.int64,
-                    value_type=types.Array(types.float64, 1, 'C')
-                ))
+            if isinstance(value, dict):
                 # Populate the dict from the saved state
+                # TODO: clean this mess here
+                #dict_value_type = str(getattr(instance, key)._numba_type_.value_type)
                 for k, v in value.items():
-                    getattr(instance, key)[k] = np.array(v)
+                    #if 'array' in dict_value_type:
+                    #    getattr(instance, key)[k] = np.array([v],dtype=np.float64)
+                    #else:
+                    getattr(instance, key)[k] = v
             else:
                 # For non-dict keys like 'window'
                 setattr(instance, key, value)
-
         return instance
-    
-    @classmethod
-    def _load_from_file(cls, folder: str, name: str):
-        raise NotImplementedError("Subclasses must implement _load_from_file")
+
+
+    def validate_input(self, dt, dscode, serie,**kwargs):
+        """
+        Common input validation for update methods in subclasses.
+
+        Args:
+            dt: numpy array of datetime64 values
+            dscode: numpy array of categorical codes
+            serie: numpy array of values to process
+
+        Raises:
+            ValueError: If input validation fails.
+        """
+        # Validate that inputs are numpy arrays
+        if not isinstance(dt, np.ndarray) \
+            or not isinstance(dscode, np.ndarray) \
+            or not isinstance(serie, np.ndarray):
+            raise ValueError("All inputs must be numpy arrays")
+        for k,v in kwargs.items():
+            if not isinstance(v, np.ndarray):
+                raise ValueError(f"All inputs must be numpy arrays --see: {k}")
+        assert dt.dtype in ['<M8[us]','<M8[D]','<M8[m]','int64']
+        # Validate that all inputs have the same length
+        if len(dt) != len(dscode) or len(dt) != len(serie):
+            raise ValueError("All inputs must have the same length")
+        for k,v in kwargs.items():
+            if len(dt) != len(dscode):
+                raise ValueError(f"All inputs must have the same length --see: {k}")
+        

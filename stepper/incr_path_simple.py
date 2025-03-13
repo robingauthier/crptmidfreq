@@ -5,7 +5,6 @@ import numpy as np
 from numba import njit
 from numba import types
 from numba.typed import Dict
-from .base_stepper import BaseStepper
 
 
 @njit
@@ -46,7 +45,7 @@ def incremental_pivot(dt, dscode, values):
 
 
 
-class PivotStepper(BaseStepper):
+class PivotStepper:
     """Like .pivot_table in pandas"""
 
     def __init__(self, folder='', name=''):
@@ -57,7 +56,8 @@ class PivotStepper(BaseStepper):
             folder: folder for saving/loading state
             name: name for saving/loading state
         """
-        super().__init__(folder,name)
+        self.folder = os.path.join(get_data_folder(), folder)
+        self.name = name
 
         # Initialize empty state
         self.last_values = Dict.empty(

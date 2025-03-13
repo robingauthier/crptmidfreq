@@ -5,31 +5,18 @@ import numpy as np
 from numba import njit
 from numba import types
 from numba.typed import Dict
-
-from config_loc import get_data_folder
+from .base_stepper import BaseStepper
 
 
 @njit
-def groupby_last_values(codes, values, timestamps, last_values, last_timestamps):
+def groupby_last_values(codes, values, timestamps, last_values, last_timestamps,position):
     """
-    Forward fill values for each code, using last known values from memory.
-
-    Args:
-        codes: array of categorical codes
-        values: array of values to process
-        timestamps: array of timestamps (as int64 nanoseconds)
-        last_values: Dict mapping codes to last known values
-        last_timestamps: Dict mapping codes to last timestamp for each code
-
-    Returns:
-        Array of forward-filled values corresponding to each input row
+    equivalent to groupby(['dscode','dt']).last() usuful for resampling the data
     """
+    # counter is the actual i in the new non duplicated result
     counter = np.int64(-1)
     counter_loc = np.int64(-1)
-    position = Dict.empty(
-        key_type=types.int64,
-        value_type=types.int64
-    )
+
     result = np.empty(len(codes), dtype=np.float64)
     result_ts = np.empty(len(codes), dtype=np.int64)
     result_code = np.empty(len(codes), dtype=np.int64)
@@ -45,7 +32,7 @@ def groupby_last_values(codes, values, timestamps, last_values, last_timestamps)
             print(ts)
             print(code)
             print(last_ts)
-            raise ValueError("DateTime must be strictly increasing per code")
+            raise ValueError(f"DateTime must be strictly increasing per code {ts} last_ts={last_ts} i={i}")
         if ts != last_ts:
             position[code] = np.int64(counter + 1)
             counter = np.int64(counter + 1)
@@ -55,6 +42,7 @@ def groupby_last_values(codes, values, timestamps, last_values, last_timestamps)
         counter_loc = position[code]
         if counter_loc < 0:
             counter_loc = 0
+
         counter_loc = np.int64(np.float64(counter_loc))
         result[counter_loc] = value
         result_code[counter_loc] = code
@@ -70,8 +58,8 @@ def groupby_last_values(codes, values, timestamps, last_values, last_timestamps)
     return result_ts, result_code, result
 
 
-class GroupbyLastStepper:
-    """Forward fill stepper that maintains last known values per code"""
+class GroupbyLastStepper(BaseStepper):
+    """Last value // removes duplicates """
 
     def __init__(self, folder='', name=''):
         """
@@ -81,56 +69,30 @@ class GroupbyLastStepper:
             folder: folder for saving/loading state
             name: name for saving/loading state
         """
-        self.folder = os.path.join(get_data_folder(), folder)
-        self.name = name
+        super().__init__(folder,name)
 
         # Initialize empty state
         self.last_values = Dict.empty(
             key_type=types.int64,
             value_type=types.float64
         )
-
+        # stores the index in the non duplicated table
+        self.last_position = Dict.empty(
+            key_type=types.int64,
+            value_type=types.int64
+        )
         self.last_timestamps = Dict.empty(
             key_type=types.int64,
             value_type=types.int64
         )
-
+        
     def save(self):
-        """Save internal state to file"""
-        if not os.path.exists(self.folder):
-            os.makedirs(self.folder)
-
-        state = {
-            'last_timestamps': dict(self.last_timestamps),
-            'last_values': dict(self.last_values)
-        }
-
-        filepath = os.path.join(self.folder, self.name + '.pkl')
-        with open(filepath, 'wb') as f:
-            pickle.dump(state, f)
+        self.save_utility()
 
     @classmethod
     def load(cls, folder, name):
-        """Load instance from saved state"""
-        folder_path = os.path.join(get_data_folder(), folder)
-        filepath = os.path.join(folder_path, name + '.pkl')
-
-        if not os.path.exists(filepath):
-            return cls(folder=folder, name=name)
-
-        with open(filepath, 'rb') as f:
-            state = pickle.load(f)
-
-        # Create new instance
-        instance = cls(folder=folder, name=name)
-
-        # Convert regular dicts back to numba Dicts
-        for k, v in state['last_values'].items():
-            instance.last_values[k] = v
-        for k, v in state['last_timestamps'].items():
-            instance.last_timestamps[k] = v
-
-        return instance
+        """Load instance from saved state or create new if not exists"""
+        return GroupbyLastStepper.load_utility(cls,folder=folder,name=name)
 
     def update(self, dt, dscode, serie):
         """
@@ -145,22 +107,11 @@ class GroupbyLastStepper:
             numpy array of same length as input arrays containing forward-filled values
         """
         # Input validation
-        if not isinstance(dt, np.ndarray) or not isinstance(dscode, np.ndarray) or not isinstance(serie, np.ndarray):
-            raise ValueError("All inputs must be numpy arrays")
-
-        if len(dt) != len(dscode) or len(dt) != len(serie):
-            raise ValueError("All inputs must have the same length")
-
-        if not dt.dtype == 'int64':
-            # Convert datetime64 to int64 nanoseconds for Numba
-            timestamps = dt.astype('datetime64[ns]').astype('int64')
-        else:
-            timestamps = dt
-
+        self.validate_input(dt,dscode,serie)
+        
         # Update values and timestamps using numba function
         result_ts, result_code, result = groupby_last_values(
-            dscode, serie, timestamps,
-            self.last_values, self.last_timestamps
+            dscode, serie, dt.view(np.int64),
+            self.last_values, self.last_timestamps,self.last_position
         )
-        self.save()
         return result_ts, result_code, result

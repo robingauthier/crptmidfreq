@@ -3,11 +3,10 @@ from numba import njit
 from numba.typed import Dict
 from numba import types
 import os
-import pickle
-from config_loc import get_data_folder
+from .base_stepper import BaseStepper
 
 @njit
-def update_diff_values(codes, values, timestamps, window, diff_values, last_timestamps):
+def update_diff_values(codes, values, timestamps, diff_values, last_timestamps):
     """
     Vectorized update of difference values and timestamps
 
@@ -57,12 +56,11 @@ def update_diff_values(codes, values, timestamps, window, diff_values, last_time
     return result
 
 
-class DiffStepper:
-    _instances = {}  # Class variable to track loaded instances
+class DiffStepper(BaseStepper):
     
     def __init__(self, folder='', name='', window=1):
-        self.folder = os.path.join(get_data_folder(), folder)
-        self.name = name
+        assert window==1
+        super().__init__(folder,name)
         self.window = window
 
         # Initialize empty state
@@ -76,51 +74,13 @@ class DiffStepper:
         )
 
     def save(self):
-        """Save internal state to file"""
-        if not os.path.exists(self.folder):
-            os.makedirs(self.folder)
-
-        state = {
-            'last_timestamps': dict(self.last_timestamps),
-            'diff_values': dict(self.diff_values),
-            'window': self.window
-        }
-        print(state)
-        filepath = os.path.join(self.folder, self.name + '.pkl')
-        with open(filepath, 'wb') as f:
-            pickle.dump(state, f)
+        self.save_utility()
 
     @classmethod
     def load(cls, folder, name, window=1):
         """Load instance from saved state or create new if not exists"""
-        instance_key = f"{folder}/{name}"
-        #if instance_key in cls._instances:
-        #    return cls._instances[instance_key]
+        return DiffStepper.load_utility(cls,folder=folder,name=name,window=window)
 
-        folder_path = os.path.join(get_data_folder(), folder)
-        filepath = os.path.join(folder_path, name + '.pkl')
-        
-        try:
-            with open(filepath, 'rb') as f:
-                print(f'loading {filepath}')
-                state = pickle.load(f)
-            print(state)
-            # Create a new instance
-            instance = cls(folder=folder_path, name=name, window=state['window'])
-
-            # Convert regular dicts back to numba Dicts
-            for k, v in state['diff_values'].items():
-                instance.diff_values[k] = v
-            for k, v in state['last_timestamps'].items():
-                instance.last_timestamps[k] = v
-        except (FileNotFoundError, ValueError):
-            print('Cannot load the Stepper- will create one')
-            if window is None:
-                raise ValueError("window parameter is required when creating new instance")
-            instance = cls(folder=folder, name=name, window=window)
-        
-        cls._instances[instance_key] = instance
-        return instance
 
     def update(self, dt, dscode, serie):
         """
@@ -147,5 +107,5 @@ class DiffStepper:
         # Update values and timestamps using numba function
         return update_diff_values(
             dscode, serie, timestamps,
-            self.window, self.diff_values, self.last_timestamps
+            self.diff_values, self.last_timestamps
         )

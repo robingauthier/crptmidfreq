@@ -16,7 +16,8 @@ def download_data(date_str='2024-12-17',
                   instr='futures',
                   ucm='um',
                   klinefreq='1m',
-                  period='daily'):
+                  period='daily',
+                  return_filename=False):
     """
     List of data available on the binance website:
 
@@ -87,7 +88,8 @@ def download_data(date_str='2024-12-17',
                                  'raw_hist',
                                  f'data_{ticker}_{kind}_{date_str}_{instr}_{ucm}_{period}.pq'])
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
-
+    if return_filename:
+        return output_file
     # Check if the data already exists
     if os.path.exists(output_file):
         print(f"Data already exists at {output_file}. Skipping download.")

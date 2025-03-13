@@ -44,17 +44,8 @@ def update_rolling_lag(timestamps,
 
 class RollingLagStepper(RollingStepper):
     def update(self, dt, dscode, values):
-        if len(dscode) != len(values):
-            raise ValueError("Codes and values arrays must have the same length")
-        if len(dt) != len(values):
-            raise ValueError("Codes and values arrays must have the same length")
-
-        if not dt.dtype == 'int64':
-            timestamps = dt.astype('datetime64[ns]').astype('int64')
-        else:
-            timestamps = dt
-
-        res = update_rolling_lag(timestamps,
+        self.validate_input(dt,dscode,values)
+        res = update_rolling_lag(dt.view(np.int64),
                                  dscode,
                                  values,
                                  self.position,

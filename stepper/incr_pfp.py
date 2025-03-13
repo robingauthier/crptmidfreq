@@ -5,8 +5,8 @@ import numpy as np
 from numba import njit
 from numba import types
 from numba.typed import Dict
-
-from config_loc import get_data_folder
+from .base_stepper import BaseStepper
+from config_loc import get_analysis_folder
 
 
 @njit
@@ -32,10 +32,6 @@ def calculate_restype(restype, price, entrylevel, maxlevel, minlevel, direction,
         return nan if direction > 0 else maxlevel
     return nan
 
-
-@njit
-def test():
-    pass
 
 
 def update_pfp_values(dts, dscodes, prices, nbrev, last_pfp_states):
@@ -117,10 +113,9 @@ def update_pfp_values(dts, dscodes, prices, nbrev, last_pfp_states):
     return res_price, res_dir, res_el, res_perf, res_perf2, res_dur
 
 
-class PfPStepper:
-    def __init__(self, folder='', name='', nbrev=1, tick=1e-4):
-        self.folder = os.path.join(get_data_folder(), folder)
-        self.name = name
+class PfPStepper(BaseStepper):
+    def __init__(self, folder='', name='', nbrev=3, tick=1e-4):
+        super().__init__(folder,name)
         self.nbrev = nbrev
         self.tick = tick
 
@@ -143,9 +138,9 @@ class PfPStepper:
             pickle.dump({'states': state, 'nbrev': self.nbrev, 'tick': self.tick}, f)
 
     @classmethod
-    def load(cls, folder, name, nbrev=None, tick=None):
+    def load(cls, folder, name, nbrev=3, tick=1e-4):
         """Load instance from saved state or create new if not exists."""
-        folder_path = os.path.join(get_data_folder(), folder)
+        folder_path = os.path.join(get_analysis_folder(), folder)
         filepath = os.path.join(folder_path, name + '.pkl')
 
         if not os.path.exists(filepath):
@@ -173,20 +168,13 @@ class PfPStepper:
         Returns:
             Dict mapping each restype to numpy arrays of results.
         """
-        if len(dts) != len(dscodes) or len(dts) != len(prices):
-            raise ValueError("All inputs must have the same length")
+        self.validate_input(dts,dscodes,prices)
 
-        if not dts.dtype == 'int64':
-            # Convert datetime64 to int64 nanoseconds for Numba
-            timestamps = dts.astype('datetime64[ns]').astype('int64')
-        else:
-            timestamps = dts
         # code does not work with non nan prices
         assert np.sum(np.isnan(prices)) == 0
         prices_int = (prices // self.tick)
         res_price, res_dir, res_el, res_perf, res_perf2, res_dur = update_pfp_values(
-            timestamps, dscodes, prices_int,
+            dts.view(np.int64), dscodes, prices_int,
             self.nbrev, self.last_pfp_states
         )
-        self.save()
         return res_price * self.tick, res_dir, res_el * self.tick, res_perf, res_perf2, res_dur

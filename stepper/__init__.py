@@ -2,7 +2,7 @@ from stepper.incr_cumsum import CumSumStepper
 from stepper.incr_diff import DiffStepper
 from stepper.incr_ewm import EwmStepper
 from stepper.incr_ewm_detrend import DetrendEwmStepper
-from stepper.incr_ewm_unit import EwmUnitStepper
+
 from stepper.incr_ewmkurt import EwmKurtStepper
 from stepper.incr_ewmskew import EwmSkewStepper
 from stepper.incr_ewmstd import EwmStdStepper
@@ -12,7 +12,6 @@ from stepper.incr_merge_asof import MergeAsofStepper
 
 from stepper.incr_pfp import PfPStepper
 from stepper.incr_timebar import TimeBarStepper
-from stepper.kernel_twap import RollingKernelTwapStepper
 from stepper.rolling_corr import RollingCorrStepper
 from stepper.rolling_lag import RollingLagStepper
 from stepper.rolling_max import RollingMaxStepper
@@ -21,3 +20,8 @@ from stepper.rolling_min import RollingMinStepper
 from stepper.rolling_reg import RollingRidgeStepper
 
 from stepper.incr_clip import ClipStepper
+
+from stepper.incr_cs_mean import csMeanStepper
+from stepper.incr_cs_std import csStdStepper
+from stepper.incr_cs_rank import csRankStepper
+

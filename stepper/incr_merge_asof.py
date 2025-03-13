@@ -5,10 +5,7 @@ import numpy as np
 from numba import njit
 from numba import types
 from numba.typed import Dict
-
-
-def keep_import():
-    njit()
+from .base_stepper import BaseStepper
 
 
 @njit
@@ -118,7 +115,7 @@ def merge_asof_numba(
            last_right_values2
 
 
-class MergeAsofStepper:
+class MergeAsofStepper(BaseStepper):
     def __init__(self, folder='', name='', p=10):
         """
         Initialize MergeAsofStepper for incremental merge_asof operations
@@ -129,48 +126,22 @@ class MergeAsofStepper:
             direction: Merge direction ("backward", "forward", or "nearest")
             p: Number of most recent values to keep in memory per dscode
         """
-        self.folder = os.path.join(folder)
-        self.name = name
+        super().__init__(folder,name)
         self.p = p  # Number of recent entries to retain
 
         # Store last right-side data
         self.right_timestamps = np.array([], dtype=np.int64)
         self.right_dscodes = np.array([], dtype=np.int64)
         self.right_values = np.array([], dtype=np.float64)
-
+    
     def save(self):
-        """Save internal state to file"""
-        if not os.path.exists(self.folder):
-            os.makedirs(self.folder)
-
-        state = {
-            'right_data': {k: (v[0].tolist(), v[1].tolist()) for k, v in self.right_data.items()},
-
-            'p': self.p
-        }
-
-        filepath = os.path.join(self.folder, self.name + '.pkl')
-        with open(filepath, 'wb') as f:
-            pickle.dump(state, f)
+        self.save_utility()
 
     @classmethod
-    def load(cls, folder, name, p=1000):
-        """Load instance from saved state"""
-        filepath = os.path.join(folder, name + '.pkl')
+    def load(cls, folder, name):
+        """Load instance from saved state or create new if not exists"""
+        return MergeAsofStepper.load_utility(cls,folder=folder,name=name)
 
-        if not os.path.exists(filepath):
-            return cls(folder=folder, name=name, p=p)
-
-        with open(filepath, 'rb') as f:
-            state = pickle.load(f)
-
-        instance = cls(folder=folder, name=name, p=state['p'])
-
-        # Restore right_data
-        for k, v in state['right_data'].items():
-            instance.right_data[k] = (np.array(v[0], dtype=np.int64), np.array(v[1], dtype=np.float64))
-
-        return instance
 
     def update(self, left_timestamps, left_dscodes, right_timestamps, right_dscodes, right_values):
         """
@@ -187,6 +158,10 @@ class MergeAsofStepper:
         Returns:
             Tuple of (merged_timestamps, merged_dscodes, merged_left_values, merged_right_values)
         """
+        # Input validation
+        self.validate_input(left_timestamps,left_dscodes,np.zeros_like(left_dscodes))
+        self.validate_input(right_timestamps,right_dscodes,right_values)
+        
         # Input validation and type conversion
         left_timestamps = self._to_int64(left_timestamps)
         right_timestamps = self._to_int64(right_timestamps)

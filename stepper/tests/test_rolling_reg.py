@@ -4,6 +4,8 @@ from utils.common import clean_folder
 from ..rolling_reg import RollingRidgeStepper
 
 
+# pytest ./stepper/tests/test_rolling_reg.py --pdb --maxfail=1
+
 def test_reg_stepper_update():
     clean_folder('test_corr')
     stepper = RollingRidgeStepper(folder='test_corr', window=10)
@@ -27,6 +29,7 @@ def test_reg_stepper_save_and_load(tmp_path):
 
     stepper1 = RollingRidgeStepper.load(folder='test_corr', window=10)
     a1, b1, r1 = stepper1.update(dt[:c], dscode[:c], serie1[:c], serie2[:c])
+    stepper1.save()
     stepper2 = RollingRidgeStepper.load(folder='test_corr')
     a2, b2, r2 = stepper2.update(dt[c:], dscode[c:], serie1[c:], serie2[c:])
 

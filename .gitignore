@@ -1,3 +1,5 @@
 featurelib/tests/__pycache__/
 *.pyc
 *.pkl
+*.xlsx
+*.csv

@@ -6,7 +6,7 @@ from numba import njit
 from numba import types
 from numba.typed import Dict
 
-from config_loc import get_data_folder
+from .base_stepper import BaseStepper
 
 
 @njit
@@ -38,7 +38,7 @@ def clip_values(codes, values, timestamps, last_timestamps,low_clip=np.nan,high_
     return result
 
 
-class ClipStepper:
+class ClipStepper(BaseStepper):
     """Forward fill stepper that maintains last known values per code"""
 
     def __init__(self, folder='', name='',low_clip=np.nan,high_clip=np.nan):
@@ -49,8 +49,8 @@ class ClipStepper:
             folder: folder for saving/loading state
             name: name for saving/loading state
         """
-        self.folder = os.path.join(get_data_folder(), folder)
-        self.name = name
+        super().__init__(folder,name)
+
         self.low_clip=low_clip
         self.high_clip=high_clip
 
@@ -61,68 +61,18 @@ class ClipStepper:
         )
 
     def save(self):
-        """Save internal state to file"""
-        if not os.path.exists(self.folder):
-            os.makedirs(self.folder)
-
-        state = {
-            'last_timestamps': dict(self.last_timestamps),
-            'last_values': dict(self.last_values),
-            'high_clip':self.high_clip,
-            'low_clip':self.low_clip,
-        }
-
-        filepath = os.path.join(self.folder, self.name + '.pkl')
-        with open(filepath, 'wb') as f:
-            pickle.dump(state, f)
+        self.save_utility()
 
     @classmethod
-    def load(cls, folder, name):
-        """Load instance from saved state"""
-        folder_path = os.path.join(get_data_folder(), folder)
-        filepath = os.path.join(folder_path, name + '.pkl')
-
-        if not os.path.exists(filepath):
-            return cls(folder=folder, name=name)
-
-        with open(filepath, 'rb') as f:
-            state = pickle.load(f)
-
-        # Create new instance
-        instance = cls(folder=folder, name=name)
-
-        instance.high_clip=state['high_clip']
-        instance.low_clip=state['low_clip']
-
-        for k, v in state['last_timestamps'].items():
-            instance.last_timestamps[k] = v
-
-        return instance
+    def load(cls, folder, name, window=1):
+        """Load instance from saved state or create new if not exists"""
+        return ClipStepper.load_utility(cls,folder=folder,name=name)
 
     def update(self, dt, dscode, serie):
-        """
-        Update forward fill state and return filled values
-
-        Args:
-            dt: numpy array of datetime64 values
-            dscode: numpy array of categorical codes
-            serie: numpy array of values to process
-
-        Returns:
-            numpy array of same length as input arrays containing forward-filled values
-        """
-        # Input validation
-        if not isinstance(dt, np.ndarray) or not isinstance(dscode, np.ndarray) or not isinstance(serie, np.ndarray):
-            raise ValueError("All inputs must be numpy arrays")
-
-        if len(dt) != len(dscode) or len(dt) != len(serie):
-            raise ValueError("All inputs must have the same length")
-
-        # Convert datetime64 to int64 nanoseconds for Numba
-        timestamps = dt.astype('datetime64[ns]').astype('int64')
+        self.validate_input(dt,dscode,serie)
 
         # Update values and timestamps using numba function
         return clip_values(
-            dscode, serie, timestamps,
+            dscode, serie, dt.view(np.int64),
             self.last_timestamps,self.low_clip, self.high_clip
         )

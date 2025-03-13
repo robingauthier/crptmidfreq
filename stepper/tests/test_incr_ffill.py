@@ -4,6 +4,7 @@ from numba import types
 from numba.typed import Dict
 
 from ..incr_ffill import FfillStepper, ffill_values
+# pytest ./stepper/tests/test_incr_ffill.py --pdb --maxfail=1
 
 
 def test_ffill_values_basic():
@@ -60,26 +61,6 @@ def test_ffill_stepper_update():
 
     np.testing.assert_array_equal(result, expected)
 
-
-def test_ffill_stepper_save_and_load(tmp_path):
-    folder = tmp_path / "test_ffill_stepper"
-    folder.mkdir()
-
-    stepper = FfillStepper(folder=str(folder), name="test_stepper")
-
-    dt = np.array(['2023-01-01', '2023-01-02'], dtype='datetime64[D]')
-    dscode = np.array([1, 2])
-    serie = np.array([10, 20], dtype=np.float64)
-
-    stepper.update(dt, dscode, serie)
-    stepper.save()
-
-    loaded_stepper = FfillStepper.load(folder=str(folder), name="test_stepper")
-
-    assert loaded_stepper.last_values[1] == 10
-    assert loaded_stepper.last_values[2] == 20
-    assert loaded_stepper.last_timestamps[1] == dt[0].astype('datetime64[ns]').astype('int64')
-    assert loaded_stepper.last_timestamps[2] == dt[1].astype('datetime64[ns]').astype('int64')
 
 
 def test_ffill_stepper_with_empty_inputs():

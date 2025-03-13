@@ -4,7 +4,7 @@ from numba.typed import Dict
 from numba import types
 import os
 import pickle
-from config_loc import get_data_folder
+from .base_stepper import BaseStepper
 
 @njit
 def get_alpha(window):
@@ -12,7 +12,8 @@ def get_alpha(window):
     return 1 - np.exp(np.log(0.5) / window)
 
 @njit
-def update_ewmstd_values(codes, values, timestamps, alpha, last_sum, last_wgt_sum, last_sum_sq, last_wgt_sum_sq, last_timestamps):
+def update_ewmstd_values(codes, values, timestamps, alpha, last_sum, 
+                         last_wgt_sum, last_sum_sq, last_wgt_sum_sq, last_timestamps):
     """
     Vectorized update of EWM values and squared values for standard deviation calculation
 
@@ -77,12 +78,10 @@ def update_ewmstd_values(codes, values, timestamps, alpha, last_sum, last_wgt_su
 
     return result
 
-class EwmStdStepper:
-    _instances = {}  # Class variable to track loaded instances
+class EwmStdStepper(BaseStepper):
     
     def __init__(self, folder='', name='', window=1):
-        self.folder = os.path.join(get_data_folder(), folder)
-        self.name = name
+        super().__init__(folder,name)
         self.window = window
         self.alpha = get_alpha(window)
 
@@ -109,64 +108,12 @@ class EwmStdStepper:
         )
 
     def save(self):
-        """Save internal state to file"""
-        if not os.path.exists(self.folder):
-            os.makedirs(self.folder)
-
-        state = {
-            'last_timestamps': dict(self.last_timestamps),
-            'last_sum': dict(self.last_sum),
-            'last_wgt_sum': dict(self.last_wgt_sum),
-            'last_sum_sq': dict(self.last_sum_sq),
-            'last_wgt_sum_sq': dict(self.last_wgt_sum_sq),
-            'window': self.window,
-            'alpha': self.alpha
-        }
-        print(state)
-        filepath = os.path.join(self.folder, self.name + '.pkl')
-        with open(filepath, 'wb') as f:
-            pickle.dump(state, f)
+        self.save_utility()
 
     @classmethod
-    def load(cls, folder, name, window=None):
+    def load(cls, folder, name, window=1):
         """Load instance from saved state or create new if not exists"""
-        instance_key = f"{folder}/{name}"
-        #if instance_key in cls._instances:
-        #    return cls._instances[instance_key]
-            
-        folder_path = os.path.join(get_data_folder(), folder)
-        filepath = os.path.join(folder_path, name + '.pkl')
-
-        if not os.path.exists(filepath):
-            instance = cls(folder=folder, name=name, window=window)
-            return instance
-
-
-        with open(filepath, 'rb') as f:
-            state = pickle.load(f)
-        print(state)
-        # Create a new instance
-        instance = cls(
-            folder=folder_path,
-            name=name,
-            window=state['window']
-        )
-        instance.alpha = state['alpha']
-
-        # Convert regular dicts back to numba Dicts
-        for k, v in state['last_sum'].items():
-            instance.last_sum[k] = v
-        for k, v in state['last_wgt_sum'].items():
-            instance.last_wgt_sum[k] = v
-        for k, v in state['last_sum_sq'].items():
-            instance.last_sum_sq[k] = v
-        for k, v in state['last_wgt_sum_sq'].items():
-            instance.last_wgt_sum_sq[k] = v
-        for k, v in state['last_timestamps'].items():
-            instance.last_timestamps[k] = v
-
-        cls._instances[instance_key] = instance
-        return instance
+        return EwmStdStepper.load_utility(cls,folder=folder,name=name,window=window)
 
     def update(self, dt, dscode, serie):
         """
@@ -181,18 +128,11 @@ class EwmStdStepper:
             numpy array of same length as input arrays containing EWM standard deviation values
         """
         # Input validation
-        if not isinstance(dt, np.ndarray) or not isinstance(dscode, np.ndarray) or not isinstance(serie, np.ndarray):
-            raise ValueError("All inputs must be numpy arrays")
-
-        if len(dt) != len(dscode) or len(dt) != len(serie):
-            raise ValueError("All inputs must have the same length")
-
-        # Convert datetime64 to int64 nanoseconds for Numba
-        timestamps = dt.astype('datetime64[ns]').astype('int64')
-
+        self.validate_input(dt,dscode,serie)
+        
         # Update values and timestamps using numba function
         return update_ewmstd_values(
-            dscode, serie, timestamps,
+            dscode, serie, dt.view(np.int64),
             self.alpha, self.last_sum, self.last_wgt_sum,
             self.last_sum_sq, self.last_wgt_sum_sq, self.last_timestamps
         )

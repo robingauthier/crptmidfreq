@@ -2,9 +2,9 @@ import numpy as np
 from numba import njit
 from numba.typed import Dict
 from numba import types
-import os
-import pickle
-from config_loc import get_data_folder
+
+from .base_stepper import BaseStepper
+
 
 
 @njit
@@ -91,12 +91,13 @@ def update_cs_std_values(codes, values, bys,wgts,timestamps,
     return result
 
 
-class csStdStepper:
-    _instances = {}  # Class variable to track loaded instances
-    
+
+class csStdStepper(BaseStepper):
+
+
     def __init__(self, folder='', name='',mincnt=1):
-        self.folder = os.path.join(get_data_folder(), folder)
-        self.name = name
+        super().__init__(folder,name)
+
         self.mincnt=mincnt # std not defined with 1 sample 
         
         # Initialize empty state
@@ -122,57 +123,12 @@ class csStdStepper:
         )
 
     def save(self):
-        """Save internal state to file"""
-        if not os.path.exists(self.folder):
-            os.makedirs(self.folder)
-
-        state = {
-            'last_timestamps': dict(self.last_timestamps),
-            'last_sums': dict(self.last_sums),
-            'last_sums2': dict(self.last_sums2),
-            'last_wgts': dict(self.last_wgts),
-            'last_cnts': dict(self.last_cnts),
-            'mincnt':self.mincnt,
-        }
-        filepath = os.path.join(self.folder, self.name + '.pkl')
-        with open(filepath, 'wb') as f:
-            pickle.dump(state, f)
+        self.save_utility()
 
     @classmethod
-    def load(cls, folder, name):
+    def load(cls, folder, name, mincnt=1):
         """Load instance from saved state or create new if not exists"""
-        instance_key = f"{folder}/{name}"
-        #if instance_key in cls._instances:
-        #    return cls._instances[instance_key]
-
-        folder_path = os.path.join(get_data_folder(), folder)
-        filepath = os.path.join(folder_path, name + '.pkl')
-        
-        try:
-            with open(filepath, 'rb') as f:
-                print(f'loading {filepath}')
-                state = pickle.load(f)
-
-            # Create a new instance
-            instance = cls(folder=folder_path, name=name)
-            instance.mincnt=state['mincnt']
-            # Convert regular dicts back to numba Dicts
-            for k, v in state['last_sums'].items():
-                instance.last_sums[k] = v
-            for k, v in state['last_sums2'].items():
-                instance.last_sums2[k] = v
-            for k, v in state['last_cnts'].items():
-                instance.last_cnts[k] = v
-            for k, v in state['last_wgts'].items():
-                instance.last_wgts[k] = v
-            for k, v in state['last_timestamps'].items():
-                instance.last_timestamps[k] = v
-        except (FileNotFoundError, ValueError):
-            print('Cannot load the Stepper- will create one')
-            instance = cls(folder=folder, name=name)
-        
-        cls._instances[instance_key] = instance
-        return instance
+        return csStdStepper.load_utility(cls,folder=folder,name=name,mincnt=mincnt)
 
     def update(self, dt, dscode, serie,by=None,wgt=None):
         """
@@ -192,27 +148,15 @@ class csStdStepper:
             wgt = np.ones_like(serie)
         if by is None:
             by = np.ones_like(serie)
-        # Input validation
-        if not isinstance(dt, np.ndarray) or not isinstance(dscode, np.ndarray) or not isinstance(serie, np.ndarray):
-            raise ValueError("All inputs must be numpy arrays")
 
-        if not isinstance(dt, np.ndarray) or not isinstance(by, np.ndarray) or not isinstance(wgt, np.ndarray):
-            raise ValueError("All inputs must be numpy arrays")
+        self.validate_input(dt,dscode,serie,by=by,wgt=wgt)
 
-        if len(dt) != len(dscode) or len(dt) != len(serie):
-            raise ValueError("All inputs must have the same length")
-
-        if len(dt) != len(by) or len(dt) != len(wgt):
-            raise ValueError("All inputs must have the same length")
-
-        # Convert datetime64 to int64 nanoseconds for Numba
-        timestamps = dt.astype('datetime64[ns]').astype('int64')
         # by must be integers 
         by = by.astype('int64')
         
         # Update values and timestamps using numba function
         return update_cs_std_values(
-            dscode, serie, by , wgt, timestamps,
+            dscode, serie, by , wgt, dt.view(np.int64),
             self.last_timestamps,self.last_sums,self.last_sums2,self.last_wgts,self.last_cnts,self.mincnt
         )
 

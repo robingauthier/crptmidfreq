@@ -30,10 +30,11 @@ def set_pandas_display():
 
 
 def clean_folder(folder='feats_simple_v1'):
+    """cleans the feature folder"""
     import shutil
     import os
-    from config_loc import get_data_folder
-    path = os.path.join(get_data_folder(), folder)
+    from config_loc import get_feature_folder
+    path = os.path.join(get_feature_folder(), folder)
     if os.path.exists(path):
         shutil.rmtree(path)
 

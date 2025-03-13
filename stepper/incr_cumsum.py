@@ -6,7 +6,8 @@ from numba import njit
 from numba import types
 from numba.typed import Dict
 
-from config_loc import get_data_folder
+from .base_stepper import BaseStepper
+
 
 
 @njit
@@ -51,7 +52,7 @@ def cumsum_values(codes, values, timestamps, last_values, last_timestamps):
     return result
 
 
-class CumSumStepper:
+class CumSumStepper(BaseStepper):
     """Forward fill stepper that maintains last known values per code"""
 
     def __init__(self, folder='', name=''):
@@ -62,8 +63,7 @@ class CumSumStepper:
             folder: folder for saving/loading state
             name: name for saving/loading state
         """
-        self.folder = os.path.join(get_data_folder(), folder)
-        self.name = name
+        super().__init__(folder,name)
 
         # Initialize empty state
         self.last_values = Dict.empty(
@@ -76,41 +76,12 @@ class CumSumStepper:
         )
 
     def save(self):
-        """Save internal state to file"""
-        if not os.path.exists(self.folder):
-            os.makedirs(self.folder)
-
-        state = {
-            'last_timestamps': dict(self.last_timestamps),
-            'last_values': dict(self.last_values)
-        }
-
-        filepath = os.path.join(self.folder, self.name + '.pkl')
-        with open(filepath, 'wb') as f:
-            pickle.dump(state, f)
+        self.save_utility()
 
     @classmethod
     def load(cls, folder, name):
-        """Load instance from saved state"""
-        folder_path = os.path.join(get_data_folder(), folder)
-        filepath = os.path.join(folder_path, name + '.pkl')
-
-        if not os.path.exists(filepath):
-            return cls(folder=folder, name=name)
-
-        with open(filepath, 'rb') as f:
-            state = pickle.load(f)
-
-        # Create new instance
-        instance = cls(folder=folder, name=name)
-
-        # Convert regular dicts back to numba Dicts
-        for k, v in state['last_values'].items():
-            instance.last_values[k] = v
-        for k, v in state['last_timestamps'].items():
-            instance.last_timestamps[k] = v
-
-        return instance
+        """Load instance from saved state or create new if not exists"""
+        return CumSumStepper.load_utility(cls,folder=folder,name=name)
 
     def update(self, dt, dscode, serie):
         """
@@ -135,9 +106,8 @@ class CumSumStepper:
         timestamps = dt.astype('datetime64[ns]').astype('int64')
 
         # Update values and timestamps using numba function
-        res = cumsum_values(
+        return cumsum_values(
             dscode, serie, timestamps,
             self.last_values, self.last_timestamps
         )
-        self.save()
-        return res
+

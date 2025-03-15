@@ -64,9 +64,9 @@ class ClipStepper(BaseStepper):
         self.save_utility()
 
     @classmethod
-    def load(cls, folder, name, window=1):
+    def load(cls, folder, name,low_clip=np.nan,high_clip=np.nan):
         """Load instance from saved state or create new if not exists"""
-        return ClipStepper.load_utility(cls,folder=folder,name=name)
+        return ClipStepper.load_utility(cls,folder=folder,name=name,low_clip=low_clip,high_clip=high_clip)
 
     def update(self, dt, dscode, serie):
         self.validate_input(dt,dscode,serie)

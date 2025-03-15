@@ -7,7 +7,7 @@ from numba import types
 from numba.typed import Dict
 
 from config_loc import get_feature_folder
-
+from utils.common import validate_input
 class BaseStepper:
     
     
@@ -95,19 +95,4 @@ class BaseStepper:
         Raises:
             ValueError: If input validation fails.
         """
-        # Validate that inputs are numpy arrays
-        if not isinstance(dt, np.ndarray) \
-            or not isinstance(dscode, np.ndarray) \
-            or not isinstance(serie, np.ndarray):
-            raise ValueError("All inputs must be numpy arrays")
-        for k,v in kwargs.items():
-            if not isinstance(v, np.ndarray):
-                raise ValueError(f"All inputs must be numpy arrays --see: {k}")
-        assert dt.dtype in ['<M8[us]','<M8[D]','<M8[m]','int64']
-        # Validate that all inputs have the same length
-        if len(dt) != len(dscode) or len(dt) != len(serie):
-            raise ValueError("All inputs must have the same length")
-        for k,v in kwargs.items():
-            if len(dt) != len(dscode):
-                raise ValueError(f"All inputs must have the same length --see: {k}")
-        
+        validate_input(dt,dscode,serie=serie,**kwargs)

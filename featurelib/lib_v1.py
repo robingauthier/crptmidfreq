@@ -458,7 +458,7 @@ def perform_merge_asof(featd_l, featd_r, feats=[], folder=None, name=None):
     return featd_l, nfeats
 
 
-def perform_clip(featd, feats=[], clip=1.0, folder=None, name=None):
+def perform_clip(featd, feats=[], folder=None, name=None,low_clip=np.nan,high_clip=np.nan):
     """
     the alpha is variable , it depends on the ufeats
     """
@@ -469,8 +469,10 @@ def perform_clip(featd, feats=[], clip=1.0, folder=None, name=None):
     assert np.all(np.diff(featd['dtsi']) >= 0)
     nfeats = []
     for col in feats:
-        featd[f'{col}_clip{clip}'] = np.clip(featd[col], -clip, clip)
-        nfeats += [f'{col}_clip{clip}']
+        cls_clip = ClipStepper \
+            .load(folder=f"{folder}", name=f"{name}_{col}_clip", low_clip=low_clip,high_clip=high_clip)
+        featd[f'{col}_clip'] = cls_clip.update(featd['dtsi'], featd['dscode'],featd[col])
+        nfeats += [f'{col}_clip']
     return featd, nfeats
 
 
@@ -592,112 +594,22 @@ def perform_reg(featd, feats1=[], feats2=[], windows=[100], lams=[0.0], folder=N
     return featd, nfeats
 
 
-def perform_orderbook_bbo(featd, windows=[100], lams=[0.0], folder=None, name=None):
+def perform_pivot(featd, feats=[],  folder=None, name=None):
     """
+    returns date and dict { stock:values}
+    Format is special
     """
+    assert len(feats)==1
     assert 'dtsi' in featd.keys()
     assert 'dscode' in featd.keys()
-    assert 'bidask' in featd.keys()
-    assert 'price' in featd.keys()
-    assert 'quantity' in featd.keys()
+    check_cols(featd, feats)
     assert np.all(np.diff(featd['dtsi']) >= 0)
-    nfeats = []
-    cls_bbo = OrderBookStepper \
-        .load(folder=f"{folder}", name=f"{name}_bbo")
-    rbid, rask = cls_bbo.update(featd['dtsi'], featd['dscode'],
-                                featd['bidask'], featd['price'],
-                                featd['quantity'])
-    featd[f'bbo_bid'] = rbid
-    featd[f'bbo_ask'] = rask
-    nfeats += ['bbo_bid', 'bbo_ask']
-    return featd, nfeats
+    col = feats[0]
+    cls_piv = PivotStepper \
+        .load(folder=f"{folder}", name=f"{name}_{col}")
+    udts,res = cls_piv.update(featd['dtsi'], featd['dscode'], featd[col])
 
-
-def perform_orderbook_imb_naive(featd, levels=[100], folder=None, name=None):
-    """
-    """
-    assert 'dtsi' in featd.keys()
-    assert 'dscode' in featd.keys()
-    assert 'bidask' in featd.keys()
-    assert 'price' in featd.keys()
-    assert 'quantity' in featd.keys()
-    assert np.all(np.diff(featd['dtsi']) >= 0)
-    nfeats = []
-    for level in levels:
-        cls_bbo = OrderBookStepper \
-            .load(folder=f"{folder}", name=f"{name}_imb_{level}", op='imb', window=level)
-        rbid, rask = cls_bbo.update(featd['dtsi'], featd['dscode'],
-                                    featd['bidask'], featd['price'],
-                                    featd['quantity'])
-        num = rask - rbid
-        denum = rask + rbid
-        featd[f'ob_imb{level}'] = np.divide(
-            num,
-            denum,
-            out=np.zeros_like(denum),
-            where=~np.isclose(denum, np.zeros_like(denum))
-        )
-
-        nfeats += [f'ob_imb{level}']
-    return featd, nfeats
-
-
-def perform_orderbook_nonzero_levels(featd, levels=[100], folder=None, name=None):
-    """
-    """
-    assert 'dtsi' in featd.keys()
-    assert 'dscode' in featd.keys()
-    assert 'bidask' in featd.keys()
-    assert 'price' in featd.keys()
-    assert 'quantity' in featd.keys()
-    assert np.all(np.diff(featd['dtsi']) >= 0)
-    nfeats = []
-    for level in levels:
-        cls_bbo = OrderBookStepper \
-            .load(folder=f"{folder}", name=f"{name}_nonzero_{level}", op='sum', window=level, use_sign=True)
-        rbid, rask = cls_bbo.update(featd['dtsi'], featd['dscode'],
-                                    featd['bidask'], featd['price'],
-                                    featd['quantity'])
-        featd[f'ob_nonzero{level}_bid'] = rbid
-        featd[f'ob_nonzero{level}_ask'] = rask
-        nfeats += [f'ob_nonzero{level}_bid', f'ob_nonzero{level}_ask']
-    return featd, nfeats
-
-
-def perform_orderbook_depth_func(featd, levels=[100], op='depth', folder=None, name=None):
-    """
-    how many orders there are
-    """
-    assert 'dtsi' in featd.keys()
-    assert 'dscode' in featd.keys()
-    assert 'bidask' in featd.keys()
-    assert 'price' in featd.keys()
-    assert 'quantity' in featd.keys()
-    assert np.all(np.diff(featd['dtsi']) >= 0)
-    nfeats = []
-    for level in levels:
-        cls_bbo = OrderBookDepthStepper \
-            .load(folder=f"{folder}", name=f"{name}_{op}_{level}",
-                  op=op,
-                  window=level)
-        rbid, rask = cls_bbo.update(featd['dtsi'], featd['dscode'],
-                                    featd['bidask'], featd['price'],
-                                    featd['quantity'])
-        featd[f'ob_{op}_bid_l{level}'] = rbid
-        featd[f'ob_{op}_ask_l{level}'] = rask
-        num = rask - rbid
-        denum = rask + rbid
-        featd[f'ob_{op}_l{level}'] = np.divide(
-            num,
-            denum,
-            out=np.zeros_like(denum),
-            where=~np.isclose(denum, np.zeros_like(denum))
-        )
-        nfeats += [
-            f'ob_{op}_bid_l{level}',
-            f'ob_{op}_ask_l{level}',
-            f'ob_{op}_l{level}']
-    return featd, nfeats
+    return udts,res
 
 
 

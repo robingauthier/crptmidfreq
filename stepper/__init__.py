@@ -25,3 +25,4 @@ from stepper.incr_cs_mean import csMeanStepper
 from stepper.incr_cs_std import csStdStepper
 from stepper.incr_cs_rank import csRankStepper
 
+from stepper.incr_pivot import PivotStepper

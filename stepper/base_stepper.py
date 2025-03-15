@@ -83,7 +83,7 @@ class BaseStepper:
         return instance
 
 
-    def validate_input(self, dt, dscode, serie,**kwargs):
+    def validate_input(self, dt, dscode, serie=None,**kwargs):
         """
         Common input validation for update methods in subclasses.
 

@@ -16,25 +16,7 @@ from featurelib.lib_v1 import *
 
 g_folder = 'res_kmeans_v1'
 
-def silhouette_method(X, k_min=2, k_max=10):
-    """
-    Compute and plot the silhouette score for K-means over a range of cluster counts.
-    A higher score means better-defined clusters.
-    """
-    print('Computing optimal K using silhouette score')
-    ks = range(k_min, k_max + 1)
-    silhouettes = []
-
-    for k in ks:
-        kmeans = KMeans(n_clusters=k, random_state=42, n_init='auto')
-        labels = kmeans.fit_predict(X)
-        score = silhouette_score(X, labels)
-        silhouettes.append(score)
-    
-    rdf=pd.DataFrame({'k':ks,'silhouette':silhouettes})
-    rdf.to_csv('kmean_silhouette.csv')
-    
-def get_pivoted_data():
+def get_pivoted_data(start_date='2025-03-01',end_date='2026-01-01'):
     clean_folder(g_folder)
     print('Reading data from DuckDB')
     con = duckdb.connect(os.path.join(get_data_db_folder(),"my_database.db"),read_only=True)
@@ -66,11 +48,6 @@ def get_pivoted_data():
                     where=~np.isclose(featd['close'], np.zeros_like(featd['close'])))
 
     # Clip tret
-    #preclip_stats=(pd.Series(featd['tret']).describe()*1e4).astype(np.int64)
-    #clip_tret = 800e-4 # 8pct
-    #featd,nfeats=perform_clip(featd=featd,feats=['tret'],
-    #                          high_clip=clip_tret,low_clip=-clip_tret,
-    #                          folder=g_folder,name='None')
     featd,nfeats=perform_clip_quantile(featd, feats=['tret'],
                                 low_clip=0.05,high_clip=0.95,
                                 folder=g_folder,name='None')
@@ -79,7 +56,19 @@ def get_pivoted_data():
     featd,nfeats=perform_ewm(featd=featd,feats=['volume'],windows=[1000],folder=g_folder,name='None')
     featd['wgt'] = featd[nfeats[0]]
 
-    ## pivotting for correlation matrix
+    ## rank cross sectionally by volume to build a robust universe
+    perform_cs_rank()
+
+    ## adding the excess volume
+    featd['excess_volume'] = np.divide(
+                    featd[nfeats[0]],
+                    featd['volume'],
+                    out=np.zeros_like(featd['volume']),
+                    where=~np.isclose(featd['volume'], np.zeros_like(featd['volume'])))
+    perform_clip(featd=featd)
+    
+
+    ## pivotting for correlation matrix / clustering
     pdts,pfeatd  = perform_pivot(featd=featd,feats=['tret'],folder=g_folder,name='None')
     pX =  np.array([v for k,v in pfeatd.items()])
     pX = np.nan_to_num(pX)

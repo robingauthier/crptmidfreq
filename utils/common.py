@@ -1,6 +1,7 @@
 import logging
 import pandas as pd
 import numpy as np
+from config_loc import get_analysis_folder
 
 # Configure the logging
 logging.basicConfig(
@@ -45,7 +46,9 @@ def to_csv(df, name):
     for iter in range(20):
         try:
             niter = '' if iter == 0 else str(iter)
-            df.to_csv(get_analysis_folder() + name + f'{niter}.csv')
+            tpath=get_analysis_folder() + name + f'{niter}.csv'
+            df.to_csv(tpath)
+            print(f'Saved : {tpath}')
             break
         except Exception as e:
             pass
@@ -56,7 +59,6 @@ def print_ram_usage():
     process = psutil.Process()
     ram_usage = process.memory_info().rss / 1e9
     print(f'RAM usage {ram_usage}Go')
-
 
 
 def validate_input(dt, dscode, **kwargs):

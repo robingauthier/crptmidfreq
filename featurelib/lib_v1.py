@@ -475,6 +475,31 @@ def perform_clip(featd, feats=[], folder=None, name=None,low_clip=np.nan,high_cl
         nfeats += [f'{col}_clip']
     return featd, nfeats
 
+def perform_clip_quantile(featd, feats=[], folder=None, name=None,low_clip=0.05,high_clip=0.95):
+    """
+    we use an expanding quantile computation
+    """
+    assert 'dtsi' in featd.keys()
+    assert 'dscode' in featd.keys()
+    for col in feats:
+        assert col in featd.keys()
+    assert np.all(np.diff(featd['dtsi']) >= 0)
+    nfeats = []
+    for col in feats:
+        cls_qtl = QuantileStepper \
+            .load(folder=f"{folder}", name=f"{name}_{col}_clip", qs=[low_clip,high_clip])
+        arr_qtls = cls_qtl.update(featd['dtsi'], featd['dscode'],featd[col])
+        arr_qtl_low = arr_qtls[:,0]
+        arr_qtl_high = arr_qtls[:,1]
+        featd[f'{col}_clilpqtl'] = np.where(featd[col]<arr_qtl_low,
+                                            arr_qtl_low,
+                                            np.where(
+                                                featd[col]>arr_qtl_high,
+                                            arr_qtl_high,
+                                            featd[col]
+                                            ))
+        nfeats += [f'{col}_clipqtl']
+    return featd, nfeats
 
 def perform_0tonan(featd, feats=[], folder=None, name=None):
     """

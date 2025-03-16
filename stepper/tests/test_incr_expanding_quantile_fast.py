@@ -2,7 +2,7 @@ import pandas as pd
 
 from stepper.incr_expanding_quantile_fast import *
 
-# pytest ./stepper/tests/test_incr_expanding_quantile2.py --pdb --maxfail=1
+# pytest ./stepper/tests/test_incr_expanding_quantile_fast.py --pdb --maxfail=1
 
 
 ###############################################################################
@@ -66,3 +66,52 @@ def test_against_pandas():
     assert mae < 0.1, f"Expected mae < 0.2, got {mae}"
     # The approximation error might cause differences. Adjust threshold as needed.
 
+
+
+def test_save_load_result():
+    """
+    Show partial updates (streaming in two chunks), saving, loading, continuing, 
+    and comparing with a full expand-based reference.
+    """
+    n_samples = 1000
+    half = n_samples // 2
+    n_codes = 10
+    dt, dscode, serie = generate_data(n_samples, n_codes)
+    q = 0.8
+
+    # 1) Create instance, update with half the data, save
+    qstep = QuantileStepper(folder='test_data', name='test_quantile', qs=[q])
+    part1 = qstep.update(dt[:half], dscode[:half], serie[:half])
+    qstep.save()
+
+    # 2) Load, update with the second half
+    qstep_loaded = QuantileStepper.load('test_data', 'test_quantile')
+    part2 = qstep_loaded.update(dt[half:], dscode[half:], serie[half:])
+
+    # Combined result
+    quant_est = np.concatenate([part1, part2])
+
+    # Compare to a Pandas expanding quantile
+    df = pd.DataFrame({
+        'dt': dt,
+        'dscode': dscode,
+        'serie': serie,
+        'quant_est': quant_est[:,0],
+    })
+    
+    # Calculate actual expanding quantile in pandas for each group.
+    # pandas does not have a built-in "groupby expanding quantile" that is 
+    # super fast, but we can do an expanding apply:
+    # We'll do it code by code, building the same "expanding" approach.
+    df['quant_true'] = (
+        df.groupby('dscode')['serie'].transform(
+          lambda x: x.expanding().quantile(q))
+    )
+
+    # Compare results: we can check correlation or compute an average error
+    mae = (df['quant_true'] - df['quant_est']).abs().mean()
+
+    print(f"Correlation:  MAE: {mae:.4f}")
+    # Because T-Digest is approximate, perfect correlation > 0.9 or so is typical
+    assert mae < 0.1, f"Expected mae < 0.2, got {mae}"
+    # The approximation error might cause differences. Adjust threshold as needed.

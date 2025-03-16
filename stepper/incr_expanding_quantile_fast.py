@@ -5,7 +5,7 @@ import os
 import pickle
 from tdigest import TDigest
 from .base_stepper import BaseStepper
-from .tdigest.exp_qtl import expanding_quantile
+from .tdigest.exp_qtl2 import expanding_quantile
 
 ## A FASTER VERSION RELYING ON CYTHON CODE ##
 
@@ -44,7 +44,6 @@ class QuantileStepper(BaseStepper):
         return res
     
     def save(self):
-        import pdb;pdb.set_trace()
         self.save_utility()
 
     @classmethod

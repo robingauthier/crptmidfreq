@@ -3,3 +3,6 @@ featurelib/tests/__pycache__/
 *.pkl
 *.xlsx
 *.csv
+*.o
+*.so
+*.cpp

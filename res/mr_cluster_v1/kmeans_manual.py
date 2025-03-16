@@ -34,13 +34,18 @@ def silhouette_method(X, k_min=2, k_max=10):
     rdf=pd.DataFrame({'k':ks,'silhouette':silhouettes})
     rdf.to_csv('kmean_silhouette.csv')
     
-def get_pivoted_data():
+def get_pivoted_data(tokens=['BTCUSDT','ETHUSDT'],sdate_str='2019-01-01'):
     clean_folder(g_folder)
     print('Reading data from DuckDB')
     con = duckdb.connect(os.path.join(get_data_db_folder(),"my_database.db"),read_only=True)
-    df=con.execute('''SELECT close_time,dscode,close,volume,taker_buy_volume 
+    list_tokens_str='\',\''.join(tokens)
+    list_tokens_str='(\''+list_tokens_str+'\')'
+
+    df=con.execute(f'''SELECT close_time,dscode,close,volume,taker_buy_volume 
                    FROM klines
-                   WHERE close_time>'2024-03-01';
+                   WHERE 
+                   close_time>'{sdate_str}' AND
+                   dscode IN {list_tokens_str};
                    ''').df()
 
     print('Cleaning data')
@@ -67,11 +72,14 @@ def get_pivoted_data():
 
     # Clip tret
     #preclip_stats=(pd.Series(featd['tret']).describe()*1e4).astype(np.int64)
-    #clip_tret = 800e-4 # 8pct
-    #featd,nfeats=perform_clip(featd=featd,feats=['tret'],
-    #                          high_clip=clip_tret,low_clip=-clip_tret,
-    #                          folder=g_folder,name='None')
-    featd,nfeats=perform_clip_quantile(featd, feats=['tret'],
+    clip_fast=True
+    if clip_fast:
+        clip_tret = 800e-4 # 8pct
+        featd,nfeats=perform_clip(featd=featd,feats=['tret'],
+                                high_clip=clip_tret,low_clip=-clip_tret,
+                                folder=g_folder,name='None')
+    else:
+        featd,nfeats=perform_clip_quantile(featd, feats=['tret'],
                                 low_clip=0.05,high_clip=0.95,
                                 folder=g_folder,name='None')
     
@@ -87,6 +95,8 @@ def get_pivoted_data():
     pdft=pd.DataFrame(np.transpose(pX))
     pdft.columns=pdft.columns.map(dscode_map)
     pdft.index = pdts
+    
+    pdft.index=pd.to_datetime(pdft.index*1e3)
     return pdft
 
 def main():
@@ -108,9 +118,9 @@ def main():
 
 ### faudrait liquidite, start-trading,end-trading dans la data !
 
-# ipython -i  ./res/kmeans_manual.py
+# ipython -i  ./res/mr_cluster_v1/kmeans_manual.py
 if __name__=='__main__':
-    main()
+    pX= get_pivoted_data()
     
     # TODO:bucketplot of volume traded / market cap vs P&L yep
     # perform a rolling kmeans

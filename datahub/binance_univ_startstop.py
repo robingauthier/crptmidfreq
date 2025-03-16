@@ -3,9 +3,12 @@ import os
 from config_loc import get_data_folder
 
 class TokenQueryTracker:
-    def __init__(self):
-        self.log_file = os.path.join(*[get_data_folder(),
-                            "token_query_log.csv"])
+    def __init__(self,period='daily'):
+        if period=='daily':
+            nperiod=''
+        else:
+            nperiod=period
+        self.log_file = os.path.join(*[get_data_folder(),f"token_query{nperiod}_log.csv"])
         self.query_log = self._load_query_log()
 
     def _load_query_log(self):

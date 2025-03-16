@@ -5,12 +5,9 @@ import os
 import pickle
 from tdigest import TDigest
 from .base_stepper import BaseStepper
+from .tdigest.exp_qtl import expanding_quantile
 
-###############################################################################
-# 1) A "QuantileStepper" class that updates a T-Digest for each code (symbol).
-#    We then retrieve current quantile estimates as new data arrives.
-#  Under the hood it performs a Kmean clustering
-###############################################################################
+## A FASTER VERSION RELYING ON CYTHON CODE ##
 
 class QuantileStepper(BaseStepper):
     """
@@ -43,24 +40,11 @@ class QuantileStepper(BaseStepper):
         Update the T-Digest state with new data in (datetime, code, value) arrays.
         Return a 2D array (n_rows x len(qs)) of quantile values for each row.
         """
-        n = len(serie)
-        n_qs = len(self.qs)
-        results = np.zeros((n, n_qs), dtype=float)
-        
-        for i in range(n):
-            code = dscode[i]
-            val = serie[i]
-            if code not in self.tdigest_map:
-                self.tdigest_map[code] = TDigest()
-            # Update T-Digest
-            self.tdigest_map[code].update(val)
-            # Retrieve current quantiles
-            for j, qv in enumerate(self.qs):
-                results[i, j] = self.tdigest_map[code].percentile(qv*100)
-        
-        return results
+        res = expanding_quantile( dt, dscode, serie, np.array(self.qs),self.tdigest_map)
+        return res
     
     def save(self):
+        import pdb;pdb.set_trace()
         self.save_utility()
 
     @classmethod

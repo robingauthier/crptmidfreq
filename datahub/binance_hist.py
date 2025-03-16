@@ -77,6 +77,8 @@ def download_data(date_str='2024-12-17',
     assert period in ['monthly', 'daily']
     assert instr in ['futures', 'spot']
     root_url = 'https://data.binance.vision/data'
+    if period=='monthly':
+        date_str = date_str[:-3] # 2025-01 for instance
     url_loc = f'/{instr}/{ucm}/{period}/{kind}/{ticker}/{ticker}-{kind}-{date_str}.zip'
     if kind=='klines':
         # there is a klinefreq to add
@@ -140,6 +142,7 @@ def download_data(date_str='2024-12-17',
 # Syntax to run the download of BTCUSDT futures for 2024-12-21:
 # python datahub/binance_hist.py --date_str 2024-12-21 --kind trades --ticker BTCUSDT --instr futures --ucm um --period daily
 # python datahub/binance_hist.py --date_str 2024-12-21 --kind klines --ticker all --instr futures --ucm um --period daily
+# python datahub/binance_hist.py --date_str 2023-12-21 --kind klines --ticker BTCUSDT --instr futures --ucm um --period monthly
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Download Binance historical data.')
     parser.add_argument('--date_str', type=str, default='2024-12-17',

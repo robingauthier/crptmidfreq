@@ -9,6 +9,7 @@ from datahub.binance_hist import download_data
 from datahub.binance_univ_startstop import  TokenQueryTracker
 from config_loc import get_data_folder
 from config_loc import get_data_db_folder
+from dateutil.relativedelta import relativedelta
 
 def stats_on_univ(dfuniv):
     # Stats on dfuniv
@@ -43,14 +44,16 @@ def main(args):
     )
 """)
 
-    tracker = TokenQueryTracker()
-
-    kind = 'klines'         
+    tracker = TokenQueryTracker(period=args.period)
+ 
     dfuniv = download_univ()
     dfuniv = dfuniv.loc[lambda x:x['kind']=='future_um']
     dfuniv = dfuniv.loc[lambda x:x['base']=='USDT']
     
-    dts = pd.date_range(args.sdate_str,args.edate_str).tolist()
+    if args.period=='daily':
+        dts = pd.date_range(args.sdate_str,args.edate_str).tolist()
+    else:
+        dts = pd.date_range(args.sdate_str,args.edate_str,freq='ME').tolist()
     random.shuffle(dts)
     
     for dt in dts:
@@ -68,13 +71,29 @@ def main(args):
             else:
                 ticker_db=ticker+'_'+row['kind']
 
-            # check if the data is there already or not
-            query=f'''
-            SELECT COUNT(open_time) AS nb_rows FROM klines 
-            WHERE dscode='{ticker_db}' AND 
-            CAST(open_time AS DATE) = '{dt_str}';
-            '''
-            nb_existing_rows=con.execute(query=query).fetchone()[0]
+            if args.period=='daily':
+                # check if the data is there already or not
+                query=f'''
+                SELECT COUNT(open_time) AS nb_rows FROM klines 
+                WHERE dscode='{ticker_db}' AND 
+                CAST(open_time AS DATE) = '{dt_str}';
+                '''
+                nb_existing_rows=con.execute(query=query).fetchone()[0]
+            else:
+                start_month = pd.to_datetime(dt.strftime('%Y-%m')+'-01')
+                end_month = start_month+relativedelta(months=1)
+                end_month = end_month-relativedelta(days=1)
+                start_month_str=start_month.strftime('%Y-%m-%d')
+                end_month_str=end_month.strftime('%Y-%m-%d')
+                query=f'''
+                SELECT COUNT(open_time) AS nb_rows FROM klines 
+                WHERE dscode='{ticker_db}' AND 
+                CAST(open_time AS DATE) >= '{start_month_str}'
+                AND 
+                CAST(open_time AS DATE) <= '{end_month_str}';
+                '''
+                nb_existing_rows=con.execute(query=query).fetchone()[0]                
+                
             if nb_existing_rows>0:
                 continue
             
@@ -84,8 +103,7 @@ def main(args):
                     ticker=ticker,
                     instr='futures',
                     ucm='um',
-                    #period='monthly'
-                    period='daily' # on ETHUSDT it starts on 2019-12-31
+                    period=args.period, # on ETHUSDT it starts on 2019-12-31
             )   
             raw_data_fname=download_data(**data_args,return_filename=True)
             if os.path.exists(raw_data_fname) and assume_duckdb_updated:
@@ -104,7 +122,8 @@ def main(args):
             tracker.log_query(ticker,dt,success=success)
             if not success:
                 continue
-            
+            if df.shape[0]==0:
+                continue
             # Insert into DuckDB
             df["open_time"] = pd.to_datetime(df["open_time"], unit="ms", errors="coerce")
             df["close_time"] = pd.to_datetime(df["close_time"], unit="ms", errors="coerce")
@@ -127,7 +146,8 @@ def main(args):
             time.sleep(0.5)
     con.close()
     
-# python datahub/binance_hist_wrap.py --sdate_str 2024-12-21 
+# python datahub/binance_hist_wrap.py --sdate_str 2023-01-21 
+# ipython -i datahub/binance_hist_wrap.py --sdate_str 2022-01-01 --edate_str 2025-01-01 --period monthly
 if __name__=='__main__':
     parser = argparse.ArgumentParser(description='Download Binance historical data.')
     parser.add_argument('--sdate_str', type=str, default='2025-01-01',
@@ -136,5 +156,8 @@ if __name__=='__main__':
                         help='Date string for the data (e.g., 2024-12-21)')
     parser.add_argument('--kind', type=str, default='klines',
                         help='Type of data to download (e.g., trades, aggTrades, bookTicker, bookDepth)')
+    parser.add_argument('--period', type=str, default='daily',
+                        help='Type of data to download (e.g., trades, aggTrades, bookTicker, bookDepth)')
+
     args = parser.parse_args()
     main(args=args)

@@ -26,7 +26,7 @@ from stepper.incr_cs_std import csStdStepper
 from stepper.incr_cs_rank import csRankStepper
 
 from stepper.incr_pivot import PivotStepper
-from stepper.incr_expanding_quantile import QuantileStepper
+from stepper.incr_expanding_quantile_fast import QuantileStepper
 from stepper.incr_expanding_bucketxy import BucketXYStepper
 
 from stepper.incr_model import ModelStepper

@@ -105,7 +105,7 @@ class csMeanStepper(BaseStepper):
         self.save_utility()
 
     @classmethod
-    def load(cls, folder, name, window=1):
+    def load(cls, folder, name):
         """Load instance from saved state or create new if not exists"""
         return csMeanStepper.load_utility(cls,folder=folder,name=name)
 

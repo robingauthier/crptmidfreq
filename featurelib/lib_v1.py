@@ -570,6 +570,39 @@ def perform_pfp(featd, feats=[], nbrevs=[1], ticks=[3.0], debug=False, folder=No
                     nfeats += [f'{ncol}_px', f'{ncol}_el']
     return featd, nfeats
 
+def perform_cs_rank(featd,feats=[],folder=None, name=None):
+    assert 'dtsi' in featd.keys()
+    assert 'dscode' in featd.keys()
+    assert np.all(np.diff(featd['dtsi']) >= 0)
+    nfeats = []
+    for col in feats:
+        cls_qtl = csRankStepper \
+            .load(folder=f"{folder}", name=f"{name}_{col}_csrank")
+        featd[f'{col}_csrank'] = cls_qtl.update(featd['dtsi'], featd['dscode'],featd[col])
+        nfeats += [f'{col}_csrank']
+    return featd, nfeats
+    
+def perform_model(featd, feats=[], wgt=None,ycol=None,folder=None, name=None,
+                  lookback=300,minlookback=100,
+                  fitfreq=10,gap=1,model_gen=None,
+                  with_fit=True):
+    assert 'dtsi' in featd.keys()
+    assert 'dscode' in featd.keys()
+    check_cols(featd, feats)
+    assert np.all(np.diff(featd['dtsi']) >= 0)
+    xcols='_'.join(feats)
+    cls_model = ModelStepper \
+        .load(folder=f"{folder}", name=f"{name}_{xcols}_{wgt}_{ycol}", 
+                lookback=lookback,minlookback=minlookback,
+                 fitfreq=fitfreq,gap=gap,
+                 model_gen=model_gen,with_fit=with_fit)
+    xseries = np.concatenate([v for k,v in featd.items() if k in feats])
+    wgtserie = featd[wgt]
+    yserie = featd[ycol]
+    res=cls_model.update(featd['dtsi'], xseries, yserie=yserie,wgtserie=wgtserie)
+    featd[f'model_{ycol}_{wgt}']=res
+    nfeats=[f'model_{ycol}_{wgt}']
+    return featd, nfeats
 
 def perform_corr(featd, feats1=[], feats2=[], windows=[100], folder=None, name=None):
     """
@@ -590,6 +623,40 @@ def perform_corr(featd, feats1=[], feats2=[], windows=[100], folder=None, name=N
                 corr_val = cls_corr.update(featd['dtsi'], featd['dscode'], featd[col1], featd[col2])
                 featd[f'{ncol}'] = corr_val
                 nfeats += [f'{ncol}']
+    return featd, nfeats
+
+def perform_cs_demean(featd,feats=[],by=None,wgt=None,folder=None, name=None):
+    assert 'dtsi' in featd.keys()
+    assert 'dscode' in featd.keys()
+    assert np.all(np.diff(featd['dtsi']) >= 0)
+    nfeats = []
+    for col in feats:
+        cls_qtl = csMeanStepper \
+            .load(folder=f"{folder}", name=f"{name}_{col}_csmean{by}{wgt}")
+        csmean = cls_qtl.update(featd['dtsi'], featd['dscode'],featd[col],
+                                by=None if by is None else featd[by],
+                                wgt=None if wgt is None else featd[wgt])
+        featd[f'{col}_csdemean'] = featd[col]-csmean
+        nfeats += [f'{col}_csdemean']
+    return featd, nfeats
+
+def perform_cs_scaling(featd,feats=[],by=None,wgt=None,folder=None, name=None):
+    assert 'dtsi' in featd.keys()
+    assert 'dscode' in featd.keys()
+    assert np.all(np.diff(featd['dtsi']) >= 0)
+    nfeats = []
+    for col in feats:
+        cls_qtl = csStdStepper \
+            .load(folder=f"{folder}", name=f"{name}_{col}_csstd{by}{wgt}")
+        csstd = cls_qtl.update(featd['dtsi'], featd['dscode'],featd[col],
+                                by=None if by is None else featd[by],
+                                wgt=None if wgt is None else featd[wgt])
+        featd[f'{col}_csscaling'] = np.divide(
+                    featd[col],
+                    csstd,
+                    out=np.zeros_like(csstd),
+                    where=~np.isclose(csstd, np.zeros_like(csstd)))
+        nfeats += [f'{col}_csscaling']
     return featd, nfeats
 
 

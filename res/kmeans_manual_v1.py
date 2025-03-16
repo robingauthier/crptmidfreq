@@ -16,7 +16,7 @@ from featurelib.lib_v1 import *
 
 g_folder = 'res_kmeans_v1'
 
-def get_pivoted_data(start_date='2025-03-01',end_date='2026-01-01'):
+def main(start_date='2025-03-01',end_date='2026-01-01'):
     clean_folder(g_folder)
     print('Reading data from DuckDB')
     con = duckdb.connect(os.path.join(get_data_db_folder(),"my_database.db"),read_only=True)
@@ -51,13 +51,22 @@ def get_pivoted_data(start_date='2025-03-01',end_date='2026-01-01'):
     featd,nfeats=perform_clip_quantile(featd, feats=['tret'],
                                 low_clip=0.05,high_clip=0.95,
                                 folder=g_folder,name='None')
-    
+        
     ## adding the weight ewm(volume)
-    featd,nfeats=perform_ewm(featd=featd,feats=['volume'],windows=[1000],folder=g_folder,name='None')
+    window_1month = 60*24*30
+    featd,nfeats=perform_ewm(featd=featd,feats=['volume'],windows=[window_1month],folder=g_folder,name='None')
     featd['wgt'] = featd[nfeats[0]]
 
+    # Removing the market 
+    featd,nfeats=perform_cs_demean(featd=featd,feats=['volume'],by=None,wgt='wgt',folder=g_folder,name='None')
+    featd['tret_xmkt'] = featd[nfeats[0]]
+    
     ## rank cross sectionally by volume to build a robust universe
-    perform_cs_rank()
+    featd,nfeats=perform_cs_rank(featd=featd,feats=['wgt'],folder=g_folder,name='None')
+
+    ## define universe
+    featd['univ']=1*(featd[nfeats[0]]<=50)
+
 
     ## adding the excess volume
     featd['excess_volume'] = np.divide(
@@ -67,40 +76,44 @@ def get_pivoted_data(start_date='2025-03-01',end_date='2026-01-01'):
                     where=~np.isclose(featd['volume'], np.zeros_like(featd['volume'])))
     perform_clip(featd=featd)
     
+    ## Bumping return by the excess volume
+    featd['tret_volume']=featd['excess_volume']*featd['tret']
 
     ## pivotting for correlation matrix / clustering
     pdts,pfeatd  = perform_pivot(featd=featd,feats=['tret'],folder=g_folder,name='None')
     pX =  np.array([v for k,v in pfeatd.items()])
     pX = np.nan_to_num(pX)
     
+    def model_gen_kmeans():
+        return KMeans(n_clusters=20, random_state=42,n_init='auto')
+    
+    cls_model = ModelStepper \
+    .load(folder=f"{folder}", name=f"{name}_{xcols}_{wgt}_{ycol}", 
+            lookback=lookback,minlookback=minlookback,
+                fitfreq=fitfreq,gap=gap,
+                model_gen=model_gen,with_fit=with_fit)
+    res=cls_model.update(featd['dtsi'], xseries, yserie=yserie,wgtserie=wgtserie)
+
+    
+    featd,nfeats=perform_model(featd, feats=[], wgt=None,ycol=None,folder=None, name=None,
+                  lookback=300,
+                  minlookback=100,
+                  fitfreq=10,
+                  gap=1,
+                  model_gen=model_gen_kmeans,
+                  with_fit=True)
+    
     pdft=pd.DataFrame(np.transpose(pX))
     pdft.columns=pdft.columns.map(dscode_map)
     pdft.index = pdts
+    
+    
+    
+    # TODO:bucketplot of volume traded / market cap vs P&L yep
+    # perform a rolling kmeans
+    perform_bucketplot()
     return pdft
-
-def main():
-    pX= get_pivoted_data()
-
-    #silhouette_method(pX, k_min=6, k_max=50)
-
-    n_clusters = 30
-    # For clustering, we can use the correlation values or the distance
-    # In this example, we cluster on the correlation matrix rows.
-    kmeans = KMeans(n_clusters=n_clusters, random_state=42,n_init='auto')
-    # Fit on the correlation matrix (using the rows as features)
-    clusters = kmeans.fit_predict(pX.T)
-
-    # Create a DataFrame with cluster labels and variable names
-    cluster_df = pd.DataFrame({'dscode_str':  pX.columns.tolist(), 'cluster': clusters})
-    cluster_df = cluster_df.sort_values(by='cluster')
-    to_csv(cluster_df,'clusters')
-
-### faudrait liquidite, start-trading,end-trading dans la data !
 
 # ipython -i  ./res/kmeans_manual.py
 if __name__=='__main__':
     main()
-    
-    # TODO:bucketplot of volume traded / market cap vs P&L yep
-    # perform a rolling kmeans
-    # 

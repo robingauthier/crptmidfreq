@@ -43,9 +43,14 @@ class ModelStepper(BaseStepper):
         self.save_utility()
 
     @classmethod
-    def load(cls, folder, name):
+    def load(cls, folder, name,lookback=300,minlookback=100,
+                 fitfreq=10,gap=1,model_gen=None,with_fit=True):
         """Load instance from saved state or create new if not exists"""
-        return ModelStepper.load_utility(cls,folder=folder,name=name)
+        return ModelStepper.load_utility(cls,folder=folder,name=name,
+                                         lookback=lookback,minlookback=minlookback,
+                 fitfreq=fitfreq,gap=gap,
+                 model_gen=model_gen,with_fit=with_fit
+                                         )
 
 
     def update(self, dts, xseries, yserie=None,wgtserie=None):

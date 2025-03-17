@@ -698,7 +698,7 @@ def perform_pivot(featd, feats=[],  folder=None, name=None):
     assert np.all(np.diff(featd['dtsi']) >= 0)
     col = feats[0]
     cls_piv = PivotStepper \
-        .load(folder=f"{folder}", name=f"{name}_{col}")
+        .load(folder=f"{folder}", name=f"{name}_pivot_{col}")
     udts,res = cls_piv.update(featd['dtsi'], featd['dscode'], featd[col])
 
     return udts,res

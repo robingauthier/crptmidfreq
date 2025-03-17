@@ -5,10 +5,6 @@ from stepper.incr_expanding_quantile_fast import *
 # pytest ./stepper/tests/test_incr_expanding_quantile_fast.py --pdb --maxfail=1
 
 
-###############################################################################
-# 2) Test code and utility functions (similar to your EWM tests).
-###############################################################################
-
 def generate_data(n_samples, n_codes):
     """Generate test data"""
     np.random.seed(42)

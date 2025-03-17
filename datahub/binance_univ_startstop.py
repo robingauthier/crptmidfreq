@@ -8,6 +8,7 @@ class TokenQueryTracker:
             nperiod=''
         else:
             nperiod=period
+        self.period=period
         self.log_file = os.path.join(*[get_data_folder(),f"token_query{nperiod}_log.csv"])
         self.query_log = self._load_query_log()
 
@@ -31,7 +32,6 @@ class TokenQueryTracker:
     def infer_token_dates(self, token):
         """Infer start_date and end_date for a given token from query logs."""
         token_data = self.query_log[self.query_log["token"] == token]
-
         if token_data.empty:
             return None, None  # No data available
 
@@ -42,15 +42,16 @@ class TokenQueryTracker:
 
         successful_queries_min=successful_queries.min()
         successful_queries_max=successful_queries.max()
-        query_dates=token_data['query_date'].tolist()
-
-        if successful_queries_min-pd.to_timedelta('1d') in query_dates:
-            actual_min = successful_queries_min
+        
+        dfloc= token_data[token_data['query_date']<successful_queries_min]
+        if dfloc.shape[0]>0:
+            actual_min = dfloc['query_date'].max()
         else:
             actual_min=None
 
-        if successful_queries_max+pd.to_timedelta('1d') in query_dates:
-            actual_max = successful_queries_max
+        dfloc= token_data[token_data['query_date']>successful_queries_max]
+        if dfloc.shape[0]>0:
+            actual_max = dfloc['query_date'].min()
         else:
             actual_max=None
         
@@ -58,8 +59,9 @@ class TokenQueryTracker:
 
     def should_query(self, token, query_date):
         """Determine if we should query a token based on inferred start and end dates."""
-        start_date, end_date = self.infer_token_dates(token)
-
+        query_date=pd.to_datetime(query_date)
+        start_date,end_date=self.infer_token_dates(token)
+        
         if start_date is None and end_date is None:
             return True  # No prior data, assume we can query
 
@@ -94,4 +96,7 @@ def example_tokenQueryTracker():
 
 # python datahub/binance_univ_startstop.py --date_str 2025-03-11
 if __name__ == "__main__":
-    example_tokenQueryTracker()
+    #example_tokenQueryTracker()
+    tracker = TokenQueryTracker(period='monthly')
+    r=tracker.should_query('1000BTTCUSDT', '2019-01-01')
+    

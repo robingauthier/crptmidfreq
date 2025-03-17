@@ -121,7 +121,3 @@ def main():
 # ipython -i  ./res/mr_cluster_v1/kmeans_manual.py
 if __name__=='__main__':
     pX= get_pivoted_data()
-    
-    # TODO:bucketplot of volume traded / market cap vs P&L yep
-    # perform a rolling kmeans
-    # 

@@ -49,6 +49,7 @@ def main(args):
     dfuniv = download_univ()
     dfuniv = dfuniv.loc[lambda x:x['kind']=='future_um']
     dfuniv = dfuniv.loc[lambda x:x['base']=='USDT']
+    #dfuniv = dfuniv[dfuniv['sym_original'].isin(['BTCUSDT','ETHUSDT'])]
     
     if args.period=='daily':
         dts = pd.date_range(args.sdate_str,args.edate_str).tolist()
@@ -124,7 +125,11 @@ def main(args):
                 continue
             if df.shape[0]==0:
                 continue
+            
             # Insert into DuckDB
+            if "open_time" not in df.columns:
+                print(df.head())
+                import pdb;pdb.set_trace()
             df["open_time"] = pd.to_datetime(df["open_time"], unit="ms", errors="coerce")
             df["close_time"] = pd.to_datetime(df["close_time"], unit="ms", errors="coerce")
             df['dscode'] = ticker_db
@@ -147,7 +152,7 @@ def main(args):
     con.close()
     
 # python datahub/binance_hist_wrap.py --sdate_str 2023-01-21 
-# ipython -i datahub/binance_hist_wrap.py --sdate_str 2022-01-01 --edate_str 2025-01-01 --period monthly
+# python  datahub/binance_hist_wrap.py --sdate_str 2020-01-01 --edate_str 2025-01-01 --period monthly
 if __name__=='__main__':
     parser = argparse.ArgumentParser(description='Download Binance historical data.')
     parser.add_argument('--sdate_str', type=str, default='2025-01-01',

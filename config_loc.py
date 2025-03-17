@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 pd.set_option('display.max_rows', 500)
 
@@ -13,4 +14,6 @@ def get_feature_folder():
     return '/Users/sachadrevet/data_tmp/features/'
 
 def get_analysis_folder():
-    return '/Users/sachadrevet/data_tmp/analysis/'
+    tmp='/Users/sachadrevet/data_tmp/analysis/'
+    os.makedirs(tmp,exist_ok=True)
+    return tmp

@@ -123,7 +123,13 @@ def download_data(date_str='2024-12-17',
     if kind == 'bookTicker':
         df['transaction_time'] = pd.to_datetime(df['transaction_time'], unit='ms')
         df['event_time'] = pd.to_datetime(df['event_time'], unit='ms')
-
+    if kind=='klines':
+        default_cols=['open_time', 'open', 'high', 'low', 'close',
+                      'volume', 'close_time', 'quote_volume', 'count', 
+                      'taker_buy_volume', 'taker_buy_quote_volume', 'ignore']
+        # Before 2022 the data does not have any header/column names
+        if 'open_time' not in df.columns:
+            df.columns=default_cols
     # Log the file path before saving
     logging.basicConfig(level=logging.INFO)
     logging.info(f'Saving file to {output_file}')

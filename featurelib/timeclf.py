@@ -2,9 +2,10 @@
 import numpy as np
 from sklearn.base import BaseEstimator, RegressorMixin
 from pandas.tseries.offsets import BDay
-from utils.common import lvals,filter_date_df
 from joblib import delayed,Parallel
 from functools import partial
+
+from crptmidfreq.utils.common import lvals,filter_date_df
 
 # This is the rolling train / predict class
 

@@ -6,13 +6,13 @@ import os
 import duckdb
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
-from utils.common import to_csv
+from crptmidfreq.utils.common import to_csv
 
 #import sys
 #sys.path.append(os.path.abspath(os.getcwd()+'/..'))
 
-from config_loc import get_data_db_folder
-from config_loc import get_analysis_folder
+from crptmidfreq.config_loc import get_data_db_folder
+from crptmidfreq.config_loc import get_analysis_folder
 from featurelib.lib_v1 import *
 
 g_folder = 'res_kmeans_v1'

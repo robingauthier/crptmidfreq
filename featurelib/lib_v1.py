@@ -1,7 +1,7 @@
 import numpy as np
 
-from stepper import *
-from utils.common import clean_folder
+from crptmidfreq.stepper import *
+from crptmidfreq.utils.common import clean_folder
 
 
 g_steppers={} # list of sessions steppers 
@@ -51,6 +51,22 @@ def perform_ewm(featd, feats=[], windows=[1], folder=None, name=None):
             add_to_stepper_register(cls_ewm)
     return featd, nfeats
 
+def perform_divide(featd,numcols=[],denumcols=[],folder=None,name=None):
+    for col in numcols:
+        assert col in featd.keys()
+    for col in denumcols:
+        assert col in featd.keys()
+    nfeats=[]
+    for numcol in numcols:
+        for denumcol in denumcols:
+            featd['{numcol}div{denumcol}'] = np.divide(
+                    featd[numcol], 
+                    featd[denumcol], 
+                    out=np.zeros_like(featd[denumcol]),
+                    where=~np.isclose(featd[denumcol], 
+                                      np.zeros_like(featd[denumcol])))
+            nfeats+=['{numcol}div{denumcol}']
+    return featd, nfeats
 
 def perform_ewm_unit(featd, feats=[], ufeats=[], windows=[1], folder=None, name=None):
     """

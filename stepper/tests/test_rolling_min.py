@@ -1,7 +1,7 @@
 import pandas as pd
 
-from stepper.rolling_min import *
-from stepper.tests.test_incr_ewm import generate_data
+from crptmidfreq.stepper.rolling_min import *
+from crptmidfreq.stepper.tests.test_incr_ewm import generate_data
 
 
 def test_against_pandas():

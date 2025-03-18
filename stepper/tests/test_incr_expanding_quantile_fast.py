@@ -1,6 +1,6 @@
 import pandas as pd
 
-from stepper.incr_expanding_quantile_fast import *
+from crptmidfreq.stepper.incr_expanding_quantile_fast import *
 
 # pytest ./stepper/tests/test_incr_expanding_quantile_fast.py --pdb --maxfail=1
 

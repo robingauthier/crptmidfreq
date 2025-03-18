@@ -1,5 +1,5 @@
 import pandas as pd
-from stepper.rolling_rank import *
+from crptmidfreq.stepper.rolling_rank import *
 
 # pytest ./stepper/tests/test_rolling_rank.py --pdb --maxfail=1
 

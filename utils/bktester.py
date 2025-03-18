@@ -5,7 +5,7 @@ import pandas as pd
 from math import sqrt
 import matplotlib
 import matplotlib.pyplot as plt
-from stepper.incr_diff import DiffStepper
+from crptmidfreq.stepper.incr_diff import DiffStepper
 from .common import clean_folder
 # python ./utils/bktester.py
 

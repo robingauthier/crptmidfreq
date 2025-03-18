@@ -3,7 +3,7 @@ from numba import njit
 from numba.typed import Dict
 from numba import types
 
-from .base_stepper import BaseStepper
+from crptmidfreq.stepper.base_stepper import BaseStepper
 
 
 

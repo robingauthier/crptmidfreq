@@ -1,5 +1,5 @@
 import pandas as pd
-from stepper.incr_ewm_detrend import *
+from crptmidfreq.stepper.incr_ewm_detrend import *
 
 
 def generate_data(n_samples, n_codes):

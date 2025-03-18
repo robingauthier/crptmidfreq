@@ -40,3 +40,7 @@ perform a rolling kmeans
 
 I have some path features with history:
 pdf = path_simple(df['zs'], levels=[0.8, 1.5], buffer_value_mult=0.2, buffer_value_additive=0.1, hist=3)
+
+
+Things specific to crypto to add:
+- time since token is listed -- there are weirds things going on a start of token listing

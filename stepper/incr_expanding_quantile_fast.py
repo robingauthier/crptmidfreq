@@ -4,7 +4,7 @@ import pandas as pd
 import os
 import pickle
 from tdigest import TDigest
-from .base_stepper import BaseStepper
+from crptmidfreq.stepper.base_stepper import BaseStepper
 from .tdigest.exp_qtl2 import expanding_quantile
 
 ## A FASTER VERSION RELYING ON CYTHON CODE ##

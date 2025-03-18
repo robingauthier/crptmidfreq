@@ -1,6 +1,6 @@
 import pandas as pd
 
-from stepper.incr_cs_std import *
+from crptmidfreq.stepper.incr_cs_std import *
 
 
 # pytest ./stepper/tests/test_incr_cs_std.py --pdb --maxfail=1

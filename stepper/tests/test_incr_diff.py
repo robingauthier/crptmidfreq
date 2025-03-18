@@ -1,5 +1,5 @@
 import pandas as pd
-from stepper.incr_diff import *
+from crptmidfreq.stepper.incr_diff import *
 
 # pytest ./feature/tests/test_incr_diff.py --pdb --maxfail=1
 

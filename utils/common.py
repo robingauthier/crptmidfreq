@@ -1,7 +1,7 @@
 import logging
 import pandas as pd
 import numpy as np
-from config_loc import get_analysis_folder
+from crptmidfreq.config_loc import get_analysis_folder
 
 # Configure the logging
 logging.basicConfig(
@@ -35,14 +35,14 @@ def clean_folder(folder='feats_simple_v1'):
     """cleans the feature folder"""
     import shutil
     import os
-    from config_loc import get_feature_folder
+    from crptmidfreq.config_loc import get_feature_folder
     path = os.path.join(get_feature_folder(), folder)
     if os.path.exists(path):
         shutil.rmtree(path)
 
 
 def to_csv(df, name):
-    from config_loc import get_analysis_folder
+    from crptmidfreq.config_loc import get_analysis_folder
     for iter in range(20):
         try:
             niter = '' if iter == 0 else str(iter)
@@ -53,6 +53,9 @@ def to_csv(df, name):
         except Exception as e:
             pass
 
+def rename_key(featd,old,new):
+    featd[new] = featd.pop(old)
+    return featd
 
 def print_ram_usage():
     import psutil

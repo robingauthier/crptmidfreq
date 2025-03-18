@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from utils.common import clean_folder
+from crptmidfreq.utils.common import clean_folder
 from ..incr_pivot import PivotStepper
 
 # pytest ./stepper/tests/test_incr_pivot.py --pdb --maxfail=1

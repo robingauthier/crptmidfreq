@@ -4,7 +4,7 @@ from numba.typed import Dict
 from numba import types
 import os
 import pickle
-from config_loc import get_data_folder
+from crptmidfreq.config_loc import get_data_folder
 from collections import deque
 from enum import Enum
 

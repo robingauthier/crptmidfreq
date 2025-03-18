@@ -4,12 +4,13 @@ import random
 import time
 import os
 import duckdb
-from datahub.binance_univ import download_univ
-from datahub.binance_hist import download_data
-from datahub.binance_univ_startstop import  TokenQueryTracker
-from config_loc import get_data_folder
-from config_loc import get_data_db_folder
 from dateutil.relativedelta import relativedelta
+from crptmidfreq.datahub.binance_univ import download_univ
+from crptmidfreq.datahub.binance_hist import download_data
+from crptmidfreq.datahub.binance_univ_startstop import  TokenQueryTracker
+from crptmidfreq.config_loc import get_data_folder
+from crptmidfreq.config_loc import get_data_db_folder
+
 
 def stats_on_univ(dfuniv):
     # Stats on dfuniv

@@ -2,8 +2,8 @@ import shutil
 
 import pandas as pd
 
-from config_loc import get_data_folder
-from stepper.tests.test_incr_ewm import generate_data
+from crptmidfreq.config_loc import get_data_folder
+from crptmidfreq.stepper.tests.test_incr_ewm import generate_data
 from features.lib_v1 import *
 
 

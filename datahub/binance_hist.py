@@ -7,7 +7,7 @@ import zipfile
 import pandas as pd
 import requests
 
-from config_loc import get_data_folder
+from crptmidfreq.config_loc import get_data_folder
 
 
 def download_data(date_str='2024-12-17',

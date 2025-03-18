@@ -6,15 +6,18 @@ import os
 import duckdb
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
-from utils.common import to_csv
+from crptmidfreq.utils.common import to_csv
+from crptmidfreq.utils.log import get_logger
+
 
 #import sys
 #sys.path.append(os.path.abspath(os.getcwd()+'/..'))
 
-from config_loc import get_data_db_folder
-from featurelib.lib_v1 import *
+from crptmidfreq.config_loc import get_data_db_folder
+from crptmidfreq.featurelib.lib_v1 import *
 
 g_folder = 'res_kmeans_v1'
+logger = get_logger(__name__)  # Use module name for clarity
 
 def silhouette_method(X, k_min=2, k_max=10):
     """
@@ -35,6 +38,7 @@ def silhouette_method(X, k_min=2, k_max=10):
     rdf.to_csv('kmean_silhouette.csv')
     
 def get_pivoted_data(tokens=['BTCUSDT','ETHUSDT'],sdate_str='2019-01-01'):
+    logger.info('get_pivoted_data for tokens')
     clean_folder(g_folder)
     print('Reading data from DuckDB')
     con = duckdb.connect(os.path.join(get_data_db_folder(),"my_database.db"),read_only=True)
@@ -97,6 +101,7 @@ def get_pivoted_data(tokens=['BTCUSDT','ETHUSDT'],sdate_str='2019-01-01'):
     pdft.index = pdts
     
     pdft.index=pd.to_datetime(pdft.index*1e3)
+    logger.info('get_pivoted_data is ready')
     return pdft
 
 def main():
@@ -121,3 +126,4 @@ def main():
 # ipython -i  ./res/mr_cluster_v1/kmeans_manual.py
 if __name__=='__main__':
     pX= get_pivoted_data()
+    print(pX.head())

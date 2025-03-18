@@ -3,7 +3,7 @@ from numba import njit
 from numba.typed import Dict
 from numba import types
 import os
-from .base_stepper import BaseStepper
+from crptmidfreq.stepper.base_stepper import BaseStepper
 
 @njit
 def update_diff_values(codes, values, timestamps, diff_values, last_timestamps):

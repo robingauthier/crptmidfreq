@@ -5,8 +5,8 @@ import numpy as np
 from numba import njit
 from numba import types
 from numba.typed import Dict
-from .base_stepper import BaseStepper
-from config_loc import get_analysis_folder
+from crptmidfreq.stepper.base_stepper import BaseStepper
+from crptmidfreq.config_loc import get_analysis_folder
 
 
 @njit

@@ -4,7 +4,7 @@ import pandas as pd
 import os
 import pickle
 from tdigest import TDigest
-from .base_stepper import BaseStepper
+from crptmidfreq.stepper.base_stepper import BaseStepper
 
 ###############################################################################
 # 1) A "QuantileStepper" class that updates a T-Digest for each code (symbol).

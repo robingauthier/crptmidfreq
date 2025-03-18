@@ -1,5 +1,5 @@
 
-from utils.common import clean_folder
+from crptmidfreq.utils.common import clean_folder
 import numpy as np
 import pandas as pd
 import inspect

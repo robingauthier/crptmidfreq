@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from stepper.incr_merge_asof import MergeAsofStepper
+from crptmidfreq.stepper.incr_merge_asof import MergeAsofStepper
 
 # pytest ./stepper/tests/test_incr_merge_asof.py --pdb --maxfail=1
 

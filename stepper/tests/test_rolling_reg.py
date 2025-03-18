@@ -1,6 +1,6 @@
 import numpy as np
 
-from utils.common import clean_folder
+from crptmidfreq.utils.common import clean_folder
 from ..rolling_reg import RollingRidgeStepper
 
 

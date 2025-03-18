@@ -1,7 +1,7 @@
 import numpy as np
 from numba import njit
 
-from stepper.rolling_base import RollingStepper
+from crptmidfreq.stepper.rolling_base import RollingStepper
 
 
 @njit

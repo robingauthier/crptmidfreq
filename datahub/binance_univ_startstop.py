@@ -1,6 +1,6 @@
 import pandas as pd
 import os
-from config_loc import get_data_folder
+from crptmidfreq.config_loc import get_data_folder
 
 class TokenQueryTracker:
     def __init__(self,period='daily'):

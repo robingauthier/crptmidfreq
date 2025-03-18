@@ -1,6 +1,6 @@
 import shutil
 import os
-from config_loc import get_data_folder
+from crptmidfreq.config_loc import get_data_folder
 
 
 # python datahub/clean.py --date_str 2025-03-11

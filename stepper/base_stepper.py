@@ -6,8 +6,8 @@ from numba import njit
 from numba import types
 from numba.typed import Dict
 
-from config_loc import get_feature_folder
-from utils.common import validate_input
+from crptmidfreq.config_loc import get_feature_folder
+from crptmidfreq.utils.common import validate_input
 class BaseStepper:
     
     

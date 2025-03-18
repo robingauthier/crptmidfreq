@@ -2,8 +2,8 @@ import numpy as np
 import pandas as pd
 import os
 import shutil
-from stepper.incr_expanding_bucketxy import BucketXYStepper
-from utils.common import clean_folder
+from crptmidfreq.stepper.incr_expanding_bucketxy import BucketXYStepper
+from crptmidfreq.utils.common import clean_folder
 
 
 # pytest ./stepper/tests/test_incr_expanding_bucketxy.py --pdb --maxfail=1

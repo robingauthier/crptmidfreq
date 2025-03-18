@@ -6,12 +6,13 @@ import os
 import duckdb
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
-from utils.common import to_csv
+from crptmidfreq.utils.common import to_csv
+from crptmidfreq.utils.common import rename_key
 
 #import sys
 #sys.path.append(os.path.abspath(os.getcwd()+'/..'))
 
-from config_loc import get_data_db_folder
+from crptmidfreq.config_loc import get_data_db_folder
 from featurelib.lib_v1 import *
 
 g_folder = 'res_kmeans_v1'
@@ -54,8 +55,8 @@ def main(start_date='2025-03-01',end_date='2026-01-01'):
         
     ## adding the weight ewm(volume)
     window_1month = 60*24*30
-    featd,nfeats=perform_ewm(featd=featd,feats=['volume'],windows=[window_1month],folder=g_folder,name='None')
-    featd['wgt'] = featd[nfeats[0]]
+    featd,nfeats_ev=perform_ewm(featd=featd,feats=['volume'],windows=[window_1month],folder=g_folder,name='None')
+    featd['wgt'] = featd[nfeats_ev[0]]
 
     # Removing the market 
     featd,nfeats=perform_cs_demean(featd=featd,feats=['volume'],by=None,wgt='wgt',folder=g_folder,name='None')
@@ -67,13 +68,11 @@ def main(start_date='2025-03-01',end_date='2026-01-01'):
     ## define universe
     featd['univ']=1*(featd[nfeats[0]]<=50)
 
-
     ## adding the excess volume
-    featd['excess_volume'] = np.divide(
-                    featd[nfeats[0]],
-                    featd['volume'],
-                    out=np.zeros_like(featd['volume']),
-                    where=~np.isclose(featd['volume'], np.zeros_like(featd['volume'])))
+    window_1month = 60*24*30
+    featd,nfeats_ev=perform_ewm(featd=featd,feats=['volume'],windows=[window_1month],folder=g_folder,name='None')
+    featd,nfeats_d = perform_divide(featd,numcols=[],denumcols=[],folder=g_folder,name='None')
+    featd['excess_volume'] = featd[nfeats_d[0]]
     perform_clip(featd=featd)
     
     ## Bumping return by the excess volume

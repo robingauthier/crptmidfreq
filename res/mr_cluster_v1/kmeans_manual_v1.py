@@ -34,8 +34,9 @@ def main(start_date='2025-03-01',end_date='2026-01-01'):
     volume_excess_clip_low=0.1
     kmeans_lookback=24*60*30
     kmeans_fitfreq=24*60*10
-    universe_count = 50
-    clip_tret_xmkt = 0.1
+    universe_count = 100
+    ipo_burn = 60*24
+    
     r=StepperRegistry()
 
     logger.info('Reading data from DuckDB')
@@ -59,11 +60,13 @@ def main(start_date='2025-03-01',end_date='2026-01-01'):
 
     # working on numpy now
     featd={col: df[col].values for col in df.columns}
-
     
     # Casing to float64 -- otherwise we have issues later
     featd,_=perform_cast_float64(featd, feats=['close','volume','taker_buy_volume'], folder=g_folder,r=r)
 
+    # turnover = volume*close  should be in USDT
+    featd['turnover']=featd['volume']*featd['close']
+    
     ## adding distance since IPO  :: cnt_exists
     featd,nfeats=perform_cnt_exists(featd=featd,feats=[],folder=g_folder,name='None')
 
@@ -81,7 +84,7 @@ def main(start_date='2025-03-01',end_date='2026-01-01'):
                                 folder=g_folder,name='None')
         
     ## adding the weight ewm(volume)
-    featd,nfeats_ev=perform_ewm(featd=featd,feats=['volume'],windows=[window_volume_wgt],folder=g_folder,name='None')
+    featd,nfeats_ev=perform_ewm(featd=featd,feats=['turnover'],windows=[window_volume_wgt],folder=g_folder,name='None')
     featd=rename_key(featd,nfeats_ev[0],'wgt')
 
     # Removing the market in tret => tret_xmkt
@@ -92,15 +95,15 @@ def main(start_date='2025-03-01',end_date='2026-01-01'):
     featd['tret_xmkt'] = featd[nfeats[0]]
     
     ## rank cross sectionally by volume to build a robust universe
-    featd,nfeats_ev=perform_ewm(featd=featd,feats=['volume'],windows=[window_volume_univ],folder=g_folder,name='None')
-    featd=rename_key(featd,nfeats_ev[0],'volume_ewm')
-    featd,nfeats=perform_cs_rank_int(featd=featd,feats=['volume_ewm'],folder=g_folder,name='None')
+    featd,nfeats_ev=perform_ewm(featd=featd,feats=['turnover'],windows=[window_volume_univ],folder=g_folder,name='None')
+    featd=rename_key(featd,nfeats_ev[0],'turnover_ewm')
+    featd,nfeats=perform_cs_rank_int_decreasing(featd=featd,feats=['turnover_ewm'],folder=g_folder,name='None')
 
     ## define universe
     featd['univ']=1*(featd[nfeats[0]]<=universe_count)
 
-    ## adding the excess volume which is 1+x
-    featd,nfeats_ev=perform_ewm(featd=featd,feats=['volume'],
+    ## adding the excess turnover which is 1+x
+    featd,nfeats_ev=perform_ewm(featd=featd,feats=['turnover'],
                                 windows=[window_volume_excess_fast,window_volume_excess_slow],
                                 folder=g_folder,name='None')
     featd,nfeats_d = perform_divide(featd,
@@ -111,17 +114,17 @@ def main(start_date='2025-03-01',end_date='2026-01-01'):
                                   low_clip=volume_excess_clip_low,
                                   high_clip=volume_excess_clip_high,
                                   folder=g_folder,name='None')
-    featd=rename_key(featd,nfeats_d2[0],'volume_excess')
+    featd=rename_key(featd,nfeats_d2[0],'turnover_excess')
     
-    ## taker_buy_volume/volume
+    ## taker_buy_turnover/turnover
     featd,nfeats=perform_divide(featd,['taker_buy_volume'],['volume'],folder=g_folder,name='None')
     for col in nfeats:
         featd[col]=featd[col]-0.5 # needs to be centered on 0.0
     featd,nfeats_tv=perform_ewm(featd=featd,feats=nfeats,windows=windows_sret_ewm,folder=g_folder,name='None')
     
-    ## Bumping return by the excess volume
-    featd['tret_xvolume']=featd['volume_excess']*featd['tret']
-    featd['tret_xmkt_xvolume']=featd['volume_excess']*featd['tret_xmkt']
+    ## Bumping return by the excess turnover
+    featd['tret_xturnover']=featd['turnover_excess']*featd['tret']
+    featd['tret_xmkt_xturnover']=featd['turnover_excess']*featd['tret_xmkt']
 
     ## pivotting for correlation matrix / clustering
     pdts,pfeatd  = perform_pivot(featd=featd,feats=['tret_xmkt'],folder=g_folder,name='None')
@@ -180,11 +183,11 @@ def main(start_date='2025-03-01',end_date='2026-01-01'):
     for i in range(len(windows_sret_ewm)):
         ewm_col=nfeats_ewm_sr[i]
         win = windows_sret_ewm[i]
-        alpha = ewm_alpha(win)
+        alpha = 1-ewm_alpha(win)
         
-        # ewm(X) has std of std(x_i)* (1-alpha)/(1+alpha)
-        featd['todel']=featd['mual_std']*(1-alpha)/(1+alpha)
-        featd,nfeats = perform_divide(featd,[ewm_col],[f'todel'],folder=g_folder,name='None')
+        # ewm(X) has Var = Var(x_i)* (1-alpha)/(1+alpha)
+        featd['todel_num']=featd[ewm_col]*np.sqrt((1+alpha)/(1-alpha))
+        featd,nfeats = perform_divide(featd,['todel_num'],['mual_std'],folder=g_folder,name='None')
         featd,nfeats = perform_clip(featd=featd,
                                    feats=[nfeats[0]],
                                    low_clip=-3.0,high_clip=3.0,
@@ -212,12 +215,14 @@ def main(start_date='2025-03-01',end_date='2026-01-01'):
     featd['mual_high_sharpe']=featd['mual']*(featd[nfeats_sharpe[0]]>featd[nfeats_sharpe_qtl[0]])
     
     # Creating the signal
-    featd=rename_key(featd,'mual','sig_mual')
-    featd=rename_key(featd,'mual_high_sharpe','sig_mual_high_sharpe')
+    zs_cols=[x for x in featd.keys() if x.startswith('zs_')]
+    featd,_ = perform_to_sig(featd,feats=zs_cols,folder=g_folder,r=r)
+    featd = rename_key(featd,'mual','sig_mual')
+    featd = rename_key(featd,'mual_high_sharpe','sig_mual_high_sharpe')
     
     # removing post IPO   20days
     for col in get_sig_cols(featd):
-        featd[col] = featd[col]*(featd['cnt_exists']>60*24*20)
+        featd[col] = featd[col]*(featd['cnt_exists']>ipo_burn)
     
     ## adding the forward return
     featd,nfeats = perform_lag_forward(featd=featd,feats=['tret_xmkt'],windows=[-1])
@@ -231,6 +236,7 @@ def filter_dict_to_dscode(featd,dscode_str='BTCUSDT'):
     filter_numpy = (featd['dscode_str']==dscode_str)
     featd2 = {k:featd[k][filter_numpy] for k in featd.keys()}
     return featd2
+
 def filter_dict_to_dts(featd,dtsi=1):
     """filter the dictionary to a specific dscode"""
     filter_numpy = (featd['dtsi']==dtsi)
@@ -241,7 +247,7 @@ def dump_extract(featd):
     """Dumping the data for manual checks"""
     logger.info('Dumping the data for manual checks')
     
-    icols=['dtsi','dscode_str','close','sig_mual','univ','kmeans_cat','volume_excess']
+    icols=['dtsi','dscode_str','close','sig_mual','univ','kmeans_cat','turnover_excess']
     df=pd.DataFrame({k:v for k,v in featd.items() if k in icols})
     df['dtsi']=pd.to_datetime(df['dtsi']*1e3)
     
@@ -271,7 +277,7 @@ def dump_extract(featd):
 
 
 def bktest(featd):
-    # TODO:bucketplot of volume traded / market cap vs P&L yep
+    # TODO:bucketplot of turnover traded / market cap vs P&L yep
     # perform a rolling kmeans
     stats=perform_bktest(featd,folder=g_folder,name="None")
     #import pdb;pdb.set_trace()

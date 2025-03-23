@@ -34,7 +34,7 @@ def get_ann_factor(dt):
     the result is in years
     """
     median_diff_dt = np.median(np.diff(dt.view(np.int64)))
-    dt_diff_years=median_diff_dt/1e9/3600/24/365
+    dt_diff_years=median_diff_dt/1e6/3600/24/365
     return 1/dt_diff_years
 
 def dd_series(pnl):
@@ -70,10 +70,10 @@ def get_daily_stats(dt,tot_pnl, tot_trd, tot_gmv,rd=None,suf=''):
     epsilon = 1e-6
     max_dt=np.max(dt)
     rd[f'sr{suf}'] = np.sqrt(true_ann_factor) * ret / (sigma + epsilon)
-    rd[f'ann_pnl{suf}'] = ret * true_ann_factor
-    rd[f'mdd{suf}'] = np.max(dd_series(tot_pnl)) / (rd['ann_pnl'] + epsilon)
+    rd[f'ann_pnl{suf}'] = ret * true_ann_factor/1e3
+    rd[f'mdd{suf}'] = np.max(dd_series(tot_pnl)) / tot_gmv.mean() if tot_gmv.mean() > 0 else np.nan
     rd[f'rpt{suf}'] = 1e4 * tot_pnl.sum() / tot_trd.sum() if tot_trd.sum() > 0 else np.nan
-    rd[f'rog{suf}'] = 1e4 * tot_pnl.sum() / tot_gmv.sum() if tot_gmv.sum() > 0 else np.nan
+    rd[f'rog{suf}'] = 1e2 * tot_pnl.sum() / tot_gmv.mean() if tot_gmv.mean() > 0 else np.nan
     rd[f'factor{suf}']=true_ann_factor
     # ann_pnl /= 1e3  # convert to thousands
     # sharpe in the last N years

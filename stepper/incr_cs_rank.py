@@ -8,91 +8,97 @@ from crptmidfreq.stepper.base_stepper import BaseStepper
 
 
 @njit
-def update_cs_rank_values(codes, values, bys,wgts,timestamps,
-                         last_timestamps,last_vals,last_ranks,last_cnts,percent):
-    """
-    """
+def update_cs_rank_values(codes, values, bys, wgts, timestamps,
+                          last_timestamps, last_vals, last_ranks, last_cnts, percent):
     result = np.empty(len(codes), dtype=np.float64)
-
+    
     g_last_ts = 0
-    for k,v in last_timestamps.items():
-        g_last_ts = max(v,g_last_ts)
-        
-    # j is a second iterator
-    j=0 
+    # Set block_start to mark the beginning of the current block of rows.
+    block_start = 0
+    
+    # First, get the global last timestamp from last_timestamps.
+    for k, v in last_timestamps.items():
+        if v > g_last_ts:
+            g_last_ts = v
+
     for i in range(len(codes)):
         code = codes[i]
         value = values[i]
         by = bys[i]
         wgt = wgts[i]
         ts = timestamps[i]
-        
+
         if by not in last_vals:
-            last_vals[by]=np.empty(0,dtype=np.float64)
-            last_ranks[by]=np.empty(0,dtype=np.int64)
-            last_cnts[by]=0
+            last_vals[by] = np.empty(0, dtype=np.float64)
+            last_ranks[by] = np.empty(0, dtype=np.int64)
+            last_cnts[by] = 0
 
-        # Check timestamp is increasing for this code
+        # Check timestamp is strictly increasing for each code.
         last_ts = last_timestamps.get(code, np.int64(0))
-        if ts < last_ts:  # Important to have strictly increasing 
-            print('code')
-            print(code)
-            print('ts')
-            print(ts)
-            print('last_ts')
-            print(last_ts)
+        if ts < last_ts:
             raise ValueError("DateTime must be strictly increasing per code")
-
-        # Check timestamp is increasing accross dscode
-        if ts < g_last_ts:  # Important to have strictly increasing 
-            print('code')
-            print(code)
-            print('ts')
-            print(ts)
-            print('last_ts')
-            print(last_ts)
-            raise ValueError("DateTime must be strictly increasing accross instruments")
-
-        if ts!=g_last_ts:
-            for k,v in last_vals.items():
-                last_ranks[k] = np.argsort(last_vals[k]).argsort()
-            while j<i:
-                # Store result for this row
-                by2 = bys[j] 
-                if last_cnts[by2]<=1:
-                    result[j]=0.0
-                else:
-                    if percent:
-                        result[j] =(last_ranks[by2][0] - (last_cnts[by2]-1)/2)/(last_cnts[by2]-1)*2
-                    else:
-                        result[j] = last_ranks[by2][0]
-                #result[j] =last_ranks[by2][0]
-                if len(last_ranks[by2])>0:
-                    last_ranks[by2] = last_ranks[by2][1:]
-                j+=1
-            # reset everything
-            for by,v in last_vals.items():
-                last_vals[by]=np.empty(0,dtype=np.float64)
-                last_cnts[by]=0
-
-        # Store updates
-        last_timestamps[code] = ts
-        g_last_ts= ts
-        last_vals[by]=np.concatenate((last_vals[by], np.array([value * wgt],dtype=np.float64)))
-        last_cnts[by]+=1
+        if ts < g_last_ts:
+            raise ValueError("DateTime must be strictly increasing across instruments")
         
-    # the last value is not assigned 
-    by2 = bys[j] 
-    return result
+        # If we detect a new timestamp compared to the global one,
+        # process the current block.
+        if ts != g_last_ts:
+            # Update last_ranks for each 'by'
+            for k, v in last_vals.items():
+                last_ranks[k] = np.argsort(last_vals[k]).argsort()
+            for j in range(block_start, i):
+                by2 = bys[j]
+                if last_cnts[by2] <= 1:
+                    result[j] = 0.0
+                else:
+                    if percent==0:
+                        result[j] = (last_ranks[by2][0] - (last_cnts[by2]-1)/2) / (last_cnts[by2]-1)*2
+                    elif percent==1:
+                        result[j] = last_ranks[by2][0]
+                    else:
+                        result[j] = last_cnts[by2]-last_ranks[by2][0]
+                # Optionally, drop the first element of last_ranks[by2]
+                if len(last_ranks[by2]) > 0:
+                    last_ranks[by2] = last_ranks[by2][1:]
+            # Reset for new block.
+            for k, v in last_vals.items():
+                last_vals[k] = np.empty(0, dtype=np.float64)
+                last_cnts[k] = 0
+            block_start = i  # new block starts at current i
 
+        # Store updates for the current row.
+        last_timestamps[code] = ts
+        g_last_ts = ts
+        # Append new value.
+        last_vals[by] = np.concatenate((last_vals[by], np.array([value * wgt], dtype=np.float64)))
+        last_cnts[by] += 1
+
+    # Process any remaining rows at the end.
+    if block_start < len(codes):
+        for k, v in last_vals.items():
+            last_ranks[k] = np.argsort(last_vals[k]).argsort()
+        for j in range(block_start, len(codes)):
+            by2 = bys[j]
+            if last_cnts[by2] <= 1:
+                result[j] = 0.0
+            else:
+                if percent==0:
+                    result[j] = (last_ranks[by2][0] - (last_cnts[by2]-1)/2) / (last_cnts[by2]-1)*2
+                elif percent==1:
+                    result[j] = last_ranks[by2][0]
+                else:
+                    result[j] = last_cnts[by2]-last_ranks[by2][0]
+            if len(last_ranks[by2]) > 0:
+                last_ranks[by2] = last_ranks[by2][1:]
+    return result
 
 
 class csRankStepper(BaseStepper):
 
 
-    def __init__(self, folder='', name='',percent=True):
-        super().__init__(folder,name)
-        self.percent = percent
+    def __init__(self, folder='', name='',percent=0):
+        super().__init__(folder,name) 
+        self.percent = percent 
         # Initialize empty state
         self.last_vals = Dict.empty(
             key_type=types.int64,
@@ -115,7 +121,7 @@ class csRankStepper(BaseStepper):
         self.save_utility()
 
     @classmethod
-    def load(cls, folder, name,percent=True):
+    def load(cls, folder, name,percent=0):
         """Load instance from saved state or create new if not exists"""
         return csRankStepper.load_utility(cls,folder=folder,name=name,percent=percent)
 

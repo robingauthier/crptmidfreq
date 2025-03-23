@@ -5,6 +5,7 @@ from crptmidfreq.stepper import *
 from crptmidfreq.utils.common import clean_folder
 from crptmidfreq.stepper.zregistry import StepperRegistry
 from crptmidfreq.utils.common import get_analysis_folder
+from crptmidfreq.utils.common import rename_key
 from pprint import pprint
 
 g_reg = StepperRegistry()
@@ -62,6 +63,14 @@ def perform_divide(featd,numcols=[],denumcols=[],folder=None,name=None,r=g_reg):
                     where=~np.isclose(featd[denumcol], 
                                       np.zeros_like(featd[denumcol])))
             nfeats+=[f'{numcol}div{denumcol}']
+    return featd, nfeats
+
+
+def perform_to_sig(featd,feats=[],folder=None,name=None,r=g_reg):
+    nfeats=[]
+    for col in feats:
+        featd=rename_key(featd,col,f'sig_{col}')
+        nfeats+=['sig_'+col]
     return featd, nfeats
 
 
@@ -671,7 +680,7 @@ def perform_cs_rank(featd,feats=[],folder=None, name=None,r=g_reg):
     nfeats = []
     for col in feats:
         cls_qtl = csRankStepper \
-            .load(folder=f"{folder}", name=f"{name}_{col}_csrank")
+            .load(folder=f"{folder}", name=f"{name}_{col}_csrank",percent=0)
         featd[f'{col}_csrank'] = cls_qtl.update(featd['dtsi'], featd['dscode'],featd[col])
         r.add(cls_qtl)
         nfeats += [f'{col}_csrank']
@@ -685,12 +694,25 @@ def perform_cs_rank_int(featd,feats=[],folder=None, name=None,r=g_reg):
     nfeats = []
     for col in feats:
         cls_qtl = csRankStepper \
-            .load(folder=f"{folder}", name=f"{name}_{col}_csrank",percent=False)
+            .load(folder=f"{folder}", name=f"{name}_{col}_csrank",percent=1)
         featd[f'{col}_csrank'] = cls_qtl.update(featd['dtsi'], featd['dscode'],featd[col])
         r.add(cls_qtl)
         nfeats += [f'{col}_csrank']
     return featd, nfeats
 
+def perform_cs_rank_int_decreasing(featd,feats=[],folder=None, name=None,r=g_reg):
+    """returns an integer of the rank but descending order"""
+    assert 'dtsi' in featd.keys()
+    assert 'dscode' in featd.keys()
+    assert np.all(np.diff(featd['dtsi']) >= 0)
+    nfeats = []
+    for col in feats:
+        cls_qtl = csRankStepper \
+            .load(folder=f"{folder}", name=f"{name}_{col}_csrank",percent=2)
+        featd[f'{col}_csrank'] = cls_qtl.update(featd['dtsi'], featd['dscode'],featd[col])
+        r.add(cls_qtl)
+        nfeats += [f'{col}_csrank']
+    return featd, nfeats
     
 def perform_model(featd, feats=[], wgt=None,ycol=None,folder=None, name=None,
                   lookback=300,minlookback=100,
@@ -858,6 +880,15 @@ def perform_bktest(featd,  with_plot=True,with_txt=True,folder=None, name=None,r
             print('-'*20)
             pprint(stats)
         lr+=[stats]
+    if with_txt:
+        rptdf=pd.DataFrame(lr)
+        print('Gross P&L Stats:')
+        rptdf1 = rptdf[['name','col','sr','rpt','mdd','rog','avg_gmv','ann_pnl']].round(2)
+        print(rptdf1)
+        print('Net Version:')
+        rptdf2=rptdf[['name','col','sr_net','rpt_net','mdd_net','rog_net']]\
+            .rename(columns=lambda x:x.replace('_net','')).round(2)
+        print(rptdf2)
     return stats
 
 def perform_avg_features_fillna0(featd,xcols=[],outname='',folder=None,name=None,r=g_reg):

@@ -392,7 +392,7 @@ PyObject *const *__pyx_args, Py_ssize_t __pyx_nargs, PyObject *__pyx_kwds
 PyObject *__pyx_args, PyObject *__pyx_kwds
 #endif
 ); /*proto*/
-static PyObject *__pyx_f_11crptmidfreq_7stepper_7tdigest_8exp_qtl2_expanding_quantile(CYTHON_UNUSED PyArrayObject *__pyx_v_dt, PyArrayObject *__pyx_v_dscode, PyArrayObject *__pyx_v_serie, PyArrayObject *__pyx_v_qs, PyObject *__pyx_v_p2_map, int __pyx_v_freq, PyObject *__pyx_v_last_values, PyObject *__pyx_v_last_i, PyArrayObject *__pyx_v_results, CYTHON_UNUSED int __pyx_skip_dispatch) {
+static PyObject *__pyx_f_11crptmidfreq_7stepper_7tdigest_8exp_qtl2_expanding_quantile(PyArrayObject *__pyx_v_dt, PyArrayObject *__pyx_v_dscode, PyArrayObject *__pyx_v_serie, PyArrayObject *__pyx_v_qs, PyObject *__pyx_v_p2_map, int __pyx_v_freq, PyObject *__pyx_v_last_values, PyObject *__pyx_v_last_i, PyArrayObject *__pyx_v_results, CYTHON_UNUSED int __pyx_skip_dispatch) {
   int __pyx_v_n;
   int __pyx_v_n_qs;
   int __pyx_v_i;
@@ -818,8 +818,8 @@ static PyObject *__pyx_pf_11crptmidfreq_7stepper_7tdigest_8exp_qtl2_expanding_qu
 <pre class="cython line score-0">&#xA0;<span class="">44</span>: <span class="sd">    np.ndarray</span></pre>
 <pre class="cython line score-0">&#xA0;<span class="">45</span>: <span class="sd">        2D array with shape (n, len(qs)) containing quantile estimates.</span></pre>
 <pre class="cython line score-0">&#xA0;<span class="">46</span>: <span class="sd">    &quot;&quot;&quot;</span></pre>
-<pre class="cython line score-5" onclick="(function(s){s.display=s.display==='block'?'none':'block'})(this.nextElementSibling.style)">+<span class="">47</span>:     <span class="k">cdef</span> <span class="kt">int</span> <span class="nf">n</span> <span class="o">=</span> <span class="n">serie</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mf">0</span><span class="p">]</span></pre>
-<pre class='cython code score-5 '>  __pyx_t_1 = __pyx_f_5numpy_7ndarray_5shape_shape(((PyArrayObject *)__pyx_v_serie)); if (unlikely(__pyx_t_1 == ((npy_intp *)NULL) &amp;&amp; <span class='py_c_api'>PyErr_Occurred</span>())) <span class='error_goto'>__PYX_ERR(0, 47, __pyx_L1_error)</span>
+<pre class="cython line score-5" onclick="(function(s){s.display=s.display==='block'?'none':'block'})(this.nextElementSibling.style)">+<span class="">47</span>:     <span class="k">cdef</span> <span class="kt">int</span> <span class="nf">n</span> <span class="o">=</span> <span class="n">dt</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mf">0</span><span class="p">]</span> <span class="c"># I got issues of serie.shape[0] is half of n</span></pre>
+<pre class='cython code score-5 '>  __pyx_t_1 = __pyx_f_5numpy_7ndarray_5shape_shape(__pyx_v_dt); if (unlikely(__pyx_t_1 == ((npy_intp *)NULL) &amp;&amp; <span class='py_c_api'>PyErr_Occurred</span>())) <span class='error_goto'>__PYX_ERR(0, 47, __pyx_L1_error)</span>
   __pyx_v_n = (__pyx_t_1[0]);
 </pre><pre class="cython line score-5" onclick="(function(s){s.display=s.display==='block'?'none':'block'})(this.nextElementSibling.style)">+<span class="">48</span>:     <span class="k">cdef</span> <span class="kt">int</span> <span class="nf">n_qs</span> <span class="o">=</span> <span class="n">qs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mf">0</span><span class="p">]</span></pre>
 <pre class='cython code score-5 '>  __pyx_t_1 = __pyx_f_5numpy_7ndarray_5shape_shape(((PyArrayObject *)__pyx_v_qs)); if (unlikely(__pyx_t_1 == ((npy_intp *)NULL) &amp;&amp; <span class='py_c_api'>PyErr_Occurred</span>())) <span class='error_goto'>__PYX_ERR(0, 48, __pyx_L1_error)</span>
@@ -1164,10 +1164,11 @@ static PyObject *__pyx_pf_11crptmidfreq_7stepper_7tdigest_8exp_qtl2_expanding_qu
     }
     __pyx_L6:;
   }
-</pre><pre class="cython line score-2" onclick="(function(s){s.display=s.display==='block'?'none':'block'})(this.nextElementSibling.style)">+<span class="">84</span>:     <span class="k">return</span> <span class="n">results</span></pre>
+</pre><pre class="cython line score-0">&#xA0;<span class="">84</span>: </pre>
+<pre class="cython line score-2" onclick="(function(s){s.display=s.display==='block'?'none':'block'})(this.nextElementSibling.style)">+<span class="">85</span>:     <span class="k">return</span> <span class="n">results</span></pre>
 <pre class='cython code score-2 '>  <span class='pyx_macro_api'>__Pyx_XDECREF</span>(__pyx_r);
   <span class='pyx_macro_api'>__Pyx_INCREF</span>((PyObject *)__pyx_v_results);
   __pyx_r = ((PyObject *)__pyx_v_results);
   goto __pyx_L0;
-</pre><pre class="cython line score-0">&#xA0;<span class="">85</span>: </pre>
+</pre><pre class="cython line score-0">&#xA0;<span class="">86</span>: </pre>
 </div></body></html>

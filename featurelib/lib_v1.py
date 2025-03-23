@@ -64,6 +64,26 @@ def perform_divide(featd,numcols=[],denumcols=[],folder=None,name=None,r=g_reg):
             nfeats+=[f'{numcol}div{denumcol}']
     return featd, nfeats
 
+
+def perform_divide_m1(featd,numcols=[],denumcols=[],folder=None,name=None,r=g_reg):
+    """removes one once we divided"""
+    for col in numcols:
+        assert col in featd.keys()
+    for col in denumcols:
+        assert col in featd.keys()
+    nfeats=[]
+    for numcol in numcols:
+        for denumcol in denumcols:
+            featd[f'{numcol}divm1{denumcol}'] = np.divide(
+                    featd[numcol], 
+                    featd[denumcol], 
+                    out=np.ones_like(featd[denumcol]),
+                    where=~np.isclose(featd[denumcol], 
+                                      np.zeros_like(featd[denumcol])))
+            featd[f'{numcol}divm1{denumcol}']=featd[f'{numcol}divm1{denumcol}']-1.0
+            nfeats+=[f'{numcol}div{denumcol}']
+    return featd, nfeats
+
 def perform_ewm_std(featd, feats=[], windows=[1], folder=None, name=None,r=g_reg):
     """
     """
@@ -548,7 +568,9 @@ def perform_clip_quantile_global(featd, feats=[], folder=None, name=None,low_cli
         arr_qtls = cls_qtl.update(featd['dtsi'], np.zeros(featd['dtsi'].shape[0],dtype=np.int64),featd[col])
         arr_qtl_low = arr_qtls[:,0]
         arr_qtl_high = arr_qtls[:,1]
-        featd[f'{col}_clilpqtl'] = np.where(featd[col]<arr_qtl_low,
+        featd[f'{col}_qtllow']=arr_qtl_low
+        featd[f'{col}_qtlhigh']=arr_qtl_high
+        featd[f'{col}_clipqtl'] = np.where(featd[col]<arr_qtl_low,
                                             arr_qtl_low,
                                             np.where(
                                                 featd[col]>arr_qtl_high,
@@ -557,6 +579,20 @@ def perform_clip_quantile_global(featd, feats=[], folder=None, name=None,low_cli
                                             ))
         nfeats += [f'{col}_clipqtl']
     return featd, nfeats
+
+def perform_cast_float64(featd, feats=[], folder=None, name=None,r=g_reg):
+    """
+    we use an expanding quantile computation
+    This is still quite slow unfortunately !! 
+    """
+    assert 'dtsi' in featd.keys()
+    assert 'dscode' in featd.keys()
+    for col in feats:
+        assert col in featd.keys()
+    assert np.all(np.diff(featd['dtsi']) >= 0)
+    for col in feats:
+        featd[col] = featd[col].astype(np.float64, copy=False)
+    return featd, feats
 
 def perform_0tonan(featd, feats=[], folder=None, name=None,r=g_reg):
     """
@@ -628,6 +664,7 @@ def perform_pfp(featd, feats=[], nbrevs=[1], ticks=[3.0], debug=False, folder=No
     return featd, nfeats
 
 def perform_cs_rank(featd,feats=[],folder=None, name=None,r=g_reg):
+    """rank is between -1 and 1 here"""
     assert 'dtsi' in featd.keys()
     assert 'dscode' in featd.keys()
     assert np.all(np.diff(featd['dtsi']) >= 0)
@@ -639,6 +676,21 @@ def perform_cs_rank(featd,feats=[],folder=None, name=None,r=g_reg):
         r.add(cls_qtl)
         nfeats += [f'{col}_csrank']
     return featd, nfeats
+
+def perform_cs_rank_int(featd,feats=[],folder=None, name=None,r=g_reg):
+    """returns an integer of the rank"""
+    assert 'dtsi' in featd.keys()
+    assert 'dscode' in featd.keys()
+    assert np.all(np.diff(featd['dtsi']) >= 0)
+    nfeats = []
+    for col in feats:
+        cls_qtl = csRankStepper \
+            .load(folder=f"{folder}", name=f"{name}_{col}_csrank",percent=False)
+        featd[f'{col}_csrank'] = cls_qtl.update(featd['dtsi'], featd['dscode'],featd[col])
+        r.add(cls_qtl)
+        nfeats += [f'{col}_csrank']
+    return featd, nfeats
+
     
 def perform_model(featd, feats=[], wgt=None,ycol=None,folder=None, name=None,
                   lookback=300,minlookback=100,

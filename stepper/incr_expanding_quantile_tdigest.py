@@ -1,9 +1,6 @@
 
 import numpy as np
 import pandas as pd
-import os
-import pickle
-from tdigest import TDigest
 from crptmidfreq.stepper.base_stepper import BaseStepper
 from crptmidfreq.stepper.tdigest.exp_qtl2 import expanding_quantile
 from numba import types
@@ -58,11 +55,12 @@ class QuantileStepper(BaseStepper):
         Update the T-Digest state with new data in (datetime, code, value) arrays.
         Return a 2D array (n_rows x len(qs)) of quantile values for each row.
         """
+        serie = serie.astype(np.float64, copy=False)
         n=len(dt)
         n_qs=len(self.qs)
         res  = np.zeros((n, n_qs), dtype=np.float64)
         expanding_quantile(dt.view(np.int64), dscode.view(np.int64), 
-                           serie.view(np.float64), np.array(self.qs),
+                            serie, np.array(self.qs),
                             self.tdigest_map,self.freq,
                             self.last_values,self.last_i,
                             res)

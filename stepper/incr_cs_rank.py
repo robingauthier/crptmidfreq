@@ -9,7 +9,7 @@ from crptmidfreq.stepper.base_stepper import BaseStepper
 
 @njit
 def update_cs_rank_values(codes, values, bys,wgts,timestamps,
-                         last_timestamps,last_vals,last_ranks,last_cnts):
+                         last_timestamps,last_vals,last_ranks,last_cnts,percent):
     """
     """
     result = np.empty(len(codes), dtype=np.float64)
@@ -62,7 +62,10 @@ def update_cs_rank_values(codes, values, bys,wgts,timestamps,
                 if last_cnts[by2]<=1:
                     result[j]=0.0
                 else:
-                    result[j] =(last_ranks[by2][0] - (last_cnts[by2]-1)/2)/(last_cnts[by2]-1)*2
+                    if percent:
+                        result[j] =(last_ranks[by2][0] - (last_cnts[by2]-1)/2)/(last_cnts[by2]-1)*2
+                    else:
+                        result[j] = last_ranks[by2][0]
                 #result[j] =last_ranks[by2][0]
                 if len(last_ranks[by2])>0:
                     last_ranks[by2] = last_ranks[by2][1:]
@@ -87,9 +90,9 @@ def update_cs_rank_values(codes, values, bys,wgts,timestamps,
 class csRankStepper(BaseStepper):
 
 
-    def __init__(self, folder='', name=''):
+    def __init__(self, folder='', name='',percent=True):
         super().__init__(folder,name)
-
+        self.percent = percent
         # Initialize empty state
         self.last_vals = Dict.empty(
             key_type=types.int64,
@@ -112,9 +115,9 @@ class csRankStepper(BaseStepper):
         self.save_utility()
 
     @classmethod
-    def load(cls, folder, name):
+    def load(cls, folder, name,percent=True):
         """Load instance from saved state or create new if not exists"""
-        return csRankStepper.load_utility(cls,folder=folder,name=name)
+        return csRankStepper.load_utility(cls,folder=folder,name=name,percent=percent)
 
     def update(self, dt, dscode, serie,by=None,wgt=None):
         """
@@ -142,5 +145,6 @@ class csRankStepper(BaseStepper):
         
         # Update values and timestamps using numba function
         return update_cs_rank_values(dscode, serie, by,wgt,dt.view(np.int64),
-                         self.last_timestamps,self.last_vals,self.last_ranks,self.last_cnts)
+                         self.last_timestamps,self.last_vals,self.last_ranks,self.last_cnts,
+                         self.percent)
 

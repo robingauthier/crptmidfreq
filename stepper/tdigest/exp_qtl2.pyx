@@ -44,7 +44,7 @@ cpdef expanding_quantile(
     np.ndarray
         2D array with shape (n, len(qs)) containing quantile estimates.
     """
-    cdef int n = serie.shape[0]
+    cdef int n = dt.shape[0] # I got issues of serie.shape[0] is half of n
     cdef int n_qs = qs.shape[0]
     # Allocate output array.
     cdef int i, j, iloc
@@ -81,5 +81,6 @@ cpdef expanding_quantile(
             # If not enough new samples, forward-fill from the previous row.
             for j in range(n_qs):
                 results[i, j] = np.nan
+    
     return results
     

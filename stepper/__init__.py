@@ -28,6 +28,7 @@ from crptmidfreq.stepper.incr_cs_rank import csRankStepper
 from crptmidfreq.stepper.incr_pivot import PivotStepper
 from crptmidfreq.stepper.incr_unpivot import UnPivotStepper
 from crptmidfreq.stepper.incr_expanding_quantile_tdigest import QuantileStepper
+# p2 is not working correctly
 #from crptmidfreq.stepper.incr_expanding_quantile_p2 import QuantileStepper
 from crptmidfreq.stepper.incr_expanding_bucketxy import BucketXYStepper
 

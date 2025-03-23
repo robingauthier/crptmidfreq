@@ -9,37 +9,8 @@ cimport cython
 cimport numpy as np
 import numpy as np
 
+
 np.import_array()
-
-
-cdef extern from "tdigest_stubs.c":
-    ctypedef struct centroid_t:
-        double mean
-        double weight
-
-    # Not the full struct, just the parameters we want
-    ctypedef struct tdigest_t:
-        double compression
-        size_t size
-        size_t buffer_size
-
-        double min
-        double max
-
-        size_t ncentroids
-        double total_weight
-        double buffer_total_weight
-        centroid_t *centroids
-
-    tdigest_t *tdigest_new(double compression)
-    void tdigest_free(tdigest_t *T)
-    void tdigest_add(tdigest_t *T, double x, double w)
-    void tdigest_flush(tdigest_t *T)
-    void tdigest_merge(tdigest_t *T, tdigest_t *other)
-    void tdigest_scale(tdigest_t *T, double factor)
-    np.npy_intp tdigest_update_ndarray(tdigest_t *T, np.PyArrayObject *x, np.PyArrayObject *w) except -1
-    np.PyArrayObject *tdigest_quantile_ndarray(tdigest_t *T, np.PyArrayObject *q) except NULL
-    np.PyArrayObject *tdigest_cdf_ndarray(tdigest_t *T, np.PyArrayObject *x) except NULL
 
 
 CENTROID_DTYPE = np.dtype([('mean', np.float64), ('weight', np.float64)])
@@ -52,98 +23,71 @@ cdef inline void _cdf_to_hist(double[:] cdf, double[:]  hist, double size, int h
         hist[i] = (cdf[i + 1] - cdf[i]) * size
 
 
+
+
+# cython: boundscheck=False, wraparound=False, nonecheck=False
+cimport cython
+
+# Import only what we need from the C standard library
+from libc.stdlib cimport malloc, free
+from libc.string cimport memcpy
+
+# Extern declarations for the underlying C T‑Digest implementation
+cdef extern from "tdigest_stubs.c":
+    ctypedef struct centroid_t:
+        double mean
+        double weight
+
+    ctypedef struct tdigest_t:
+        double compression
+        size_t size
+        size_t buffer_size
+        double min
+        double max
+        size_t ncentroids
+        double total_weight
+        double buffer_total_weight
+        centroid_t *centroids
+
+    tdigest_t *tdigest_new(double compression)
+    void tdigest_free(tdigest_t *T)
+    void tdigest_add(tdigest_t *T, double x, double w)
+    void tdigest_flush(tdigest_t *T)
+    # Note: Other functions (e.g. for quantile, cdf, update_ndarray) are omitted
+    # in order to keep everything pure C and fast. For bulk updates we will loop in C.
+
+
+    
 cdef class TDigest:
-    """TDigest(compression=100.0)
-
-    An approximate histogram.
-
-    Parameters
-    ----------
-    compression : float, optional
-        The compression factor to use. Larger numbers provide more accurate
-        estimates, but use more memory. For most uses, the default should
-        suffice.
-
-    Notes
-    -----
-    This implements the "MergingDigest" variant of the T-Digest algorithm
-    described in [1]_. The reference java implementation can be found at [2]_.
-
-    References
-    ----------
-    .. [1] Dunning, Ted, and Otmar Ertl. "Computing Extremely Accurate
-       Quantiles Using T-Digests." https://github.com/tdunning/t-digest/blob/
-       master/docs/t-digest-paper/histo.pdf
-
-    .. [2] https://github.com/tdunning/t-digest
     """
-    cdef tdigest_t *tdigest
+    A pure-C (Cython) wrapper for a T-Digest.
+    
+    This version removes Python-level overhead: it assumes that all inputs
+    (for bulk update) are passed as contiguous memoryviews of type double.
+    """
 
-    def __cinit__(self, compression=100.0):
-        if not isfinite(compression):
-            raise ValueError("Compression must be finite")
-        self.tdigest = tdigest_new(compression)
-        if self.tdigest == NULL:
-            raise MemoryError()
-
-    def __dealloc__(self):
-        if self.tdigest != NULL:
-            tdigest_free(self.tdigest)
-
-    def __repr__(self):
-        return ("TDigest<compression={0}, "
-                "size={1}>").format(self.compression, self.size())
-
-    @property
-    def compression(self):
-        """The compression factor for this digest"""
-        return self.tdigest.compression
-
-    def min(self):
-        """min(self)
-
-        The minimum value in the digest."""
-        tdigest_flush(self.tdigest)
-        if self.tdigest.total_weight > 0:
-            return self.tdigest.min
-        return NAN
-
-    def max(self):
-        """max(self)
-
-        The maximum value in the digest."""
-        tdigest_flush(self.tdigest)
-        if self.tdigest.total_weight > 0:
-            return self.tdigest.max
-        return NAN
-
-    def size(self):
-        """size(self)
-
-        The sum of the weights on all centroids."""
-        return self.tdigest.total_weight + self.tdigest.buffer_total_weight
-
-    def cdf(self, x):
-        """cdf(self, x)
-
-        Compute an estimate of the fraction of all points added to this digest
-        which are <= x.
-
-        Parameters
-        ----------
-        x : array_like or float
+    cdef void add(self, double x, double w):
         """
-        x = np.asarray(x)
-        if not np.can_cast(x, 'f8', casting='safe'):
-            raise TypeError("x must be numeric")
-        if not np.isfinite(x).all():
-            raise ValueError("x must be finite")
-        out = <np.ndarray>tdigest_cdf_ndarray(self.tdigest, <np.PyArrayObject*>x)
-        if out.ndim == 0:
-            return np.float64(out)
-        return out
+        Add a single sample (x) with weight (w) to the digest.
+        Pure C call with no Python overhead.
+        """
+        # Caller must ensure w > 0 (no runtime check here)
+        tdigest_add(self.tdig, x, w)
 
-    def quantile(self, q):
+    cdef void update(self, double[:] x):
+        """
+        Bulk-update: add many samples in one call.
+        Both x and w must be contiguous C-level memoryviews of type double
+        and of equal length.
+        """
+        cdef Py_ssize_t i, n = x.shape[0]
+        cdef double w =1.0
+        # No error checking here: assume inputs are correct.
+        for i in range(n):
+            tdigest_add(self.tdig, x[i], w)
+
+
+    cdef double quantile(self, double q):
         """quantile(self, q)
 
         Compute an estimate of the qth percentile of the data added to
@@ -154,81 +98,99 @@ cdef class TDigest:
         q : array_like or float
             A number between 0 and 1 inclusive.
         """
-        q = np.asarray(q)
-        if not np.can_cast(q, 'f8', casting='safe'):
-            raise TypeError("q must be numeric")
-        if not np.isfinite(q).all():
-            raise ValueError("q must be finite")
-        out = <np.ndarray>tdigest_quantile_ndarray(self.tdigest, <np.PyArrayObject*>q)
+        cdef np.ndarray arr_q = np.asarray(q)
+        out = <np.ndarray>tdigest_quantile_ndarray(self.tdig, <np.PyArrayObject*>arr_q)
         if out.ndim == 0:
             return np.float64(out)
         return out
 
-    def histogram(self, bins=10, range=None):
-        """histogram(self, bins=10, range=None)
-
-        Compute a histogram from the digest.
-
-        Parameters
-        ----------
-        bins : int or array_like, optional
-            If ``bins`` is an int, it defines the number of equal width bins in
-            the given range. If ``bins`` is an array_like, the values define
-            the edges of the bins (rightmost edge inclusive), allowing for
-            non-uniform bin widths. The default is 10.
-
-        range : (float, float), optional
-            The lower and upper bounds to use when generating bins. If not
-            provided, the digest bounds ``(t.min(), t.max())`` are used. Note
-            that this option is ignored if the bin edges are provided
-            explicitly.
-
-        Returns
-        -------
-        hist : array
-            The values of the histogram.
-        bin_edges : array
-            The edges of the bins. ``len(bin_edges) == len(hist) + 1``.
+    cdef double get_min(self):
         """
-        cdef double left = 0
-        cdef double right = 0
-        cdef double size = self.size()
-        if range is None:
-            if size != 0:
-                left = self.min()
-                right = self.max()
-        else:
-            left = <double?>range[0]
-            right = <double?>range[1]
-            if not (isfinite(left) and isfinite(right)):
-                raise ValueError("range parameters must be finite")
-            elif right < left:
-                raise ValueError("max must be larger than min for range "
-                                 "parameter")
-        if right == left:
-            left -= 0.5
-            right += 0.5
+        Get the minimum value. Flushes internal buffers.
+        """
+        tdigest_flush(self.tdig)
+        return self.tdig.min
 
-        if isinstance(bins, int):
-            if bins < 1:
-                raise ValueError("bins must be >= 1")
-            bin_edges = np.linspace(left, right, bins + 1, endpoint=True)
-        else:
-            bin_edges = np.asarray(bins).astype('f8', copy=False)
-            if bin_edges.ndim != 1:
-                raise ValueError("bins must be a 1-dimensional array")
-            elif not np.isfinite(bins).all():
-                raise ValueError("bins must be finite")
-            elif (np.diff(bin_edges) < 0).any():
-                raise ValueError("bins must increase monotonically")
+    cdef double get_max(self):
+        """
+        Get the maximum value. Flushes internal buffers.
+        """
+        tdigest_flush(self.tdig)
+        return self.tdig.max
 
-        cdef int hist_size = bin_edges.size - 1
-        cdef np.ndarray[double, ndim=1] hist = np.zeros(hist_size,
-                                                        dtype=np.float64)
-        if size != 0:
-            _cdf_to_hist(self.cdf(bin_edges), hist, size, hist_size)
+    cdef double total_weight(self):
+        """
+        Return the total weight in the digest.
+        """
+        return self.tdig.total_weight + self.tdig.buffer_total_weight
 
-        return hist, bin_edges
+    cdef size_t ncentroids(self):
+        """
+        Return the number of centroids (after flushing).
+        """
+        tdigest_flush(self.tdig)
+        return self.tdig.ncentroids
+
+    # Optionally, if you wish to expose centroids as a C-level block of memory,
+    # you could add a method to copy them into a caller-supplied buffer.
+    cdef void copy_centroids(self, centroid_t *dest, size_t n):
+        """
+        Copy up to n centroids into dest.
+        Caller is responsible for ensuring that dest has enough space.
+        """
+        cdef size_t m
+        tdigest_flush(self.tdig)
+        m = self.tdig.ncentroids
+        if m > n:
+            m = n
+        memcpy(dest, self.tdig.centroids, m * sizeof(centroid_t))
+
+    @property
+    def compression(self):
+        """The compression factor for this digest"""
+        return self.tdig.compression
+
+
+    def __cinit__(self, double compression=100.0):
+        # (Minimal checking: caller must ensure compression > 0)
+        if compression <= 0:
+            raise ValueError("compression must be > 0")
+        self.tdig = tdigest_new(compression)
+        if self.tdig == NULL:
+            raise MemoryError()
+
+    def __dealloc__(self):
+        if self.tdig != NULL:
+            tdigest_free(self.tdig)
+
+
+    def __getstate__(self):
+        return (self.centroids(), self.tdig.total_weight,
+                self.tdig.min, self.tdig.max)
+
+    def __setstate__(self, state):
+        self.tdig.total_weight = <double>state[1]
+        self.tdig.min = <double>state[2]
+        self.tdig.max = <double>state[3]
+
+        cdef np.ndarray centroids = state[0]
+        cdef int n = len(centroids)
+        if n > 0:
+            memcpy(self.tdig.centroids, centroids.data,
+                   n * sizeof(centroid_t))
+            self.tdig.ncentroids = n
+
+    def __repr__(self):
+        return ("TDigest<compression={0}, "
+                "size={1}>").format(self.compression, self.size())
+
+
+    def __reduce__(self):
+        # pickle method !
+        #return (TDigest, (self.compression,), self.__getstate__())
+        from crptmidfreq.stepper.tdigest.pickle_helper import _reconstruct_TDigest
+        return (_reconstruct_TDigest, (self.compression,), self.__getstate__())
+
 
     def centroids(self):
         """centroids(self)
@@ -237,106 +199,16 @@ cdef class TDigest:
         this array is a *copy* of the internal data.
         """
         cdef size_t n
-        tdigest_flush(self.tdigest)
-        n = self.tdigest.ncentroids
+        tdigest_flush(self.tdig)
+        n = self.tdig.ncentroids
 
         cdef np.ndarray[centroid_t, ndim=1] result = np.empty(n, dtype=CENTROID_DTYPE)
         if n > 0:
-            memcpy(result.data, self.tdigest.centroids, n * sizeof(centroid_t))
+            memcpy(result.data, self.tdig.centroids, n * sizeof(centroid_t))
         return result
 
-    def __reduce__(self):
-        return (TDigest, (self.compression,), self.__getstate__())
+    def size(self):
+        """size(self)
 
-    def __getstate__(self):
-        return (self.centroids(), self.tdigest.total_weight,
-                self.tdigest.min, self.tdigest.max)
-
-    def __setstate__(self, state):
-        self.tdigest.total_weight = <double>state[1]
-        self.tdigest.min = <double>state[2]
-        self.tdigest.max = <double>state[3]
-
-        cdef np.ndarray centroids = state[0]
-        cdef int n = len(centroids)
-        if n > 0:
-            memcpy(self.tdigest.centroids, centroids.data,
-                   n * sizeof(centroid_t))
-            self.tdigest.ncentroids = n
-
-    def add(self, double x, double w=1):
-        """add(self, x, w=1)
-
-        Add a sample to this digest.
-
-        Parameters
-        ----------
-        x : float
-            The value to add.
-        w : float, optional
-            The weight of the value to add. Default is 1.
-        """
-        # Don't check w in the common case where w is 1
-        if w != 1 and (not isfinite(w) or w <= 0):
-            raise ValueError("w must be > 0 and finite")
-        tdigest_add(self.tdigest, x, w)
-
-    def update(self, x, w=1):
-        """update(self, x, w=1)
-
-        Add many samples to this digest.
-
-        Parameters
-        ----------
-        x : array_like
-            The values to add.
-        w : array_like, optional
-            The weight (or weights) of the values to add. Default is 1.
-        """
-        x = np.asarray(x)
-        check_w = not (np.isscalar(w) and w == 1)
-        w = np.asarray(w)
-
-        if not np.can_cast(x, 'f8', casting='safe'):
-            raise TypeError("x must be numeric")
-
-        if not np.can_cast(w, 'f8', casting='safe'):
-            raise TypeError("w must be numeric")
-
-        if check_w and (not np.isfinite(w).all() or (w <= 0).any()):
-            raise ValueError("w must be > 0 and finite")
-
-        tdigest_update_ndarray(self.tdigest, <np.PyArrayObject*>x,
-                               <np.PyArrayObject*>w)
-
-    def merge(self, *args):
-        """merge(self, *args)
-
-        Update this digest inplace with data from other digests.
-
-        Parameters
-        ----------
-        args : TDigests
-            TDigests to merge into this one.
-        """
-        if not all(isinstance(i, TDigest) for i in args):
-            raise TypeError("All arguments to merge must be TDigests")
-        cdef TDigest td
-        for td in args:
-            tdigest_merge(self.tdigest, td.tdigest)
-
-    def scale(self, double factor):
-        """scale(self, factor)
-
-        Return a new TDigest, with the weights all scaled by factor.
-
-        Parameters
-        ----------
-        factor : number
-            The factor to scale the weights by. Must be > 0.
-        """
-        if factor <= 0 or not isfinite(factor):
-            raise ValueError("factor must be > 0 and finite")
-        cdef TDigest out = copy(self)
-        tdigest_scale(out.tdigest, factor)
-        return out
+        The sum of the weights on all centroids."""
+        return self.tdig.total_weight + self.tdig.buffer_total_weight

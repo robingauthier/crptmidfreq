@@ -2,13 +2,10 @@ import logging
 import pandas as pd
 import numpy as np
 from crptmidfreq.config_loc import get_analysis_folder
+from crptmidfreq.utils.log import get_logger
 
-# Configure the logging
-logging.basicConfig(
-    level=logging.INFO,  # Set the logging level (e.g., DEBUG, INFO, WARNING, ERROR, CRITICAL)
-    format='%(asctime)s - %(message)s',  # Specify the log message format
-    datefmt='%Y-%m-%d::%H:%M:%S'  # Format for the timestamp
-)
+
+logger=get_logger()
 
 def lvals(df,level):
     return df.index.get_level_values(level)
@@ -36,6 +33,7 @@ def clean_folder(folder='feats_simple_v1'):
     import shutil
     import os
     from crptmidfreq.config_loc import get_feature_folder
+    logger.info(f'Cleaning folder {folder}')
     path = os.path.join(get_feature_folder(), folder)
     if os.path.exists(path):
         shutil.rmtree(path)
@@ -55,13 +53,27 @@ def to_csv(df, name):
 
 def rename_key(featd,old,new):
     featd[new] = featd.pop(old)
+    assert new in featd.keys()
     return featd
+
+def get_sig_cols(featd):
+    lr=[]
+    for k in featd.keys():
+        if k.startswith('sig_'):
+            lr+=[k]
+    return lr
+
+
+def ewm_alpha(window=1.0):
+    """Convert half-life to alpha"""
+    assert window>0
+    return 1 - np.exp(np.log(0.5) / window)
 
 def print_ram_usage():
     import psutil
     process = psutil.Process()
     ram_usage = process.memory_info().rss / 1e9
-    print(f'RAM usage {ram_usage}Go')
+    print(f'RAM usage {ram_usage:.2f} Go')
 
 
 def validate_input(dt, dscode, **kwargs):

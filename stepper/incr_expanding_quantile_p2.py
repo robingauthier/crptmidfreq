@@ -5,12 +5,9 @@ import os
 import pickle
 from tdigest import TDigest
 from crptmidfreq.stepper.base_stepper import BaseStepper
-
-###############################################################################
-# 1) A "QuantileStepper" class that updates a T-Digest for each code (symbol).
-#    We then retrieve current quantile estimates as new data arrives.
-#  Under the hood it performs a Kmean clustering
-###############################################################################
+from crptmidfreq.stepper.p2_algo.exp_qtl2 import expanding_quantile
+from numba import types
+from numba.typed import Dict
 
 class QuantileStepper(BaseStepper):
     """
@@ -19,7 +16,7 @@ class QuantileStepper(BaseStepper):
     new batch of values into the respective T-Digest, then query multiple
     quantiles for each row.
     """
-    def __init__(self, folder='', name='', qs=None):
+    def __init__(self, folder='', name='', qs=None,freq=int(60*24*5)):
         """
         Parameters
         ----------
@@ -38,27 +35,27 @@ class QuantileStepper(BaseStepper):
         # code -> TDigest object
         self.tdigest_map = {}
         
+        # Initialize empty state
+        self.last_values = {}
+        self.last_i = {}
+        self.freq=freq # frenquency of update of the quantiles
+        
     def update(self, dt, dscode, serie):
         """
         Update the T-Digest state with new data in (datetime, code, value) arrays.
         Return a 2D array (n_rows x len(qs)) of quantile values for each row.
         """
-        n = len(serie)
-        n_qs = len(self.qs)
-        results = np.zeros((n, n_qs), dtype=float)
-        
-        for i in range(n):
-            code = dscode[i]
-            val = serie[i]
-            if code not in self.tdigest_map:
-                self.tdigest_map[code] = TDigest()
-            # Update T-Digest
-            self.tdigest_map[code].update(val)
-            # Retrieve current quantiles
-            for j, qv in enumerate(self.qs):
-                results[i, j] = self.tdigest_map[code].percentile(qv*100)
-        
-        return results
+        n=len(dt)
+        n_qs=len(self.qs)
+        res  = np.zeros((n, n_qs), dtype=np.float64)
+        expanding_quantile(dt.view(np.int64), 
+                                 dscode.view(np.int64), 
+                                 serie.view(np.float64), np.array(self.qs),
+                                 self.tdigest_map,
+                                 self.freq,
+                                 self.last_values,self.last_i,
+                                 res)
+        return res
     
     def save(self):
         self.save_utility()

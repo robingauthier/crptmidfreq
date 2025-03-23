@@ -8,14 +8,14 @@ from numba.typed import Dict
 from crptmidfreq.stepper.base_stepper import BaseStepper
 
 
-#@njit
-def incremental_unpivot(timestamps, pserie):
+@njit
+def incremental_unpivot(timestamps, pseried):
     """
     Incremental pivot function that organizes data by unique timestamps and 
     assigns each dscode as a separate column without using pandas.
     """
     
-    ncodes = len(pserie)
+    ncodes = len(pseried)
     ndts = timestamps.shape[0]
     n = ncodes*ndts
     
@@ -24,11 +24,10 @@ def incremental_unpivot(timestamps, pserie):
     nserie = np.empty(n,dtype=np.float64)
     
     icode=-1
-    for code,serie in pserie.items():
+    for code,serie in pseried.items():
         icode+=1
         for j in range(ndts):
             k = j*ncodes+icode
-            print(k)
             ndt[k]=timestamps[j]
             ndscode[k]=code
             nserie[k]=serie[j]

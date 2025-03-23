@@ -8,6 +8,11 @@ from numba.typed import Dict
 
 from crptmidfreq.config_loc import get_feature_folder
 from crptmidfreq.utils.common import validate_input
+from crptmidfreq.utils.common import get_logger
+from crptmidfreq.utils.common import print_ram_usage
+
+logger= get_logger()
+
 class BaseStepper:
     
     
@@ -54,13 +59,13 @@ class BaseStepper:
         folder_path = os.path.join(get_feature_folder(), folder)
         filepath = os.path.join(folder_path, name + '.pkl')
 
+        print_ram_usage()
+        
         if not os.path.exists(filepath):
-            if self.verbose>0:
-                print(f'Stepper creating instance {folder} {name}')
+            logger.info(f'Stepper creating instance {folder} {name}')
             return cls(folder=folder, name=name, **kwargs)
 
-        if self.verbose>0:
-            print(f'gStepper loading instance {folder} {name}')
+        logger.info(f'Stepper loading instance {folder} {name}')
         with open(filepath, 'rb') as f:
             state = pickle.load(f)
 
@@ -70,12 +75,7 @@ class BaseStepper:
         for key, value in state.items():
             if isinstance(value, dict):
                 # Populate the dict from the saved state
-                # TODO: clean this mess here
-                #dict_value_type = str(getattr(instance, key)._numba_type_.value_type)
                 for k, v in value.items():
-                    #if 'array' in dict_value_type:
-                    #    getattr(instance, key)[k] = np.array([v],dtype=np.float64)
-                    #else:
                     getattr(instance, key)[k] = v
             else:
                 # For non-dict keys like 'window'

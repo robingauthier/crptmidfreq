@@ -13,7 +13,7 @@ from crptmidfreq.utils.common import get_logger
 logger=get_logger()
 
 
-class ModelStepper(BaseStepper):
+class KmeansStepper(BaseStepper):
     """Relies on the pivot first and then runs an SVD"""
 
     def __init__(self, folder='', name='',lookback=300,minlookback=100,
@@ -49,7 +49,7 @@ class ModelStepper(BaseStepper):
     def load(cls, folder, name,lookback=300,minlookback=100,
                  fitfreq=10,gap=1,model_gen=None,with_fit=True):
         """Load instance from saved state or create new if not exists"""
-        return ModelStepper.load_utility(cls,folder=folder,name=name,
+        return KmeansStepper.load_utility(cls,folder=folder,name=name,
                                          lookback=lookback,minlookback=minlookback,
                  fitfreq=fitfreq,gap=gap,
                  model_gen=model_gen,with_fit=with_fit
@@ -63,7 +63,7 @@ class ModelStepper(BaseStepper):
         if yserie is not None:
             assert xseries.shape[0]==yserie.shape[0]
 
-        result = np.zeros(xseries.shape[0],dtype=np.float64)        
+        result = np.zeros(xseries.shape,dtype=np.float64)   # pivotted table ! ndts x ndscode
         
         # Initializing the memory
         if self.last_xmem is None:
@@ -72,6 +72,7 @@ class ModelStepper(BaseStepper):
             self.last_wmem=np.zeros(self.lookback,dtype=np.float64)
         
         
+        cat_loc=None
         model_loc=None
         
         n=xseries.shape[0]
@@ -93,26 +94,19 @@ class ModelStepper(BaseStepper):
                 case_nth_model = (self.model_i>0 and self.last_i>=self.fitfreq)
                 if case_first_model or case_nth_model:
                     model_loc = self.model_gen()
-                    logger.info(f'Fitting model {self.folder} {self.name} i={self.model_i}')
-                    if yserie is not None:
-                        model_loc.fit(X=self.last_xmem,y=self.last_ymem,sample_weight=self.last_wmem)
-                    else:
-                        # clustering for instance
-                        model_loc.fit(X=self.last_xmem)
-                    
+                    logger.info(f'Fitting Kmeans {self.folder} {self.name} i={self.model_i}')
+                    cat_loc = model_loc.fit_predict(X=np.transpose(self.last_xmem))
                     self.last_i=0 # we reset the counter
                     self.model_i+=1
                     # Adding to model history list
-                    self.hmodels+=[{'dt':dts[i],'i':self.last_i,'model':model_loc,'model_i':self.model_i}]
+                    self.hmodels+=[{'dt':dts[i],
+                                    'cat':cat_loc,
+                                    'model':model_loc,
+                                    'model_i':self.model_i}]
             else:
-                model_loc=self.hmodels[-1]
+                cat_loc=self.hmodels[-1]['cat']
             
-            if model_loc is not None:
+            if cat_loc is not None:
                 # caution we are not using the gap here !!!
-                ypred=model_loc.predict(xseries[[i],:])
-                import pdb;pdb.set_trace()
-            else:
-                ypred = np.nan
-            
-            result[i]=ypred
+                result[i,:]=cat_loc
         return result

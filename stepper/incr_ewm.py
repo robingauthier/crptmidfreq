@@ -9,8 +9,9 @@ from numba.typed import Dict
 from crptmidfreq.stepper.base_stepper import BaseStepper
 
 @njit
-def get_alpha(window):
+def get_alpha(window=1.0):
     """Convert half-life to alpha"""
+    assert window>0
     return 1 - np.exp(np.log(0.5) / window)
 
 
@@ -68,6 +69,7 @@ class EwmStepper(BaseStepper):
 
     def __init__(self, folder='', name='', window=1):
         super().__init__(folder,name)
+        assert not isinstance(window,list)
         self.window = window
         self.alpha = get_alpha(window)
 

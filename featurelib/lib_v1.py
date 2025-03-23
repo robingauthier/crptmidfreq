@@ -1,10 +1,13 @@
+import os
 import numpy as np
-
+import pandas as pd
 from crptmidfreq.stepper import *
 from crptmidfreq.utils.common import clean_folder
+from crptmidfreq.stepper.zregistry import StepperRegistry
+from crptmidfreq.utils.common import get_analysis_folder
+from pprint import pprint
 
-
-g_steppers={} # list of sessions steppers 
+g_reg = StepperRegistry()
 
 def keep_import():
     clean_folder()
@@ -16,21 +19,15 @@ def check_cols(featd, wcols):
             print(f'Missing col {col} in featd')
             assert False
 
-def perform_save():
-    """must be called before shutting down the ipython
+def perform_save(r=g_reg):
+    """
+    must be called before shutting down the ipython
     so that on restart we can continue from where we were
     """
-    for k,step in g_steppers.items():
-        step.save()
+    r.save()
+        
 
-def add_to_stepper_register(stepper):
-    # requires every stepper to have a __hash__ method
-    if hash(stepper) in g_steppers:
-        return 
-    g_steppers[hash(stepper)]=stepper
-    
-
-def perform_ewm(featd, feats=[], windows=[1], folder=None, name=None):
+def perform_ewm(featd, feats=[], windows=[1], folder=None, name=None,r=g_reg):
     """
     featd is the feature dictionary where we put our result
     """
@@ -45,13 +42,12 @@ def perform_ewm(featd, feats=[], windows=[1], folder=None, name=None):
             cls_ewm = EwmStepper \
                 .load(folder=f"{folder}", name=f"{name}_{col}_ewm{hl}", window=hl)
             ewm_val = cls_ewm.update(featd['dtsi'], featd['dscode'], featd[col])
+            r.add(cls_ewm)
             featd[f'{col}_ewm{hl}'] = ewm_val
             nfeats += [f'{col}_ewm{hl}']
-            # keeping track for saving down before shut-down
-            add_to_stepper_register(cls_ewm)
     return featd, nfeats
 
-def perform_divide(featd,numcols=[],denumcols=[],folder=None,name=None):
+def perform_divide(featd,numcols=[],denumcols=[],folder=None,name=None,r=g_reg):
     for col in numcols:
         assert col in featd.keys()
     for col in denumcols:
@@ -59,75 +55,16 @@ def perform_divide(featd,numcols=[],denumcols=[],folder=None,name=None):
     nfeats=[]
     for numcol in numcols:
         for denumcol in denumcols:
-            featd['{numcol}div{denumcol}'] = np.divide(
+            featd[f'{numcol}div{denumcol}'] = np.divide(
                     featd[numcol], 
                     featd[denumcol], 
                     out=np.zeros_like(featd[denumcol]),
                     where=~np.isclose(featd[denumcol], 
                                       np.zeros_like(featd[denumcol])))
-            nfeats+=['{numcol}div{denumcol}']
+            nfeats+=[f'{numcol}div{denumcol}']
     return featd, nfeats
 
-def perform_ewm_unit(featd, feats=[], ufeats=[], windows=[1], folder=None, name=None):
-    """
-    the alpha is variable , it depends on the ufeats
-    """
-    assert 'dtsi' in featd.keys()
-    assert 'dscode' in featd.keys()
-    for col in feats:
-        assert col in featd.keys()
-    for col in ufeats:
-        assert col in featd.keys()
-    assert np.all(np.diff(featd['dtsi']) >= 0)
-    nfeats = []
-    for col in feats:
-        for ucol in ufeats:
-            for hl in windows:
-                cls_ewm = EwmUnitStepper \
-                    .load(folder=f"{folder}", name=f"{name}_{col}x{ucol}_ewm{hl}", window=hl)
-                ewm_val = cls_ewm.update(featd['dtsi'], featd['dscode'], featd[col], featd[ucol])
-                featd[f'{col}x{ucol}_ewm{hl}'] = ewm_val
-                nfeats += [f'{col}x{ucol}_ewm{hl}']
-    return featd, nfeats
-
-
-def perform_conv_kernel_spike(featd, feats=[], ufeats=[],
-                              windows=[1],
-                              spike_intervals=[1],
-                              half_lifes=[100],
-                              spike_widths=[50],
-                              folder=None, name=None):
-    """
-    the alpha is variable , it depends on the ufeats
-    """
-    assert 'dtsi' in featd.keys()
-    assert 'dscode' in featd.keys()
-    for col in feats:
-        assert col in featd.keys()
-    for col in ufeats:
-        assert col in featd.keys()
-    assert np.all(np.diff(featd['dtsi']) >= 0)
-    nfeats = []
-    for col in feats:
-        for ucol in ufeats:
-            for window in windows:
-                for spike_width in spike_widths:
-                    for half_life in half_lifes:
-                        for spike_interval in spike_intervals:
-                            ncol = f'kernel_spike_{col}x{ucol}_{window}x{half_life}x{spike_interval}x{spike_width}'
-                            cls_k = RollingKernelTwapStepper \
-                                .load(folder=f"{folder}", name=f"{name}_{ncol}",
-                                      window=window,
-                                      spike_interval=spike_interval,
-                                      spike_width=spike_width,
-                                      half_life=half_life)
-                            k_val = cls_k.update(featd['dtsi'], featd['dscode'], featd[col], featd[ucol])
-                            featd[ncol] = k_val
-                            nfeats += [ncol]
-    return featd, nfeats
-
-
-def perform_ewm_std(featd, feats=[], windows=[1], folder=None, name=None):
+def perform_ewm_std(featd, feats=[], windows=[1], folder=None, name=None,r=g_reg):
     """
     """
     assert 'dtsi' in featd.keys()
@@ -141,12 +78,13 @@ def perform_ewm_std(featd, feats=[], windows=[1], folder=None, name=None):
             cls_ewmstd = EwmStdStepper \
                 .load(folder=f"{folder}", name=f"{name}_{col}_ewmstd{hl}", window=hl)
             ewmstd_val = cls_ewmstd.update(featd['dtsi'], featd['dscode'], featd[col])
+            r.add(cls_ewmstd)
             featd[f'{col}_ewmstd{hl}'] = ewmstd_val
             nfeats += [f'{col}_ewmstd{hl}']
     return featd, nfeats
 
 
-def perform_scaling_ewm(featd, feats=[], windows=[100], clip=3, folder=None, name=None):
+def perform_scaling_ewm(featd, feats=[], windows=[100], clip=3, folder=None, name=None,r=g_reg):
     """scaling by ewmstd and clipping"""
     assert 'dtsi' in featd.keys()
     assert 'dscode' in featd.keys()
@@ -159,6 +97,7 @@ def perform_scaling_ewm(featd, feats=[], windows=[100], clip=3, folder=None, nam
             cls_ewmstd = EwmStdStepper \
                 .load(folder=f"{folder}", name=f"{name}_{col}_scaled_ewmstd{hl}", window=hl)
             ewmstd_val = cls_ewmstd.update(featd['dtsi'], featd['dscode'], featd[col])
+            r.add(cls_ewmstd)
             num = featd[col]
             denum = ewmstd_val
             featd[f'{col}_scaled_ewmstd{hl}'] = np.divide(
@@ -166,11 +105,12 @@ def perform_scaling_ewm(featd, feats=[], windows=[100], clip=3, folder=None, nam
                 denum,
                 out=np.zeros_like(denum),
                 where=~np.isclose(denum, np.zeros_like(denum)))
+            featd[f'{col}_scaled_ewmstd{hl}']=np.clip(featd[f'{col}_scaled_ewmstd{hl}'],a_min=-clip,a_max=clip)
             nfeats += [f'{col}_scaled_ewmstd{hl}']
     return featd, nfeats
 
 
-def perform_detrend_ewm(featd, feats=[], windows=[1], folder=None, name=None):
+def perform_detrend_ewm(featd, feats=[], windows=[1], folder=None, name=None,r=g_reg):
     """
     """
     assert 'dtsi' in featd.keys()
@@ -184,13 +124,15 @@ def perform_detrend_ewm(featd, feats=[], windows=[1], folder=None, name=None):
             cls_ewm = EwmStepper \
                 .load(folder=f"{folder}", name=f"{name}_{col}_detrend_ewm{hl}", window=hl)
             ewm_val = cls_ewm.update(featd['dtsi'], featd['dscode'], featd[col])
+            r.add(cls_ewm)
             featd[f'{col}_detrend_ewm{hl}'] = featd[col] - ewm_val
             nfeats += [f'{col}_detrend_ewm{hl}']
     return featd, nfeats
 
 
-def perform_detrend_ewm_ratio(featd, feats=[], windows=[1], folder=None, name=None):
+def perform_detrend_ewm_ratio(featd, feats=[], windows=[1], folder=None, name=None,r=g_reg):
     """
+    computes P/ewm(P)-1
     """
     assert 'dtsi' in featd.keys()
     assert 'dscode' in featd.keys()
@@ -203,19 +145,22 @@ def perform_detrend_ewm_ratio(featd, feats=[], windows=[1], folder=None, name=No
             cls_ewm = EwmStepper \
                 .load(folder=f"{folder}", name=f"{name}_{col}_detrendratio_ewm{hl}", window=hl)
             ewm_val = cls_ewm.update(featd['dtsi'], featd['dscode'], featd[col])
+            r.add(cls_ewm)
             num = featd[col]
             denum = ewm_val
             featd[f'{col}_detrendratio_ewm{hl}'] = np.divide(
                 num,
                 denum,
-                out=np.zeros_like(denum),
+                out=np.ones_like(denum),
                 where=~np.isclose(denum, np.zeros_like(denum))
             )
+            # make it be around 0.0
+            featd[f'{col}_detrendratio_ewm{hl}']=featd[f'{col}_detrendratio_ewm{hl}']-1.0
             nfeats += [f'{col}_detrendratio_ewm{hl}']
     return featd, nfeats
 
 
-def perform_ewm_skew(featd, feats=[], windows=[1], folder=None, name=None):
+def perform_ewm_skew(featd, feats=[], windows=[1], folder=None, name=None,r=g_reg):
     """
     """
     assert 'dtsi' in featd.keys()
@@ -229,12 +174,13 @@ def perform_ewm_skew(featd, feats=[], windows=[1], folder=None, name=None):
             cls_skew = EwmSkewStepper \
                 .load(folder=f"{folder}", name=f"{name}_{col}_ewmskew{hl}", window=hl)
             skew_val = cls_skew.update(featd['dtsi'], featd['dscode'], featd[col])
+            r.add(cls_skew)
             featd[f'{col}_ewmskew{hl}'] = skew_val
             nfeats += [f'{col}_ewmskew{hl}']
     return featd, nfeats
 
 
-def perform_ewm_kurt(featd, feats=[], windows=[1], folder=None, name=None):
+def perform_ewm_kurt(featd, feats=[], windows=[1], folder=None, name=None,r=g_reg):
     """
     """
     assert 'dtsi' in featd.keys()
@@ -248,12 +194,13 @@ def perform_ewm_kurt(featd, feats=[], windows=[1], folder=None, name=None):
             cls_kurt = EwmKurtStepper \
                 .load(folder=f"{folder}", name=f"{name}_{col}_ewmkurt{hl}", window=hl)
             kurt_val = cls_kurt.update(featd['dtsi'], featd['dscode'], featd[col])
+            r.add(cls_kurt)
             featd[f'{col}_ewmkurt{hl}'] = kurt_val
             nfeats += [f'{col}_ewmkurt{hl}']
     return featd, nfeats
 
 
-def perform_ffill(featd, feats=[], folder=None, name=None):
+def perform_ffill(featd, feats=[], folder=None, name=None,r=g_reg):
     """
     """
     assert 'dtsi' in featd.keys()
@@ -266,12 +213,13 @@ def perform_ffill(featd, feats=[], folder=None, name=None):
         cls_ffill = FfillStepper \
             .load(folder=f"{folder}", name=f"{name}_{col}_ffill")
         ffill_val = cls_ffill.update(featd['dtsi'], featd['dscode'], featd[col])
+        r.add(cls_ffill)
         featd[f'{col}_ffill'] = ffill_val
         nfeats += [f'{col}_ffill']
     return featd, nfeats
 
 
-def perform_groupby_last(featd, feats=[], folder=None, name=None):
+def perform_groupby_last(featd, feats=[], folder=None, name=None,r=g_reg):
     """
     This will return you a new feature dictionary
     """
@@ -286,6 +234,7 @@ def perform_groupby_last(featd, feats=[], folder=None, name=None):
         cls_ffill = GroupbyLastStepper \
             .load(folder=f"{folder}", name=f"{name}_{col}_last")
         rts, rcode, rval = cls_ffill.update(featd['dtsi'], featd['dscode'], featd[col])
+        r.add(cls_ffill)
         if 'dtsi' not in nfeatd.keys():
             nfeatd['dtsi'] = rts
             nfeatd['dscode'] = rcode
@@ -294,7 +243,7 @@ def perform_groupby_last(featd, feats=[], folder=None, name=None):
     return nfeatd, nfeats
 
 
-def perform_cumsum(featd, feats=[], folder=None, name=None):
+def perform_cumsum(featd, feats=[], folder=None, name=None,r=g_reg):
     """
     """
     assert 'dtsi' in featd.keys()
@@ -307,12 +256,32 @@ def perform_cumsum(featd, feats=[], folder=None, name=None):
         cls_cum = CumSumStepper \
             .load(folder=f"{folder}", name=f"{name}_{col}_cumsum")
         cum_val = cls_cum.update(featd['dtsi'], featd['dscode'], featd[col])
+        r.add(cls_cum)
         featd[f'{col}_cumsum'] = cum_val
         nfeats += [f'{col}_cumsum']
     return featd, nfeats
 
 
-def perform_diff(featd, feats=[], windows=[1], folder=None, name=None):
+def perform_cnt_exists(featd, feats=[], folder=None, name=None,r=g_reg):
+    """
+    cnt=1
+    cumcnt=cumsum(cnt)
+    """
+    assert 'dtsi' in featd.keys()
+    assert 'dscode' in featd.keys()
+    assert np.all(np.diff(featd['dtsi']) >= 0)
+    nfeats = []
+    featd['one'] = np.ones(featd['dtsi'].shape)
+    cls_cum = CumSumStepper \
+        .load(folder=f"{folder}", name=f"{name}_cnt_exists")
+    cum_val = cls_cum.update(featd['dtsi'], featd['dscode'], featd['one'])
+    r.add(cls_cum)
+    featd[f'cnt_exists'] = cum_val
+    nfeats += [f'cnt_exists']
+    return featd, nfeats
+
+
+def perform_diff(featd, feats=[], windows=[1], folder=None, name=None,r=g_reg):
     """
     """
     assert 'dtsi' in featd.keys()
@@ -327,12 +296,13 @@ def perform_diff(featd, feats=[], windows=[1], folder=None, name=None):
             cls_diff = DiffStepper \
                 .load(folder=f"{folder}", name=f"{name}_{col}_diff{hl}", window=hl)
             diff_val = cls_diff.update(featd['dtsi'], featd['dscode'], featd[col])
+            r.add(cls_diff)
             featd[f'{col}_diff{hl}'] = np.nan_to_num(diff_val)
             nfeats += [f'{col}_diff{hl}']
     return featd, nfeats
 
 
-def perform_lag(featd, feats=[], windows=[1], folder=None, name=None):
+def perform_lag(featd, feats=[], windows=[1], folder=None, name=None,r=g_reg):
     """
     """
     assert 'dtsi' in featd.keys()
@@ -350,8 +320,34 @@ def perform_lag(featd, feats=[], windows=[1], folder=None, name=None):
                 cls_lag = RollingLagStepper \
                     .load(folder=f"{folder}", name=f"{name}_{col}_lag{hl}", window=hl)
                 lag_val = cls_lag.update(featd['dtsi'], featd['dscode'], featd[col])
+                r.add(cls_lag)
                 featd[f'{col}_lag{hl}'] = lag_val
                 nfeats += [f'{col}_lag{hl}']
+    return featd, nfeats
+
+def perform_lag_forward(featd, feats=[], windows=[1], folder=None, name=None,r=g_reg):
+    """
+    """
+    assert 'dtsi' in featd.keys()
+    assert 'dscode' in featd.keys()
+    for col in feats:
+        assert col in featd.keys()
+    assert np.all(np.diff(featd['dtsi']) >= 0)
+    assert np.array(windows).dtype == 'int64'
+    nfeats = []
+    for col in feats:
+        for hl in windows:
+            assert hl<0
+            df = pd.DataFrame({
+                'i':np.arange(len(featd['dtsi'])),
+                'dts':featd['dtsi'],
+                'dscode':featd['dscode'],
+                'feat':featd[col],
+                })
+            df['feat_forward']=df.groupby('dscode')['feat'].transform(lambda x:x.shift(hl))
+            assert df['i'].is_monotonic_increasing
+            featd[f'forward_{col}_lag{hl}'] = df['feat_forward'].values
+            nfeats += [f'forward_{col}_lag{hl}']
     return featd, nfeats
 
 
@@ -466,7 +462,7 @@ def perform_merge_asof(featd_l, featd_r, feats=[], folder=None, name=None):
     nfeats = []
     for col in feats:
         cls_merge = MergeAsofStepper \
-            .load(folder=f"{folder}", name=f"{name}_{col}_masof", p=10)
+            .load(folder=f"{folder}", name=f"{name}_{col}_masof")
         merge_val = cls_merge.update(featd_l['dtsi'], featd_l['dscode'],
                                      featd_r['dtsi'], featd_r['dscode'], featd_r[col])
         featd_l[f'{col}_masof'] = merge_val
@@ -491,9 +487,54 @@ def perform_clip(featd, feats=[], folder=None, name=None,low_clip=np.nan,high_cl
         nfeats += [f'{col}_clip']
     return featd, nfeats
 
-def perform_clip_quantile(featd, feats=[], folder=None, name=None,low_clip=0.05,high_clip=0.95):
+def perform_quantile_global(featd, feats=[], qs=[],folder=None, name=None,r=g_reg):
     """
     we use an expanding quantile computation
+    """
+    assert 'dtsi' in featd.keys()
+    assert 'dscode' in featd.keys()
+    assert len(qs)>0
+    for col in feats:
+        assert col in featd.keys()
+    assert np.all(np.diff(featd['dtsi']) >= 0)
+    nfeats = []
+    for col in feats:
+        cls_qtl = QuantileStepper \
+            .load(folder=f"{folder}", name=f"{name}_{col}_qtl", qs=qs)
+        arr_qtls = cls_qtl.update(featd['dtsi'], np.zeros(featd['dtsi'].shape[0],dtype=np.int64),featd[col])
+        r.add(cls_qtl)
+        for i in range(len(qs)):
+            qs_loc = qs[i]
+            featd[f'{col}_qtl{qs_loc:.2f}'] = arr_qtls[:,i]
+            nfeats += [f'{col}_qtl{qs_loc:.2f}']
+    return featd, nfeats
+
+def perform_quantile_bydscode(featd, feats=[], qs=[],folder=None, name=None,r=g_reg):
+    """
+    we use an expanding quantile computation
+    """
+    assert 'dtsi' in featd.keys()
+    assert 'dscode' in featd.keys()
+    assert len(qs)>0
+    for col in feats:
+        assert col in featd.keys()
+    assert np.all(np.diff(featd['dtsi']) >= 0)
+    nfeats = []
+    for col in feats:
+        cls_qtl = QuantileStepper \
+            .load(folder=f"{folder}", name=f"{name}_{col}_qtl", qs=qs)
+        arr_qtls = cls_qtl.update(featd['dtsi'], featd['dscode'],featd[col])
+        r.add(cls_qtl)
+        for i in range(len(qs)):
+            qs_loc = qs[i]
+            featd[f'{col}_qtl{qs_loc:.2f}'] = arr_qtls[:,i]
+            nfeats += [f'{col}_qtl{qs_loc:.2f}']
+    return featd, nfeats
+
+def perform_clip_quantile_global(featd, feats=[], folder=None, name=None,low_clip=0.05,high_clip=0.95,r=g_reg):
+    """
+    we use an expanding quantile computation
+    This is still quite slow unfortunately !! 
     """
     assert 'dtsi' in featd.keys()
     assert 'dscode' in featd.keys()
@@ -504,7 +545,7 @@ def perform_clip_quantile(featd, feats=[], folder=None, name=None,low_clip=0.05,
     for col in feats:
         cls_qtl = QuantileStepper \
             .load(folder=f"{folder}", name=f"{name}_{col}_clip", qs=[low_clip,high_clip])
-        arr_qtls = cls_qtl.update(featd['dtsi'], featd['dscode'],featd[col])
+        arr_qtls = cls_qtl.update(featd['dtsi'], np.zeros(featd['dtsi'].shape[0],dtype=np.int64),featd[col])
         arr_qtl_low = arr_qtls[:,0]
         arr_qtl_high = arr_qtls[:,1]
         featd[f'{col}_clilpqtl'] = np.where(featd[col]<arr_qtl_low,
@@ -517,7 +558,7 @@ def perform_clip_quantile(featd, feats=[], folder=None, name=None,low_clip=0.05,
         nfeats += [f'{col}_clipqtl']
     return featd, nfeats
 
-def perform_0tonan(featd, feats=[], folder=None, name=None):
+def perform_0tonan(featd, feats=[], folder=None, name=None,r=g_reg):
     """
     the alpha is variable , it depends on the ufeats
     """
@@ -533,7 +574,7 @@ def perform_0tonan(featd, feats=[], folder=None, name=None):
     return featd, nfeats
 
 
-def perform_add_prefix(featd, feats=[], prefix='', folder=None, name=None):
+def perform_add_prefix(featd, feats=[], prefix='', folder=None, name=None,r=g_reg):
     nfeats = []
     for col in feats:
         assert col in featd.keys()
@@ -586,7 +627,7 @@ def perform_pfp(featd, feats=[], nbrevs=[1], ticks=[3.0], debug=False, folder=No
                     nfeats += [f'{ncol}_px', f'{ncol}_el']
     return featd, nfeats
 
-def perform_cs_rank(featd,feats=[],folder=None, name=None):
+def perform_cs_rank(featd,feats=[],folder=None, name=None,r=g_reg):
     assert 'dtsi' in featd.keys()
     assert 'dscode' in featd.keys()
     assert np.all(np.diff(featd['dtsi']) >= 0)
@@ -595,13 +636,14 @@ def perform_cs_rank(featd,feats=[],folder=None, name=None):
         cls_qtl = csRankStepper \
             .load(folder=f"{folder}", name=f"{name}_{col}_csrank")
         featd[f'{col}_csrank'] = cls_qtl.update(featd['dtsi'], featd['dscode'],featd[col])
+        r.add(cls_qtl)
         nfeats += [f'{col}_csrank']
     return featd, nfeats
     
 def perform_model(featd, feats=[], wgt=None,ycol=None,folder=None, name=None,
                   lookback=300,minlookback=100,
                   fitfreq=10,gap=1,model_gen=None,
-                  with_fit=True):
+                  with_fit=True,r=g_reg):
     assert 'dtsi' in featd.keys()
     assert 'dscode' in featd.keys()
     check_cols(featd, feats)
@@ -616,11 +658,12 @@ def perform_model(featd, feats=[], wgt=None,ycol=None,folder=None, name=None,
     wgtserie = featd[wgt]
     yserie = featd[ycol]
     res=cls_model.update(featd['dtsi'], xseries, yserie=yserie,wgtserie=wgtserie)
+    r.add(cls_model)
     featd[f'model_{ycol}_{wgt}']=res
     nfeats=[f'model_{ycol}_{wgt}']
     return featd, nfeats
 
-def perform_corr(featd, feats1=[], feats2=[], windows=[100], folder=None, name=None):
+def perform_corr(featd, feats1=[], feats2=[], windows=[100], folder=None, name=None,r=g_reg):
     """
     """
     assert 'dtsi' in featd.keys()
@@ -637,11 +680,12 @@ def perform_corr(featd, feats1=[], feats2=[], windows=[100], folder=None, name=N
                 cls_corr = RollingCorrStepper \
                     .load(folder=f"{folder}", name=f"{name}_{ncol}", window=hl)
                 corr_val = cls_corr.update(featd['dtsi'], featd['dscode'], featd[col1], featd[col2])
+                r.add(cls_corr)
                 featd[f'{ncol}'] = corr_val
                 nfeats += [f'{ncol}']
     return featd, nfeats
 
-def perform_cs_demean(featd,feats=[],by=None,wgt=None,folder=None, name=None):
+def perform_cs_demean(featd,feats=[],by=None,wgt=None,folder=None, name=None,r=g_reg):
     assert 'dtsi' in featd.keys()
     assert 'dscode' in featd.keys()
     assert np.all(np.diff(featd['dtsi']) >= 0)
@@ -652,11 +696,12 @@ def perform_cs_demean(featd,feats=[],by=None,wgt=None,folder=None, name=None):
         csmean = cls_qtl.update(featd['dtsi'], featd['dscode'],featd[col],
                                 by=None if by is None else featd[by],
                                 wgt=None if wgt is None else featd[wgt])
+        r.add(cls_qtl)
         featd[f'{col}_csdemean'] = featd[col]-csmean
         nfeats += [f'{col}_csdemean']
     return featd, nfeats
 
-def perform_cs_scaling(featd,feats=[],by=None,wgt=None,folder=None, name=None):
+def perform_cs_scaling(featd,feats=[],by=None,wgt=None,folder=None, name=None,r=g_reg):
     assert 'dtsi' in featd.keys()
     assert 'dscode' in featd.keys()
     assert np.all(np.diff(featd['dtsi']) >= 0)
@@ -667,6 +712,7 @@ def perform_cs_scaling(featd,feats=[],by=None,wgt=None,folder=None, name=None):
         csstd = cls_qtl.update(featd['dtsi'], featd['dscode'],featd[col],
                                 by=None if by is None else featd[by],
                                 wgt=None if wgt is None else featd[wgt])
+        r.add(cls_qtl)
         featd[f'{col}_csscaling'] = np.divide(
                     featd[col],
                     csstd,
@@ -676,7 +722,7 @@ def perform_cs_scaling(featd,feats=[],by=None,wgt=None,folder=None, name=None):
     return featd, nfeats
 
 
-def perform_reg(featd, feats1=[], feats2=[], windows=[100], lams=[0.0], folder=None, name=None):
+def perform_reg(featd, feats1=[], feats2=[], windows=[100], lams=[0.0], folder=None, name=None,r=g_reg):
     """
     lam is the ridge regularisation
     """
@@ -695,6 +741,7 @@ def perform_reg(featd, feats1=[], feats2=[], windows=[100], lams=[0.0], folder=N
                     cls_reg = RollingRidgeStepper \
                         .load(folder=f"{folder}", name=f"{name}_{ncol}", window=hl, lam=lam)
                     alpha, beta, resid = cls_reg.update(featd['dtsi'], featd['dscode'], featd[col1], featd[col2])
+                    r.add(cls_reg)
                     featd[f'{ncol}_alpha'] = alpha
                     featd[f'{ncol}_beta'] = beta
                     featd[f'{ncol}_resid'] = resid
@@ -702,7 +749,7 @@ def perform_reg(featd, feats1=[], feats2=[], windows=[100], lams=[0.0], folder=N
     return featd, nfeats
 
 
-def perform_pivot(featd, feats=[],  folder=None, name=None):
+def perform_pivot(featd, feats=[],  folder=None, name=None,r=g_reg):
     """
     returns date and dict { stock:values}
     Format is special
@@ -716,9 +763,76 @@ def perform_pivot(featd, feats=[],  folder=None, name=None):
     cls_piv = PivotStepper \
         .load(folder=f"{folder}", name=f"{name}_pivot_{col}")
     udts,res = cls_piv.update(featd['dtsi'], featd['dscode'], featd[col])
-
+    r.add(cls_piv)
     return udts,res
 
+
+def perform_unpivot(dts, pfeatd,  folder=None, name=None,r=g_reg):
+    """
+    returns date and dict { stock:values}
+    Format is special
+    """
+    assert np.all(np.diff(dts) >= 0)
+    cls_piv = UnPivotStepper \
+        .load(folder=f"{folder}", name=f"{name}_unpivot")
+    ndt,ndscode,nserie = cls_piv.update(dts, pfeatd)
+    r.add(cls_piv)
+    return ndt,ndscode,nserie
+
+
+def perform_bktest(featd,  with_plot=True,with_txt=True,folder=None, name=None,r=g_reg):
+    assert 'dtsi' in featd.keys()
+    assert 'dscode' in featd.keys()
+    from crptmidfreq.utils.bktester import bktest_stats
+    if with_plot:
+        save_graph_path=os.path.join(get_analysis_folder(),'bktest_NAME.png')
+    else:
+        save_graph_path = None
+    sig_cols=[x for x in featd.keys() if x.startswith('sig_')]
+    lr=[]
+    for sig_col in sig_cols:
+        stats=bktest_stats(
+            featd['dtsi'],
+            featd['dscode'],
+            featd[sig_col],
+            featd['forward_fh1'],
+            featd['wgt'], 
+            str(sig_col), # name
+            save_graph_path=save_graph_path,
+        )
+        stats['col']=sig_col
+        if with_txt:
+            print('-'*20)
+            print('-'*20)
+            pprint(stats)
+        lr+=[stats]
+    return stats
+
+def perform_avg_features_fillna0(featd,xcols=[],outname='',folder=None,name=None,r=g_reg):
+    """we fillna values with 0.0"""
+    assert 'dtsi' in featd.keys()
+    featd[outname]=np.zeros(featd['dtsi'].shape[0])
+    for xcol in xcols:
+        featd[outname]=featd[outname]+np.nan_to_num(featd[xcol])
+    featd[outname]=featd[outname]/len(xcols)
+    return featd,[outname]
+
+def perform_bucketplot(featd,xcols=[],ycols=[],folder=None,name=None,r=g_reg):
+    assert 'dtsi' in featd.keys()
+    assert 'dscode' in featd.keys()
+    check_cols(featd, xcols+ycols)
+    assert np.all(np.diff(featd['dtsi']) >= 0)
+    for xcol in xcols:
+        for ycol in ycols:
+            cls_bucket = BucketXYStepper \
+                .load(folder=f"{folder}", name=f"{name}_bucketxy_{xcol}_{ycol}")
+            r_mean,r_std = cls_bucket.update(featd['dtsi'], 
+                                             featd['dscode'], 
+                                             featd[xcol],
+                                             featd[ycol])
+            # TODO: to finish
+    nfeats=[]
+    return featd, nfeats
 
 
 # ipython -i -m featurelib.lib_v1

@@ -44,3 +44,50 @@ pdf = path_simple(df['zs'], levels=[0.8, 1.5], buffer_value_mult=0.2, buffer_val
 
 Things specific to crypto to add:
 - time since token is listed -- there are weirds things going on a start of token listing
+
+
+# TODO: model the intraday volume curve
+
+
+## Distribution of an Ewm(X)
+
+Let $ x_1, x_2, \ldots, x_n \sim \mathcal{N}(0, \sigma^2) $ be an i.i.d. sequence of Gaussian random variables.
+
+Define the Exponentially Weighted Moving Average (EWMA) recursively as:
+$$
+\text{ewm}_x(n+1) = \alpha \cdot \text{ewm}_x(n) + (1 - \alpha) \cdot x_n
+$$
+with $ 0 < \alpha < 1 $, and assume $ \text{ewm}_x(1) = 0 $ (or some fixed value).
+
+We can unroll the recursion:
+$$
+\text{ewm}_x(n) = (1 - \alpha) \sum_{k=0}^{n-1} \alpha^k x_{n-1-k}
+$$
+
+As \( n \to \infty \), this becomes a weighted sum of i.i.d. Gaussian variables:
+$$
+y = (1 - \alpha) \sum_{k=0}^{\infty} \alpha^k x_k
+$$
+
+Since each \( x_k \sim \mathcal{N}(0, \sigma^2) \), and the sum is linear, \( y \sim \mathcal{N}(0, \text{Var}[y]) \), where:
+$$
+\text{Var}[y] = (1 - \alpha)^2 \sum_{k=0}^{\infty} \alpha^{2k} \cdot \sigma^2
+= \sigma^2 (1 - \alpha)^2 \sum_{k=0}^{\infty} \alpha^{2k}
+$$
+
+The geometric sum gives:
+$$
+\sum_{k=0}^\infty \alpha^{2k} = \frac{1}{1 - \alpha^2}
+$$
+
+So:
+$$
+\text{Var}[y] = \sigma^2 \cdot \frac{(1 - \alpha)^2}{1 - \alpha^2} = \sigma^2 \cdot \frac{1 - \alpha}{1 + \alpha}
+$$
+
+\textbf{Therefore, the limiting distribution of the EWMA is:}
+$$
+\boxed{
+\text{ewm}_x(n) \sim \mathcal{N}\left(0,\; \sigma^2 \cdot \frac{1 - \alpha}{1 + \alpha}\right)
+}
+$$

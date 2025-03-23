@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 from math import sqrt
 import matplotlib
+
 import matplotlib.pyplot as plt
 from crptmidfreq.stepper.incr_diff import DiffStepper
 from .common import clean_folder
@@ -78,7 +79,8 @@ def get_daily_stats(dt,tot_pnl, tot_trd, tot_gmv,rd=None,suf=''):
     # sharpe in the last N years
     latest_srs = []
     for n in latest_n_list:
-        mod_r = tot_pnl[dt >= (max_dt - pd.Timedelta(days=365 * n))]
+        year_to_ms = 365 * 24 * 60 * 60 * 1_000_000  # seconds → microseconds pd.Timedelta(days=365 * n)
+        mod_r = tot_pnl[dt >= (max_dt - n*year_to_ms)]
         try:
             latest_sr = np.sqrt(true_ann_factor) * np.mean(mod_r) / np.std(mod_r, ddof=1)
         except:
@@ -110,6 +112,7 @@ def bktest_stats(
         ypred,        # numpy array of predicted signal values
         y,            # numpy array of forward returns
         lots,         # numpy array of weights
+        name,         # column or signal name
         spread=None,  # numpy array; market spread (bps)
         turnover=None,# numpy array; turnover values
         volatility=None,  # numpy array; volatility values
@@ -131,6 +134,7 @@ def bktest_stats(
     """
     # Initialize results dictionary with default NaNs.
     rd = {
+        'name':name,
         'sr': np.nan, 
         'mdd': np.nan, 
         'rpt': np.nan, 
@@ -257,10 +261,13 @@ def bktest_stats(
         # Plot cumulative net pnl (using daily_net from pandas aggregation)
         cum_net = np.cumsum(daily_net_pnl)
         fig, ax = plt.subplots(figsize=(10, 6))
-        ax.plot(daily_dt, cum_net)
+        daily_dt_f = pd.to_datetime(daily_dt*1e3)
+        ax.plot(daily_dt_f, cum_net)
         ax.set_title('Cumulative Net PnL')
-        plt.savefig(save_graph_path)
+        tsave_graph_path=save_graph_path.replace('NAME',name)
+        plt.savefig(tsave_graph_path)
         plt.close(fig)
+        print(f'Bktest Graph saved to {tsave_graph_path}')
     
     if save_dailypnl_path is not None:
         # Create a DataFrame to export daily pnl stats.
@@ -269,7 +276,8 @@ def bktest_stats(
         df_daily.sort_index(inplace=True)
         df_daily['cumpnl'] = df_daily['pnl'].cumsum()
         df_daily['cumpnlpct'] = df_daily['cumpnl'] / (df_daily['grossdelta'].quantile(0.8) + epsilon)
-        df_daily.to_excel(save_dailypnl_path)
-    
+        tsave_dailypnl_path=save_dailypnl_path.replace('NAME',name)
+        df_daily.to_excel(tsave_dailypnl_path)
+        print(f'Bktest CSV saved to {tsave_dailypnl_path}')
     
     return rd

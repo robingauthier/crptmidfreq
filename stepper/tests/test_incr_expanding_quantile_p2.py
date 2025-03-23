@@ -1,9 +1,8 @@
 import pandas as pd
 
-from crptmidfreq.stepper.incr_expanding_quantile_fast import *
+from crptmidfreq.stepper.incr_expanding_quantile_p2 import *
 
-# pytest ./stepper/tests/test_incr_expanding_quantile_fast.py --pdb --maxfail=1
-
+# pytest ./crptmidfreq/stepper/tests/test_incr_expanding_quantile_p2.py --pdb --maxfail=1
 
 def generate_data(n_samples, n_codes):
     """Generate test data"""
@@ -32,7 +31,7 @@ def test_against_pandas():
     q = 0.9
 
     # Create and run QuantileStepper on data
-    qstep = QuantileStepper(folder='test_data', name='test_quantile', qs=[q])
+    qstep = QuantileStepper(folder='test_data', name='test_quantile', qs=[q],freq=3)
     # For an expanding quantile, we feed the entire data once, 
     # but in real streaming you'd feed it in chunks or row by row.
     quant_est = qstep.update(dt, dscode, serie)
@@ -53,7 +52,9 @@ def test_against_pandas():
         df.groupby('dscode')['serie'].transform(
           lambda x: x.expanding().quantile(q))
     )
-
+    df['quant_est'] = (
+        df.groupby('dscode')['quant_est'].transform('ffill')
+    )
     # Compare results: we can check correlation or compute an average error
     mae = (df['quant_true'] - df['quant_est']).abs().mean()
 
@@ -76,7 +77,7 @@ def test_save_load_result():
     q = 0.8
 
     # 1) Create instance, update with half the data, save
-    qstep = QuantileStepper(folder='test_data', name='test_quantile', qs=[q])
+    qstep = QuantileStepper(folder='test_data', name='test_quantile', qs=[q],freq=3)
     part1 = qstep.update(dt[:half], dscode[:half], serie[:half])
     qstep.save()
 
@@ -103,7 +104,9 @@ def test_save_load_result():
         df.groupby('dscode')['serie'].transform(
           lambda x: x.expanding().quantile(q))
     )
-
+    df['quant_est'] = (
+        df.groupby('dscode')['quant_est'].transform('ffill')
+    )
     # Compare results: we can check correlation or compute an average error
     mae = (df['quant_true'] - df['quant_est']).abs().mean()
 

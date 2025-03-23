@@ -26,7 +26,10 @@ from crptmidfreq.stepper.incr_cs_std import csStdStepper
 from crptmidfreq.stepper.incr_cs_rank import csRankStepper
 
 from crptmidfreq.stepper.incr_pivot import PivotStepper
-from crptmidfreq.stepper.incr_expanding_quantile_fast import QuantileStepper
+from crptmidfreq.stepper.incr_unpivot import UnPivotStepper
+from crptmidfreq.stepper.incr_expanding_quantile_tdigest import QuantileStepper
+#from crptmidfreq.stepper.incr_expanding_quantile_p2 import QuantileStepper
 from crptmidfreq.stepper.incr_expanding_bucketxy import BucketXYStepper
 
 from crptmidfreq.stepper.incr_model import ModelStepper
+from crptmidfreq.stepper.incr_model_kmeans import KmeansStepper

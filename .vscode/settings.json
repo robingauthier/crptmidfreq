@@ -1,12 +1,9 @@
 {
   "python.defaultInterpreterPath": "/Users/sachadrevet/anaconda3/bin/python",
   "python.analysis.extraPaths": [
-    "${workspaceFolder}/venv/lib/python3.x/site-packages",
+    "${workspaceFolder}/venv/lib/python3.x/site-packages"
   ],
   "python.envFile": "${workspaceFolder}/.vscode/.env",
-  //    "${workspaceFolder}/../"
-  //"python.testing.pytestArgs": ["${workspaceFolder}/../"],
-  //"python.analysis.useImportHeuristic": true,
   "files.autoSave": "afterDelay",
   "files.autoSaveDelay": 1000,
   "C_Cpp_Runner.cCompilerPath": "clang",

@@ -2,7 +2,9 @@
 import logging
 import logging
 
-def get_logger(name: str):
+
+
+def get_logger(name='crptmidfreq'):
     """Returns a configured logger with a fixed format."""
     
     logger = logging.getLogger(name)

@@ -154,6 +154,7 @@ def main(args):
     
 # python datahub/binance_hist_wrap.py --sdate_str 2023-01-21 
 # python  datahub/binance_hist_wrap.py --sdate_str 2020-01-01 --edate_str 2025-01-01 --period monthly
+# python ./crptmidfreq/datahub/binance_hist_wrap.py --sdate_str 2020-01-01 --edate_str 2025-01-01 --period monthly
 if __name__=='__main__':
     parser = argparse.ArgumentParser(description='Download Binance historical data.')
     parser.add_argument('--sdate_str', type=str, default='2025-01-01',

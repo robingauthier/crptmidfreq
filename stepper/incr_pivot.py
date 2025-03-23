@@ -79,7 +79,8 @@ class PivotStepper(BaseStepper):
 
     def update(self, dt, dscode, serie):
         """
-
+        dscode contains integers 
+        the result is a dictionary of numpy arrays with the dscode as key
         """
         self.validate_input(dt,dscode,serie)
         # Update values and timestamps using numba function
@@ -87,11 +88,7 @@ class PivotStepper(BaseStepper):
             key_type=types.int64,
             value_type=types.Array(types.float64, 1, 'C')
         )
-        print('pivot_start')
         udts,res= incremental_pivot(
             dt.view(np.int64),dscode.view(np.int64), serie, 
             self.last_timestamps,res)
-        #rd = dict(res) # numba dict-> python dict
-        #rd['dt']=udts
-        print('pivot_end')
         return udts,res

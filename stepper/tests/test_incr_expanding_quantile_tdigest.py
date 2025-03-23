@@ -1,13 +1,9 @@
 import pandas as pd
 
-from crptmidfreq.stepper.incr_expanding_quantile import *
+from crptmidfreq.stepper.incr_expanding_quantile_tdigest import *
 
-# pytest ./stepper/tests/test_incr_quantile_expanding.py --pdb --maxfail=1
+# pytest ./crptmidfreq/stepper/tests/test_incr_expanding_quantile_tdigest.py --pdb --maxfail=1
 
-
-###############################################################################
-# 2) Test code and utility functions (similar to your EWM tests).
-###############################################################################
 
 def generate_data(n_samples, n_codes):
     """Generate test data"""
@@ -36,7 +32,7 @@ def test_against_pandas():
     q = 0.9
 
     # Create and run QuantileStepper on data
-    qstep = QuantileStepper(folder='test_data', name='test_quantile', qs=[q])
+    qstep = QuantileStepper(folder='test_data', name='test_quantile', qs=[q],freq=3)
     # For an expanding quantile, we feed the entire data once, 
     # but in real streaming you'd feed it in chunks or row by row.
     quant_est = qstep.update(dt, dscode, serie)
@@ -67,26 +63,6 @@ def test_against_pandas():
     # The approximation error might cause differences. Adjust threshold as needed.
 
 
-def test_save_load():
-    """Test save and load functionality for the streaming quantile."""
-    n_samples = 1000
-    n_codes = 10
-    dt, dscode, serie = generate_data(n_samples, n_codes)
-
-    q = 0.9
-    qstep = QuantileStepper(folder='test_data', name='test_quantile', qs=[q])
-    # Update with the data
-    qstep.update(dt, dscode, serie)
-    qstep.save()
-
-    # Load
-    qstep_loaded = QuantileStepper.load('test_data', 'test_quantile')
-    # Compare q
-    assert qstep.qs[0] == qstep_loaded.qs[0]
-
-    # Compare that the same codes exist
-    assert qstep.tdigest_map.keys() == qstep_loaded.tdigest_map.keys()
-
 
 def test_save_load_result():
     """
@@ -100,7 +76,7 @@ def test_save_load_result():
     q = 0.8
 
     # 1) Create instance, update with half the data, save
-    qstep = QuantileStepper(folder='test_data', name='test_quantile', qs=[q])
+    qstep = QuantileStepper(folder='test_data', name='test_quantile', qs=[q],freq=3)
     part1 = qstep.update(dt[:half], dscode[:half], serie[:half])
     qstep.save()
 

@@ -71,7 +71,7 @@ def get_daily_stats(dt,tot_pnl, tot_trd, tot_gmv,rd=None,suf=''):
     max_dt=np.max(dt)
     rd[f'sr{suf}'] = np.sqrt(true_ann_factor) * ret / (sigma + epsilon)
     rd[f'ann_pnl{suf}'] = ret * true_ann_factor/1e3
-    rd[f'mdd{suf}'] = np.max(dd_series(tot_pnl)) / tot_gmv.mean() if tot_gmv.mean() > 0 else np.nan
+    rd[f'mdd{suf}'] = 100*np.max(dd_series(tot_pnl)) / tot_gmv.mean() if tot_gmv.mean() > 0 else np.nan
     rd[f'rpt{suf}'] = 1e4 * tot_pnl.sum() / tot_trd.sum() if tot_trd.sum() > 0 else np.nan
     rd[f'rog{suf}'] = 1e2 * tot_pnl.sum() / tot_gmv.mean() if tot_gmv.mean() > 0 else np.nan
     rd[f'factor{suf}']=true_ann_factor

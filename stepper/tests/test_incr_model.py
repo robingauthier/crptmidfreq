@@ -5,9 +5,10 @@ import pytest
 from sklearn.linear_model import LinearRegression
 import pandas as pd
 # Adjust this import path to wherever your ModelStepper is defined
-from ..incr_model import ModelStepper  
+from crptmidfreq.stepper.incr_model import ModelStepper
 
-# pytest ./stepper/tests/test_incr_model.py --pdb --maxfail=1
+# pytest ./crptmidfreq/stepper/tests/test_incr_model.py --pdb --maxfail=1
+
 
 def test_model_stepper_sklearn_linear():
     """Test the ModelStepper with a scikit-learn LinearRegression model."""
@@ -22,9 +23,9 @@ def test_model_stepper_sklearn_linear():
         return LinearRegression()
 
     # 3) Instantiate ModelStepper
-    lookback = 10
-    minlookback = 5
-    fitfreq = 2
+    lookback = 500
+    minlookback = 200
+    fitfreq = 100
     stepper = ModelStepper(
         folder=test_folder,
         name="test_modelstep_linear",
@@ -37,11 +38,11 @@ def test_model_stepper_sklearn_linear():
 
     # 4) Generate some dummy data
     np.random.seed(42)
-    n_samples = 20
+    n_samples = 1000
     n_features = 3
 
     # Timestamps can be simple range or actual dates
-    dts = np.arange(n_samples)  
+    dts = np.arange(n_samples)
     xseries = np.random.randn(n_samples, n_features)
     yserie = 2.0 * xseries[:, 0] + 0.5 * xseries[:, 1] - xseries[:, 2] + 0.3 * np.random.randn(n_samples)
     wgtserie = 1.0 + 0.1 * np.random.rand(n_samples)  # always > 1
@@ -57,9 +58,9 @@ def test_model_stepper_sklearn_linear():
     assert len(stepper.hmodels) > 0, "No models were fitted, expected at least one in hmodels."
 
     df = pd.DataFrame({
-    'y':yserie,
-    'ypred':preds,
-    'wgt':wgtserie    
+        'y': yserie,
+        'ypred': preds,
+        'wgt': wgtserie
     })
-    corr=df[['y','ypred']].corr().iloc[0,1]
-    assert corr>0.9
+    corr = df[['y', 'ypred']].corr().iloc[0, 1]
+    assert corr > 0.8

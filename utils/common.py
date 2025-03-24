@@ -3,23 +3,33 @@ import pandas as pd
 import numpy as np
 from crptmidfreq.config_loc import get_analysis_folder
 from crptmidfreq.utils.log import get_logger
+import hashlib
 
 
-logger=get_logger()
+logger = get_logger()
 
-def lvals(df,level):
+
+def get_hash(text):
+    # Encode the string to bytes, then compute the SHA256 hash
+    hash_object = hashlib.sha256(text.encode('utf-8'))
+    return hash_object.hexdigest()
+
+
+def lvals(df, level):
     return df.index.get_level_values(level)
 
-def filter_date_df(df,start_date=None,end_date=None):
-    if isinstance(df.index,pd.MultiIndex):
+
+def filter_date_df(df, start_date=None, end_date=None):
+    if isinstance(df.index, pd.MultiIndex):
         if start_date is not None:
-            df=df[lvals(df,'date')>=start_date]
+            df = df[lvals(df, 'date') >= start_date]
         if end_date is not None:
-            df=df[lvals(df,'date')<=end_date]
+            df = df[lvals(df, 'date') <= end_date]
     else:
         print('filter_date_df :: Not implemented yet')
     return df
-        
+
+
 def set_pandas_display():
     import pandas as pd
 
@@ -44,30 +54,52 @@ def to_csv(df, name):
     for iter in range(20):
         try:
             niter = '' if iter == 0 else str(iter)
-            tpath=get_analysis_folder() + name + f'{niter}.csv'
+            tpath = get_analysis_folder() + name + f'{niter}.csv'
             df.to_csv(tpath)
             print(f'Saved : {tpath}')
             break
         except Exception as e:
             pass
 
-def rename_key(featd,old,new):
+
+def rename_key(featd, old, new):
     featd[new] = featd.pop(old)
     assert new in featd.keys()
     return featd
 
+
 def get_sig_cols(featd):
-    lr=[]
+    """Convention :sig_ will be signals"""
+    lr = []
     for k in featd.keys():
         if k.startswith('sig_'):
-            lr+=[k]
+            lr += [k]
+    return lr
+
+
+def get_sigf_cols(featd):
+    """Convention :sigf_ will be features ready for ML"""
+    lr = []
+    for k in featd.keys():
+        if k.startswith('sigf_'):
+            lr += [k]
+    return lr
+
+
+def get_forward_cols(featd):
+    """Convention :sigf_ will be features ready for ML"""
+    lr = []
+    for k in featd.keys():
+        if k.startswith('forward_'):
+            lr += [k]
     return lr
 
 
 def ewm_alpha(window=1.0):
     """Convert half-life to alpha"""
-    assert window>0
+    assert window > 0
     return 1 - np.exp(np.log(0.5) / window)
+
 
 def print_ram_usage():
     import psutil
@@ -83,26 +115,25 @@ def validate_input(dt, dscode, **kwargs):
     Args:
         dt: numpy array of datetime64 values
         dscode: numpy array of categorical codes
-        
+
     Raises:
         ValueError: If input validation fails.
     """
     # Validate that inputs are numpy arrays
     if not isinstance(dt, np.ndarray) \
-        or not isinstance(dscode, np.ndarray):
+            or not isinstance(dscode, np.ndarray):
         raise ValueError("All inputs must be numpy arrays")
-    for k,v in kwargs.items():
+    for k, v in kwargs.items():
         if not isinstance(v, np.ndarray):
             raise ValueError(f"All inputs must be numpy arrays --see: {k}")
-    
+
     # Minimal type validation
-    assert dt.dtype in ['<M8[us]','<M8[D]','<M8[m]','<M8[ns]','int64']
-    assert dscode.dtype in ['int64','object']
-    
+    assert dt.dtype in ['<M8[us]', '<M8[D]', '<M8[m]', '<M8[ns]', 'int64']
+    assert dscode.dtype in ['int64', 'object']
+
     # Validate that all inputs have the same length
     if len(dt) != len(dscode):
         raise ValueError("All inputs must have the same length")
-    for k,v in kwargs.items():
+    for k, v in kwargs.items():
         if len(dt) != len(v):
             raise ValueError(f"All inputs must have the same length --see: {k}")
-    

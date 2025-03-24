@@ -7,112 +7,143 @@ from numba import types
 from numba.typed import Dict
 from crptmidfreq.stepper.base_stepper import BaseStepper
 from crptmidfreq.utils.common import get_logger
+from crptmidfreq.stepper.incr_model_timeclf import TimeClfStepper
+from crptmidfreq.stepper.incr_model_timeclf import get_dts_max_before
+from crptmidfreq.stepper.incr_model_timeclf import get_dts_min_after
 
 # Quite similar to the featurelib/timeclf.py
 
-logger=get_logger()
+logger = get_logger()
 
 
 class ModelStepper(BaseStepper):
     """Relies on the pivot first and then runs an SVD"""
 
-    def __init__(self, folder='', name='',lookback=300,minlookback=100,
-                 fitfreq=10,gap=1,model_gen=None,with_fit=True):
+    def __init__(self, folder='', name='', lookback=300, minlookback=100,
+                 fitfreq=10, gap=1, model_gen=None, with_fit=True):
         """
         """
-        super().__init__(folder,name)
-        self.fitfreq=fitfreq
-        self.gap=gap
-        self.lookback=lookback
-        self.minlookback=minlookback
-        self.model_gen = model_gen# you need to call model_gen() to create a new model 
-        self.with_fit=with_fit
-        
-        # Initialize empty state
-        self.last_xmem = None
-        self.last_ymem = None
-        self.last_wmem = None
-        self.mempos = 0
-        self.warmpos=0
-        self.last_i =0 # when the last model was fit
-        self.model_i = 0 # counting the models
-        self.last_mem=None
-        self.last_univ=None
-        
+        super().__init__(folder, name)
+        self.timeclf = TimeClfStepper(folder=folder, name=name,
+                                      lookback=lookback, minlookback=minlookback,
+                                      fitfreq=fitfreq, gap=gap)
+
+        # Initialize empty state for the memory
+        self.last_xmem = np.ndarray(shape=(0, 0), dtype=np.float64)
+        self.last_ymem = np.array([], dtype=np.float64)
+        self.last_wmem = np.array([], dtype=np.float64)
+        self.last_dts = np.array([], dtype=np.int64)
+
         # History of models
-        self.hmodels=[]
-        
+        self.model_gen = model_gen
+        self.hmodels = []
+
+        self.with_fit = with_fit
+
     def save(self):
         self.save_utility()
 
     @classmethod
-    def load(cls, folder, name,lookback=300,minlookback=100,
-                 fitfreq=10,gap=1,model_gen=None,with_fit=True):
+    def load(cls, folder, name, lookback=300, minlookback=100,
+             fitfreq=10, gap=1, model_gen=None, with_fit=True):
         """Load instance from saved state or create new if not exists"""
-        return ModelStepper.load_utility(cls,folder=folder,name=name,
-                                         lookback=lookback,minlookback=minlookback,
-                 fitfreq=fitfreq,gap=gap,
-                 model_gen=model_gen,with_fit=with_fit
+        return ModelStepper.load_utility(cls, folder=folder, name=name,
+                                         lookback=lookback,
+                                         minlookback=minlookback,
+                                         fitfreq=fitfreq,
+                                         gap=gap,
+                                         model_gen=model_gen,
+                                         with_fit=with_fit
                                          )
 
+    def manage_history(self, dts, xseries, yserie, wgtserie, train_start_dt, train_stop_dt):
 
-    def update(self, dts, xseries, yserie=None,wgtserie=None):
-        """
-        """
-        assert isinstance(xseries,np.ndarray)
-        if yserie is not None:
-            assert xseries.shape[0]==yserie.shape[0]
+        keep_idx_1 = (self.last_dts >= train_start_dt) & (self.last_dts <= train_stop_dt)
+        keep_idx_2 = (dts >= train_start_dt) & (dts <= train_stop_dt)
+        new_dts = np.concatenate([
+            self.last_dts[keep_idx_1],
+            dts[keep_idx_2]
+        ])
+        new_yserie = np.concatenate([
+            self.last_ymem[keep_idx_1],
+            yserie[keep_idx_2]
+        ])
+        new_wserie = np.concatenate([
+            self.last_wmem[keep_idx_1],
+            wgtserie[keep_idx_2]
+        ])
+        if self.last_xmem.shape[0] == 0:
+            nf = xseries.shape[1]
+            self.last_xmem = np.ndarray(shape=(0, nf), dtype=np.float64)
+        new_xserie = np.concatenate([
+            self.last_xmem[keep_idx_1],
+            xseries[keep_idx_2]
+        ])
+        logger.info('ModelStepper :: updating the memory ')
+        # assigning back
+        self.last_dts = new_dts
+        self.last_wmem = new_wserie
+        self.last_ymem = new_yserie
+        self.last_xmem = new_xserie
 
-        result = np.zeros(xseries.shape[0],dtype=np.float64)        
-        
-        # Initializing the memory
-        if self.last_xmem is None:
-            self.last_xmem=np.zeros((self.lookback,xseries.shape[1]),dtype=np.float64)
-            self.last_ymem=np.zeros(self.lookback,dtype=np.float64)
-            self.last_wmem=np.zeros(self.lookback,dtype=np.float64)
-        
-        
-        model_loc=None
-        
-        n=xseries.shape[0]
-        for i in range(n):
-            self.mempos=(self.mempos+1)%self.lookback # position in memory . It is circular
-            self.warmpos+=1 # min nb of points to compute svd
-            self.last_i+=1
+    def fit_model(self):
+        model_loc = self.model_gen()
+        model_loc.fit(X=self.last_xmem, y=self.last_ymem, sample_weight=self.last_wmem)
+        return model_loc
+
+    def update(self, dts, xseries, yserie=None, wgtserie=None):
+        """
+        We need to respect the dtsi here. 
+        """
+        if wgtserie is None:
+            wgtserie = np.ones(xseries.shape[0])
+        if yserie is None:
+            assert not self.with_fit
+            yserie = np.zeros(xseries.shape[0])
+        self.validate_input(dts, dscode=np.ones(yserie.shape[0], dtype=np.int64),
+                            serie=yserie, serie2=wgtserie)
+
+        n = xseries.shape[0]
+        first_time = dts[0]
+        last_time = dts[-1]
+        self.timeclf.update(dts, np.zeros(n), np.zeros(n))
+        ltimes = self.timeclf.ltimes
+
+        result = np.zeros(xseries.shape[0], dtype=np.float64)
+
+        model_loc = None
+
+        for ltime in ltimes:
+            train_start_dt = ltime['train_start_dt']
+            train_stop_dt = ltime['train_stop_dt']
+
+            test_start_dt = ltime['test_start_dt']
+            test_stop_dt = ltime['test_stop_dt']
+            time_str = ltime['str']
+
+            if test_stop_dt < first_time:
+                continue
+            if test_start_dt > last_time:
+                break
+
+            test_start_i = get_dts_max_before(dts, test_start_dt)
+            test_stop_i = get_dts_max_before(dts, test_stop_dt)
 
             if self.with_fit:
-                self.last_xmem[self.mempos,:]=xseries[i,:]
-                if yserie is not None:
-                    # clustering has no yserie
-                    self.last_ymem[self.mempos]=yserie[i]
-                if wgtserie is not None:
-                    # clustering has no wgt
-                    self.last_wmem[self.mempos]=wgtserie[i]
-                
-                case_first_model = (self.model_i==0 and self.last_i>=self.minlookback)
-                case_nth_model = (self.model_i>0 and self.last_i>=self.fitfreq)
-                if case_first_model or case_nth_model:
-                    model_loc = self.model_gen()
-                    logger.info(f'Fitting model {self.folder} {self.name} i={self.model_i}')
-                    if yserie is not None:
-                        model_loc.fit(X=self.last_xmem,y=self.last_ymem,sample_weight=self.last_wmem)
-                    else:
-                        # clustering for instance
-                        model_loc.fit(X=self.last_xmem)
-                    
-                    self.last_i=0 # we reset the counter
-                    self.model_i+=1
-                    # Adding to model history list
-                    self.hmodels+=[{'dt':dts[i],'i':self.last_i,'model':model_loc,'model_i':self.model_i}]
+                logger.info(f'Fitting model {time_str}')
+                self.manage_history(dts, xseries, yserie, wgtserie, train_start_dt, train_stop_dt)
+                model_loc = self.fit_model()
+                self.hmodels += [{
+                    'train_start_dt': train_start_dt,
+                    'train_end_dt': train_stop_dt,
+                    'model': model_loc}]
             else:
-                model_loc=self.hmodels[-1]
-            
+                model_loc = [x for x in self.hmodels if x['train_end_dt'] == train_stop_dt]['model']
+
             if model_loc is not None:
-                # caution we are not using the gap here !!!
-                ypred=model_loc.predict(xseries[[i],:])
-                import pdb;pdb.set_trace()
+                ypred = model_loc.predict(xseries[test_start_i:test_stop_i, :])
+                result[test_start_i:test_stop_i] = ypred
             else:
-                ypred = np.nan
-            
-            result[i]=ypred
+                result[test_start_i:test_stop_i] = 0.0
+
         return result

@@ -11,15 +11,14 @@ from crptmidfreq.utils.common import validate_input
 from crptmidfreq.utils.common import get_logger
 from crptmidfreq.utils.common import print_ram_usage
 
-logger= get_logger()
+logger = get_logger()
+
 
 class BaseStepper:
-    
-    
+
     _instances = {}  # Class variable to track loaded instances
-    verbose=3
-    
-    
+    verbose = 3
+
     def __init__(self, folder='', name=''):
         self.folder = os.path.join(get_feature_folder(), folder)
         self.name = name
@@ -27,16 +26,16 @@ class BaseStepper:
     def __hash__(self):
         # Use a tuple of the important attributes to compute the hash
         return hash((self.folder, self.name))
-    
+
     def save_utility(self):
         """Save internal state to file."""
         # Ensure the folder exists
         if not os.path.exists(self.folder):
             os.makedirs(self.folder)
-        
+
         # Dynamically get the state of the instance by filtering out callable objects
         state = {}
-        
+
         for key, value in self.__dict__.items():
             if not callable(value):
                 if isinstance(value, Dict):  # Check if it's a numba Dict
@@ -44,23 +43,22 @@ class BaseStepper:
                     state[key] = dict(value)
                 else:
                     state[key] = value
-        
+
         # Filepath where the state will be saved
         filepath = os.path.join(self.folder, self.name + '.pkl')
 
         # Save the state using pickle
         with open(filepath, 'wb') as f:
             pickle.dump(state, f)
-        
 
     @classmethod
-    def load_utility(self,cls, folder='', name='',**kwargs):
+    def load_utility(self, cls, folder='', name='', **kwargs):
         """Load instance from saved state or create new if not exists"""
         folder_path = os.path.join(get_feature_folder(), folder)
         filepath = os.path.join(folder_path, name + '.pkl')
 
         print_ram_usage()
-        
+
         if not os.path.exists(filepath):
             logger.info(f'Stepper creating instance {folder} {name}')
             return cls(folder=folder, name=name, **kwargs)
@@ -82,8 +80,7 @@ class BaseStepper:
                 setattr(instance, key, value)
         return instance
 
-
-    def validate_input(self, dt, dscode, serie=None,**kwargs):
+    def validate_input(self, dt, dscode=None, serie=None, **kwargs):
         """
         Common input validation for update methods in subclasses.
 
@@ -95,4 +92,4 @@ class BaseStepper:
         Raises:
             ValueError: If input validation fails.
         """
-        validate_input(dt,dscode,serie=serie,**kwargs)
+        validate_input(dt, dscode, serie=serie, **kwargs)

@@ -4,6 +4,10 @@
     "${workspaceFolder}/venv/lib/python3.x/site-packages"
   ],
   "python.envFile": "${workspaceFolder}/.vscode/.env",
+  "formatAll.includeFileExtensions": [
+    ".py"
+  ],
+  "editor.formatOnSave": true, // I added it to format on save
   "files.autoSave": "afterDelay",
   "files.autoSaveDelay": 1000,
   "C_Cpp_Runner.cCompilerPath": "clang",

@@ -1,0 +1,1 @@
+- Idea is to sell any IPO on Futures !

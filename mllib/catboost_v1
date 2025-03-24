@@ -1,0 +1,19 @@
+from catboost import CatBoostRegressor
+# https://catboost.ai/en/docs/concepts/parameter-tuning
+# https://catboost.ai/en/docs/concepts/python-reference_catboostregressor
+
+
+def gen_catb_v1(n_samples):
+    catb_kwargs = dict(
+        loss_function='RMSE',
+        early_stopping_rounds=10,
+        thread_count=10,
+        colsample_bylevel=0.5,
+        learning_rate=0.01,
+        iterations=400,
+        subsample=0.8,
+        max_bin=60,
+        depth=6,
+        min_data_in_leaf=max(200, int(0.05*n_samples)),
+    )
+    return CatBoostRegressor(**catb_kwargs)

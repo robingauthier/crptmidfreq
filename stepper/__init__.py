@@ -34,3 +34,5 @@ from crptmidfreq.stepper.incr_expanding_bucketxy import BucketXYStepper
 
 from crptmidfreq.stepper.incr_model import ModelStepper
 from crptmidfreq.stepper.incr_model_kmeans import KmeansStepper
+
+from crptmidfreq.stepper.incr_bktest import BktestStepper

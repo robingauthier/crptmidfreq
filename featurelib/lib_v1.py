@@ -754,7 +754,8 @@ def perform_model(featd, feats=[], wgt=None, ycol=None, folder=None, name=None,
               fitfreq=fitfreq,
               gap=gap,
               model_gen=model_gen,
-              with_fit=with_fit)
+              with_fit=with_fit,
+              featnames=feats)
     xseries = np.transpose(np.stack([v for k, v in featd.items() if k in feats]))
     wgtserie = featd[wgt]
     yserie = featd[ycol]
@@ -887,39 +888,10 @@ def perform_unpivot(dts, pfeatd,  folder=None, name=None, r=g_reg):
 def perform_bktest(featd,  with_plot=True, with_txt=True, folder=None, name=None, r=g_reg):
     assert 'dtsi' in featd.keys()
     assert 'dscode' in featd.keys()
-    from crptmidfreq.utils.bktester import bktest_stats
-    if with_plot:
-        save_graph_path = os.path.join(get_analysis_folder(), 'bktest_NAME.png')
-    else:
-        save_graph_path = None
-    sig_cols = [x for x in featd.keys() if x.startswith('sig_')]
-    lr = []
-    for sig_col in sig_cols:
-        stats = bktest_stats(
-            featd['dtsi'],
-            featd['dscode'],
-            featd[sig_col],
-            featd['forward_fh1'],
-            featd['wgt'],
-            str(sig_col),  # name
-            save_graph_path=save_graph_path,
-        )
-        stats['col'] = sig_col
-        if with_txt:
-            print('-'*20)
-            print('-'*20)
-            pprint(stats)
-        lr += [stats]
-    if with_txt:
-        rptdf = pd.DataFrame(lr)
-        print('Gross P&L Stats:')
-        rptdf1 = rptdf[['name', 'col', 'sr', 'rpt', 'mdd', 'rog', 'avg_gmv', 'ann_pnl']].round(2)
-        print(rptdf1)
-        print('Net Version:')
-        rptdf2 = rptdf[['name', 'col', 'sr_net', 'rpt_net', 'mdd_net', 'rog_net']]\
-            .rename(columns=lambda x: x.replace('_net', '')).round(2)
-        print(rptdf2)
-    return stats
+    cls_bk = BktestStepper \
+        .load(folder=f"{folder}", name=f"{name}")
+    cls_bk.update(featd)
+    r.add(cls_bk)
 
 
 def perform_avg_features_fillna0(featd, xcols=[], outname='', folder=None, name=None, r=g_reg):

@@ -1,6 +1,6 @@
 import os
 import pickle
-
+import pandas as pd
 import numpy as np
 from numba import njit
 from numba import types
@@ -16,11 +16,19 @@ from crptmidfreq.stepper.incr_model_timeclf import get_dts_min_after
 logger = get_logger()
 
 
+def featimp_lgbm(model_loc, feat_names):
+    try:
+        fimp = pd.Series(model_loc.feature_importances_, index=feat_names)
+        print(fimp.sort_values(ascending=False))
+    except Exception as e:
+        pass
+
+
 class ModelStepper(BaseStepper):
     """Relies on the pivot first and then runs an SVD"""
 
     def __init__(self, folder='', name='', lookback=300, minlookback=100,
-                 fitfreq=10, gap=1, model_gen=None, with_fit=True):
+                 fitfreq=10, gap=1, model_gen=None, with_fit=True, featnames=[]):
         """
         """
         super().__init__(folder, name)
@@ -39,13 +47,15 @@ class ModelStepper(BaseStepper):
         self.hmodels = []
 
         self.with_fit = with_fit
+        self.featnames = featnames
 
     def save(self):
         self.save_utility()
 
     @classmethod
     def load(cls, folder, name, lookback=300, minlookback=100,
-             fitfreq=10, gap=1, model_gen=None, with_fit=True):
+             fitfreq=10, gap=1, model_gen=None, with_fit=True,
+             featnames=[]):
         """Load instance from saved state or create new if not exists"""
         return ModelStepper.load_utility(cls, folder=folder, name=name,
                                          lookback=lookback,
@@ -53,7 +63,8 @@ class ModelStepper(BaseStepper):
                                          fitfreq=fitfreq,
                                          gap=gap,
                                          model_gen=model_gen,
-                                         with_fit=with_fit
+                                         with_fit=with_fit,
+                                         featnames=featnames
                                          )
 
     def manage_history(self, dts, xseries, yserie, wgtserie, train_start_dt, train_stop_dt):
@@ -82,13 +93,15 @@ class ModelStepper(BaseStepper):
         logger.info('ModelStepper :: updating the memory ')
         # assigning back
         self.last_dts = new_dts
-        self.last_wmem = new_wserie
-        self.last_ymem = new_yserie
+        self.last_wmem = np.nan_to_num(new_wserie)
+        self.last_ymem = np.nan_to_num(new_yserie)
         self.last_xmem = new_xserie
 
     def fit_model(self):
         model_loc = self.model_gen()
         model_loc.fit(X=self.last_xmem, y=self.last_ymem, sample_weight=self.last_wmem)
+
+        featimp_lgbm(model_loc, self.featnames)
         return model_loc
 
     def update(self, dts, xseries, yserie=None, wgtserie=None):

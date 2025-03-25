@@ -46,7 +46,7 @@ def main_features(start_date='2025-03-01', end_date='2026-01-01'):
     df = con.execute(f'''SELECT close_time,dscode,close,volume,taker_buy_volume 
                    FROM klines
                    WHERE CAST(close_time AS DATE)>='{start_date}'
-                   AND CAST(close_time AS DATE)<='{end_date}';
+                   AND CAST(close_time AS DATE)<'{end_date}';
                    ''').df()
 
     print('Cleaning data')
@@ -72,12 +72,10 @@ def main_features(start_date='2025-03-01', end_date='2026-01-01'):
     # adding distance since IPO  :: cnt_exists
     featd, nfeats = perform_cnt_exists(featd=featd, feats=[], folder=g_folder, name='None')
 
-    # adding the time of the day
-    one_day_unit = int(60*24*1e6)
+    # adding the time of the day -- I confirm it works
+    one_day_unit = int(3600*24*1e6)
     featd['sigf_timeofday'] = np.mod(featd['dtsi'], one_day_unit)
-    featd['sigf_timeofday'] = featd['sigf_timeofday']/one_day_unit
-    import pdb
-    pdb.set_trace()
+    featd['sigf_timeofday'] = featd['sigf_timeofday']/one_day_unit*24
 
     # adding returns
     featd, nfeats = perform_diff(featd=featd, feats=['close'], windows=[1], folder=g_folder, name='None')
@@ -197,10 +195,10 @@ def main_features(start_date='2025-03-01', end_date='2026-01-01'):
         alpha = 1-ewm_alpha(win)
 
         # ewm(X) has Var = Var(x_i)* (1-alpha)/(1+alpha)
-        featd['todel_num'] = featd[ewm_col]*np.sqrt((1+alpha)/(1-alpha))
-        featd, nfeats = perform_divide(featd, ['todel_num'], ['mual_std'], folder=g_folder, name='None')
+        featd[f'todel_{ewm_col}'] = featd[ewm_col]*np.sqrt((1+alpha)/(1-alpha))
+        featd, nfeats = perform_divide(featd, [f'todel_{ewm_col}'], ['mual_std'], folder=g_folder, name='None')
         featd, nfeats = perform_clip(featd=featd,
-                                     feats=[nfeats[0]],
+                                     feats=nfeats,
                                      low_clip=-3.0, high_clip=3.0,
                                      folder=g_folder, name='None')
         featd = rename_key(featd, nfeats[0], f'zs_{win}')
@@ -232,9 +230,11 @@ def main_features(start_date='2025-03-01', end_date='2026-01-01'):
     featd, _ = perform_to_sigf(featd, feats=zs_cols, folder=g_folder, r=r)
     featd = rename_key(featd, 'mual', 'sigf_mual')
     featd = rename_key(featd, 'mual_high_sharpe', 'sigf_mual_high_sharpe')
+    featd = rename_key(featd, nfeats_sharpe[0], 'sigf_mual_pnl_sharpe')
     featd = rename_key(featd, 'cnt_exists', 'sigf_ipocnt')
     featd = rename_key(featd, 'mual_std', 'sigf_mual_std')
     featd = rename_key(featd, 'turnover_excess', 'sigf_turnover_excess')
+    featd['sigf_wgt'] = featd['wgt']
     for col in nfeats_tv:
         featd = rename_key(featd, col, f'sigf_{col}')
 
@@ -252,14 +252,11 @@ def main_features(start_date='2025-03-01', end_date='2026-01-01'):
         featd, nfeats = perform_sma(featd, feats=['tret_xmkt'], windows=[window_forward], folder=g_folder)
         featd, nfeats = perform_lag_forward(featd=featd, feats=['tret_xmkt'], windows=[-1*window_forward])
         featd = rename_key(featd, nfeats[0], f'forward_fh{window_forward}')
-
-    # saving down
-    save_features(featd, name=f'{start_date}_{end_date}')
+    r.save()
     return featd
 
 
 def main_model(featd):
-    ndscode = 100
     model_lookback = 60*24*10
     model_fitfreq = 60*24*10
 
@@ -274,15 +271,16 @@ def main_model(featd):
                                   ycol='forward_fh1',
                                   folder=g_folder,
                                   name="None",
-                                  lookback=model_lookback*ndscode,
-                                  minlookback=model_lookback*ndscode,
+                                  lookback=model_lookback,
+                                  minlookback=model_lookback,
                                   fitfreq=model_fitfreq,
                                   gap=1,
                                   model_gen=partial(gen_lgbm_lin_v1, n_samples=1_000_000),
                                   with_fit=True,
                                   r=r)
-    import pdb
-    pdb.set_trace()
+    featd = rename_key(featd, nfeats[0], 'sig_ml')
+    r.save()
+    return featd
 
 
 def filter_dict_to_univ(featd):
@@ -354,18 +352,42 @@ def save_features(featd, name=''):
     df.to_parquet(os.path.join(get_analysis_folder(), f'kmeans_manual_v1_{name}.pq'))
 
 
+def save_signal(featd, name=''):
+    wcols = (get_sig_cols(featd) +
+             get_forward_cols(featd) +
+             ['dtsi', 'dscode', 'close', 'wgt', 'univ'])
+    df = pd.DataFrame({k: featd[k] for k in wcols})
+    df.to_parquet(os.path.join(get_analysis_folder(), f'kmeans_manual_v1_signal_{name}.pq'))
+
+
 def load_features(name=''):
     df = pd.read_parquet(os.path.join(get_analysis_folder(), f'kmeans_manual_v1_{name}.pq'))
     featd = {col: df[col].values for col in df.columns}
     return featd
 
 
-# ipython -i -m crptmidfreq.res.mr_cluster_v1.kmeans_manual_v1
-if __name__ == '__main__':
+def main():
     clean_folder(g_folder)
-    featd = main_features(start_date='2025-02-01', end_date='2026-01-01')
+    dts = pd.date_range('2020-01-01', '2024-03-01', freq='2MS')
+    for i in range(len(dts)-1):
+        start_dt = dts[i].strftime('%Y-%m-%d')
+        end_dt = dts[i+1].strftime('%Y-%m-%d')
+        featd = main_features(start_date=start_dt, end_date=end_dt)
+        featd = main_model(featd)
+        # saving down
+        save_signal(featd, name=f'{start_dt}_{end_dt}')
+        bktest(featd=featd)
+
+
+def main_loc():
+    clean_folder(g_folder)
+    #featd = main_features(start_date='2025-02-01', end_date='2026-01-01')
+    # dump_extract(featd)
     featd = load_features(name='2025-02-01_2026-01-01')
     featd = main_model(featd)
-
     bktest(featd=featd)
-    dump_extract(featd)
+
+
+# ipython -i -m crptmidfreq.res.mr_cluster_v1.kmeans_manual_v1
+if __name__ == '__main__':
+    main()

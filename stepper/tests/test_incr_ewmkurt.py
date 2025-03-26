@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-import pytest
 from datetime import datetime, timedelta
 from ..incr_ewmkurt import EwmKurtStepper
 

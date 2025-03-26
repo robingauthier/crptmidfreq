@@ -1,7 +1,4 @@
 import pandas as pd
-import argparse
-import random
-import time
 import os
 import duckdb
 from sklearn.cluster import KMeans

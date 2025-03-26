@@ -1,9 +1,7 @@
 
-from functools import partial
 import numpy as np
 import pandas as pd
 from math import sqrt
-import matplotlib
 
 import matplotlib.pyplot as plt
 from crptmidfreq.stepper.incr_diff import DiffStepper
@@ -35,6 +33,8 @@ def get_ann_factor(dt):
     """infers the sampling from dt
     the result is in years
     """
+    if isinstance(dt, pd.Series):
+        dt = dt.values
     median_diff_dt = np.median(np.diff(dt.view(np.int64)))
     dt_diff_years = median_diff_dt/1e6/3600/24/365
     return 1/dt_diff_years
@@ -197,7 +197,7 @@ def bktest_stats(
     gross_pnl = np.where(np.isnan(gross_pnl), 0.0, gross_pnl)
 
     # Trade volume is taken as absolute signal.
-    clean_folder(folder='bktester')
+    # clean_folder(folder='bktester')
     m = DiffStepper(folder='bktestser', name='diff')
     trd0 = m.update(dt, dscode, s)
     trd = np.abs(trd0)

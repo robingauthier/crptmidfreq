@@ -1,5 +1,4 @@
 import numpy as np
-from numba import njit
 from bottleneck import move_rank
 from crptmidfreq.stepper.base_stepper import BaseStepper
 
@@ -30,7 +29,7 @@ class BottleneckRankStepper(BaseStepper):
         assert self.window > 0
         self.validate_input(dt, dscode, values)
         if self.last_values.shape[0] > 0:
-            nvalues = np.concatenate(self.last_values, values)
+            nvalues = np.concatenate([self.last_values, values], axis=0)
             nrm = self.last_values.shape[0]
         else:
             nvalues = values
@@ -38,4 +37,5 @@ class BottleneckRankStepper(BaseStepper):
         nres = move_rank(nvalues, self.window)
         self.last_values = nvalues[-self.window:]
         res = nres[nrm:]
+        assert res.shape[0] == values.shape[0]
         return res

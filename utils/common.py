@@ -1,10 +1,9 @@
-import logging
 import pandas as pd
 import numpy as np
 from crptmidfreq.config_loc import get_analysis_folder
 from crptmidfreq.utils.log import get_logger
 import hashlib
-
+import os
 
 logger = get_logger()
 
@@ -139,12 +138,11 @@ def validate_input(dt, dscode, **kwargs):
             raise ValueError(f"All inputs must have the same length --see: {k}")
 
 
-
-def merge_dicts(cfg,dcfg,name=''):
-    for k,v in dcfg.items():
+def merge_dicts(cfg, dcfg, name=''):
+    for k, v in dcfg.items():
         if k not in cfg.keys():
             logger.info(f'Missing key={k} in cfg for {name} -- will use default value')
-            cfg[k]=v
+            cfg[k] = v
     return cfg
 
 
@@ -169,7 +167,6 @@ def filter_dict_to_dts(featd, dtsi=1):
     return featd2
 
 
-
 def save_features(featd, name=''):
     wcols = (get_sigf_cols(featd) +
              get_forward_cols(featd) +
@@ -184,3 +181,9 @@ def save_signal(featd, name=''):
              ['dtsi', 'dscode', 'close', 'wgt', 'univ'])
     df = pd.DataFrame({k: featd[k] for k in wcols})
     df.to_parquet(os.path.join(get_analysis_folder(), f'{name}.pq'))
+
+
+def load_parquet(name=''):
+    df = pd.read_parquet(os.path.join(get_analysis_folder(), f'{name}.pq'))
+    featd = {col: df[col].values for col in df.columns}
+    return featd

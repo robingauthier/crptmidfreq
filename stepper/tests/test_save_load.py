@@ -1,9 +1,7 @@
 
 from crptmidfreq.utils.common import clean_folder
 import numpy as np
-import pandas as pd
 import inspect
-from .. import *
 
 
 # pytest ./crptmidfreq/stepper/tests/test_save_load.py --pdb --maxfail=1

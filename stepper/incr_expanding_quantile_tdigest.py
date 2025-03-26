@@ -1,6 +1,5 @@
 
 import numpy as np
-import pandas as pd
 from crptmidfreq.stepper.base_stepper import BaseStepper
 from crptmidfreq.stepper.tdigest.exp_qtl2 import expanding_quantile
 from numba import types

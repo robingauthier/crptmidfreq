@@ -1,26 +1,13 @@
 import pandas as pd
-import argparse
-import random
-import time
 import os
-import duckdb
-from sklearn.cluster import KMeans
-from sklearn.metrics import silhouette_score
-from crptmidfreq.utils.common import to_csv
 from crptmidfreq.utils.common import rename_key
-from numba.typed import Dict
-from numba.core import types
 from functools import partial
-from crptmidfreq.config_loc import get_data_db_folder
 from crptmidfreq.featurelib.lib_v1 import *
 from crptmidfreq.strats import *
 from crptmidfreq.stepper.zregistry import StepperRegistry
 from crptmidfreq.utils.common import get_logger
-from crptmidfreq.utils.common import get_sig_cols, get_sigf_cols, get_forward_cols
-from crptmidfreq.utils.common import ewm_alpha
+from crptmidfreq.utils.common import get_sig_cols, get_sigf_cols
 from crptmidfreq.utils.common import filter_dict_to_univ
-from crptmidfreq.utils.common import filter_dict_to_dscode
-from crptmidfreq.utils.common import filter_dict_to_dts
 from crptmidfreq.utils.common import save_features
 from crptmidfreq.utils.common import save_signal
 
@@ -54,7 +41,7 @@ def main_features(start_date='2025-03-01', end_date='2026-01-01'):
 
         # univ config
         universe_count=100,
-        
+
         # applyops
         window_appops=1000,
     )
@@ -128,7 +115,7 @@ def main_features(start_date='2025-03-01', end_date='2026-01-01'):
                       r=g_r,
                       cfg=cfg)
 
-    # PfP features
+    # PfP features -- this is too slow for now ! 2 minutes for 1 month
     featd = pfp_feats(featd,
                       feats=['tret_xmkt'],
                       folder=g_folder,
@@ -206,9 +193,8 @@ def main_signal_naive(featd):
 
     # removing post IPO   20days
     for col in get_sig_cols(featd):
-        featd[col] = featd[col]*(featd['sigf_ipocnt'] > ipo_burn)
+        #featd[col] = featd[col]*(featd['sigf_ipocnt'] > ipo_burn)
         featd[col] = featd[col]*featd['univ']
-
     return featd
 
 
@@ -225,11 +211,6 @@ def bktest(featd):
                                        name="None",
                                        r=g_r)
 
-
-def load_features(name=''):
-    df = pd.read_parquet(os.path.join(get_analysis_folder(), f'kmeans_manual_v1_{name}.pq'))
-    featd = {col: df[col].values for col in df.columns}
-    return featd
 
 
 def main():

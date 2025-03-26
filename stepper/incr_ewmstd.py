@@ -2,17 +2,16 @@ import numpy as np
 from numba import njit
 from numba.typed import Dict
 from numba import types
-import os
-import pickle
 from crptmidfreq.stepper.base_stepper import BaseStepper
 
-@njit
+
 def get_alpha(window):
     """Convert half-life to alpha"""
     return 1 - np.exp(np.log(0.5) / window)
 
+
 @njit
-def update_ewmstd_values(codes, values, timestamps, alpha, last_sum, 
+def update_ewmstd_values(codes, values, timestamps, alpha, last_sum,
                          last_wgt_sum, last_sum_sq, last_wgt_sum_sq, last_timestamps):
     """
     Vectorized update of EWM values and squared values for standard deviation calculation
@@ -78,12 +77,14 @@ def update_ewmstd_values(codes, values, timestamps, alpha, last_sum,
 
     return result
 
+
 class EwmStdStepper(BaseStepper):
-    
+
     def __init__(self, folder='', name='', window=1):
-        super().__init__(folder,name)
+        assert window > 0
+        super().__init__(folder, name)
         self.window = window
-        self.alpha = get_alpha(window)
+        self.alpha = np.float64(get_alpha(window))
 
         # Initialize empty state
         self.last_sum = Dict.empty(
@@ -113,7 +114,7 @@ class EwmStdStepper(BaseStepper):
     @classmethod
     def load(cls, folder, name, window=1):
         """Load instance from saved state or create new if not exists"""
-        return EwmStdStepper.load_utility(cls,folder=folder,name=name,window=window)
+        return EwmStdStepper.load_utility(cls, folder=folder, name=name, window=window)
 
     def update(self, dt, dscode, serie):
         """
@@ -128,8 +129,8 @@ class EwmStdStepper(BaseStepper):
             numpy array of same length as input arrays containing EWM standard deviation values
         """
         # Input validation
-        self.validate_input(dt,dscode,serie)
-        
+        self.validate_input(dt, dscode, serie)
+
         # Update values and timestamps using numba function
         return update_ewmstd_values(
             dscode, serie, dt.view(np.int64),

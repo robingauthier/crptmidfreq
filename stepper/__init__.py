@@ -1,3 +1,4 @@
+
 from crptmidfreq.stepper.incr_cumsum import CumSumStepper
 from crptmidfreq.stepper.incr_diff import DiffStepper
 from crptmidfreq.stepper.incr_ewm import EwmStepper

@@ -1,16 +1,11 @@
 import os
-import pickle
 import pandas as pd
 import numpy as np
-from numba import njit
-from numba import types
-from numba.typed import Dict
 from crptmidfreq.stepper.base_stepper import BaseStepper
 from crptmidfreq.utils.common import get_logger
 from crptmidfreq.utils.bktester import bktest_stats
 from crptmidfreq.utils.bktester import get_daily_stats
 from crptmidfreq.config_loc import get_analysis_folder
-import matplotlib
 import matplotlib.pyplot as plt
 
 # Quite similar to the featurelib/timeclf.py
@@ -40,7 +35,7 @@ class BktestStepper(BaseStepper):
         self.with_txt = True
         with_plot = True
         if with_plot:
-            self.save_graph_path = os.path.join(get_analysis_folder(), f'bktest_{self.name}_COLNAME.png')
+            self.save_graph_path = os.path.join(get_analysis_folder(), f'{self.name}_COLNAME.png')
         else:
             self.save_graph_path = None
 
@@ -113,7 +108,7 @@ class BktestStepper(BaseStepper):
         rptdf1 = rptdf[['name', 'col', 'sr', 'rpt', 'mdd', 'rog', 'avg_gmv', 'ann_pnl', 'cnt']].round(2)
         if self.with_txt:
             print('Gross P&L Stats:')
-            print(rptdf1)
+            print(rptdf1.sort_values('sr'))
         return rptdf1
 
     def compute_daily_stats(self):

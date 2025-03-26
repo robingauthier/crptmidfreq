@@ -1,12 +1,8 @@
-import os
-import shutil
 import numpy as np
-import pytest
 import numpy as np
 import pandas as pd
 from crptmidfreq.utils.common import clean_folder
 from crptmidfreq.stepper.incr_model_timeclf import TimeClfStepper
-from pprint import pprint
 # pytest ./crptmidfreq/stepper/tests/test_incr_model_timeclf.py --pdb --maxfail=1
 
 

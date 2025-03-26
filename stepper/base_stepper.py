@@ -1,15 +1,11 @@
 import os
 import pickle
 
-import numpy as np
-from numba import njit
-from numba import types
 from numba.typed import Dict
-
+from numba import types
 from crptmidfreq.config_loc import get_feature_folder
 from crptmidfreq.utils.common import validate_input
 from crptmidfreq.utils.common import get_logger
-from crptmidfreq.utils.common import print_ram_usage
 
 logger = get_logger()
 
@@ -27,7 +23,7 @@ class BaseStepper:
         # Use a tuple of the important attributes to compute the hash
         return hash((self.folder, self.name))
 
-    def save_utility(self):
+    def save_utility(self, skip=['qutile_steppers']):
         """Save internal state to file."""
         # Ensure the folder exists
         if not os.path.exists(self.folder):
@@ -44,10 +40,17 @@ class BaseStepper:
         state = {}
 
         for key, value in self.__dict__.items():
+            if key in skip:
+                continue
             if not callable(value):
                 if isinstance(value, Dict):  # Check if it's a numba Dict
                     # Convert numba Dict to a Python dict
                     state[key] = dict(value)
+
+                    # Case of nested dict case key==last_pfp_states
+                    for k2, v2 in state[key].items():
+                        if isinstance(v2, Dict):
+                            state[key][k2] = dict(v2)
                 else:
                     state[key] = value
 
@@ -78,7 +81,16 @@ class BaseStepper:
 
         # Iterate over all items in the state dictionary and create corresponding instance variables
         for key, value in state.items():
-            if isinstance(value, dict):
+            if key == 'last_pfp_states':
+                # this is a very special case
+                for k, v in value.items():
+                    getattr(instance, key)[k] = Dict.empty(
+                        key_type=types.unicode_type,
+                        value_type=types.float64)
+                    for k2, v2 in v.items():
+                        getattr(instance, key)[k][k2] = v2
+
+            elif isinstance(value, dict):
                 # Populate the dict from the saved state
                 for k, v in value.items():
                     getattr(instance, key)[k] = v

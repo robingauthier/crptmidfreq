@@ -1,7 +1,4 @@
 import numpy as np
-import pytest
-from numba import types
-from numba.typed import Dict
 
 from ..incr_clip import ClipStepper
 

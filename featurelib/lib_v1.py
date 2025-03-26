@@ -1,17 +1,12 @@
-import os
 import numpy as np
 import pandas as pd
 from crptmidfreq.stepper import *
 from crptmidfreq.utils.common import clean_folder
 from crptmidfreq.stepper.zregistry import StepperRegistry
-from crptmidfreq.utils.common import get_analysis_folder
 from crptmidfreq.utils.common import rename_key
 from crptmidfreq.utils.common import get_hash
 from crptmidfreq.utils.common import ewm_alpha
 from crptmidfreq.utils.common import get_logger
-from pprint import pprint
-import matplotlib
-import matplotlib.pyplot as plt
 
 g_reg = StepperRegistry()
 logger = get_logger()
@@ -704,7 +699,9 @@ def perform_expanding_max(featd, feats=[], folder=None, name=None):
     return featd, nfeats
 
 
-def perform_sma(featd, feats=[], windows=[1], folder=None, name=None):
+def perform_sma(featd, feats=[], windows=[1], folder=None, name=None, r=g_reg
+
+                ):
     """
     """
     assert 'dtsi' in featd.keys()

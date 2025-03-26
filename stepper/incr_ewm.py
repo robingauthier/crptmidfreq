@@ -1,5 +1,3 @@
-import os
-import pickle
 
 import numpy as np
 from numba import njit
@@ -8,7 +6,6 @@ from numba.typed import Dict
 
 from crptmidfreq.stepper.base_stepper import BaseStepper
 
-@njit
 def get_alpha(window=1.0):
     """Convert half-life to alpha"""
     assert window>0

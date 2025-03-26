@@ -1,4 +1,3 @@
-import pandas as pd
 from crptmidfreq.stepper.rolling_rank import *
 
 # pytest ./crptmidfreq/stepper/tests/test_rolling_rank.py --pdb --maxfail=1

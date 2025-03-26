@@ -8,7 +8,6 @@ from dateutil.relativedelta import relativedelta
 from crptmidfreq.datahub.binance_univ import download_univ
 from crptmidfreq.datahub.binance_hist import download_data
 from crptmidfreq.datahub.binance_univ_startstop import  TokenQueryTracker
-from crptmidfreq.config_loc import get_data_folder
 from crptmidfreq.config_loc import get_data_db_folder
 
 

@@ -1,4 +1,3 @@
-import pandas as pd
 
 from crptmidfreq.stepper.incr_bktest import *
 

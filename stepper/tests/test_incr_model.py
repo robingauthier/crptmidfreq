@@ -1,7 +1,6 @@
 import os
 import shutil
 import numpy as np
-import pytest
 from sklearn.linear_model import LinearRegression
 import pandas as pd
 # Adjust this import path to wherever your ModelStepper is defined

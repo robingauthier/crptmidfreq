@@ -1,12 +1,9 @@
-import os
-import pickle
 
 import numpy as np
 from numba import njit
 from numba import types
 from numba.typed import Dict
 from crptmidfreq.stepper.base_stepper import BaseStepper
-from crptmidfreq.config_loc import get_analysis_folder
 
 
 @njit
@@ -33,6 +30,7 @@ def calculate_restype(restype, price, entrylevel, maxlevel, minlevel, direction,
     return nan
 
 
+@njit
 def update_pfp_values(dts, dscodes, prices, nbrev, last_pfp_states):
     """
     Incremental update of PFP values for each dscode.
@@ -132,10 +130,10 @@ class PfPStepper(BaseStepper):
     @classmethod
     def load(cls, folder, name,  nbrev=3, tick=1e-4):
         """Load instance from saved state or create new if not exists"""
-        return PfPStepper.load_utility(cls, 
+        return PfPStepper.load_utility(cls,
                                        folder=folder,
-                                       name=name, 
-                                       nbrev=nbrev, 
+                                       name=name,
+                                       nbrev=nbrev,
                                        tick=tick)
 
     def update(self, dts, dscodes, prices):

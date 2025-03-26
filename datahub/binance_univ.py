@@ -1,8 +1,5 @@
 import argparse
-import io
-import logging
 import os
-import zipfile
 import xmltodict
 import pandas as pd
 import requests

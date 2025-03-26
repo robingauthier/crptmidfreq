@@ -9,5 +9,5 @@ isort path\to\your\folder
 
 Remove unused imports with autoflake:
 ```
-autoflake --in-place --remove-all-unused-imports --recursive path\to\your\folder
+autoflake --in-place --remove-all-unused-imports --ignore-init-module-imports --recursive /Users/sachadrevet/src/crptmidfreq
 ```

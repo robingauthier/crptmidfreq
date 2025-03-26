@@ -1,28 +1,12 @@
-import pandas as pd
-import argparse
-import random
-import time
-import os
-import duckdb
-from sklearn.cluster import KMeans
-from sklearn.metrics import silhouette_score
-from crptmidfreq.utils.common import to_csv
-from crptmidfreq.utils.common import rename_key
-from numba.typed import Dict
-from numba.core import types
-from functools import partial
-from crptmidfreq.config_loc import get_data_db_folder
 from crptmidfreq.featurelib.lib_v1 import *
-from crptmidfreq.stepper.zregistry import StepperRegistry
-from crptmidfreq.utils.common import get_logger
-from crptmidfreq.utils.common import get_sig_cols, get_sigf_cols, get_forward_cols
-from crptmidfreq.utils.common import ewm_alpha
 from crptmidfreq.utils.common import merge_dicts
-from crptmidfreq.strats.prepare_klines import prepare_klines
-
 
 
 def volatility_feats(featd, feats=['tret_xmkt'], folder=None, name=None, r=None, cfg={}):
+    """
+    these are measuring changes in volatility
+    TODO we need to check if same as  change(vol_5d ) ? 
+    """
     check_cols(featd, feats)
     dcfg = dict(
         windows_macd=[[5, 20], [20, 100], [100, 500]],
@@ -34,10 +18,10 @@ def volatility_feats(featd, feats=['tret_xmkt'], folder=None, name=None, r=None,
     infer_windows = []
     for wins in cfg.get('windows_macd'):
         infer_windows += wins
-    infer_windows = set(infer_windows)
+    infer_windows = list(set(infer_windows))
     featd, _ = perform_ewm_std(featd,
                                feats=feats,
-                               windows=cfg.get('windows_macd'),
+                               windows=infer_windows,
                                folder=folder,
                                name=name,
                                r=r)

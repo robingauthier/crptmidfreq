@@ -1,13 +1,11 @@
 import numpy as np
 import pandas as pd
 import os
-import pickle
 from numba import njit
 from numba import types
 from numba.typed import Dict
 from crptmidfreq.stepper.base_stepper import BaseStepper
 from crptmidfreq.stepper.incr_expanding_quantile_tdigest import QuantileStepper
-import matplotlib
 import matplotlib.pyplot as plt
 from crptmidfreq.utils.common import get_logger
 from crptmidfreq.config_loc import get_analysis_folder
@@ -128,13 +126,21 @@ class BucketXYStepper(BaseStepper):
             self.save_graph_path = None
 
     def save(self):
-        self.save_utility()
+        self.qutile_steppers.save()
+        self.save_utility(skip=['qutile_steppers'])
 
     @classmethod
     def load(cls, folder, name, n_buckets=8, freq=int(60*24*5)):
         """Load instance from saved state or create new if not exists"""
-        return BucketXYStepper.load_utility(cls, folder=folder, name=name,
-                                            n_buckets=n_buckets, freq=freq)
+        r = BucketXYStepper.load_utility(cls, folder=folder, name=name,
+                                         n_buckets=n_buckets, freq=freq)
+        lqs = []
+        for i in range(n_buckets):
+            qsloc = (i+1)/(n_buckets+1)
+            lqs += [qsloc]
+        e = QuantileStepper.load(folder=folder, name=f'{name}_qtl', qs=lqs, freq=freq)
+        r.qutile_steppers = e
+        return r
 
     def update(self, dt, dscode, x_values, y_values):
         """

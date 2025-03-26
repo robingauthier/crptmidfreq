@@ -2,7 +2,7 @@ import pandas as pd
 
 from crptmidfreq.stepper.incr_expanding_quantile_slow import *
 
-# pytest ./stepper/tests/test_incr_quantile_expanding.py --pdb --maxfail=1
+# pytest ./crptmidfreq/stepper/tests/test_incr_quantile_expanding.py --pdb --maxfail=1
 
 
 ###############################################################################
@@ -37,7 +37,7 @@ def test_against_pandas():
 
     # Create and run QuantileStepper on data
     qstep = QuantileStepper(folder='test_data', name='test_quantile', qs=[q])
-    # For an expanding quantile, we feed the entire data once, 
+    # For an expanding quantile, we feed the entire data once,
     # but in real streaming you'd feed it in chunks or row by row.
     quant_est = qstep.update(dt, dscode, serie)
 
@@ -46,16 +46,16 @@ def test_against_pandas():
         'dt': dt,
         'dscode': dscode,
         'serie': serie,
-        'quant_est': quant_est[:,0],
+        'quant_est': quant_est[:, 0],
     })
-    
+
     # Calculate actual expanding quantile in pandas for each group.
-    # pandas does not have a built-in "groupby expanding quantile" that is 
+    # pandas does not have a built-in "groupby expanding quantile" that is
     # super fast, but we can do an expanding apply:
     # We'll do it code by code, building the same "expanding" approach.
     df['quant_true'] = (
         df.groupby('dscode')['serie'].transform(
-          lambda x: x.expanding().quantile(q))
+            lambda x: x.expanding().quantile(q))
     )
 
     # Compare results: we can check correlation or compute an average error
@@ -116,16 +116,16 @@ def test_save_load_result():
         'dt': dt,
         'dscode': dscode,
         'serie': serie,
-        'quant_est': quant_est[:,0],
+        'quant_est': quant_est[:, 0],
     })
-    
+
     # Calculate actual expanding quantile in pandas for each group.
-    # pandas does not have a built-in "groupby expanding quantile" that is 
+    # pandas does not have a built-in "groupby expanding quantile" that is
     # super fast, but we can do an expanding apply:
     # We'll do it code by code, building the same "expanding" approach.
     df['quant_true'] = (
         df.groupby('dscode')['serie'].transform(
-          lambda x: x.expanding().quantile(q))
+            lambda x: x.expanding().quantile(q))
     )
 
     # Compare results: we can check correlation or compute an average error

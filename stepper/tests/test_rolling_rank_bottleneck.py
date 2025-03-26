@@ -1,7 +1,7 @@
 import pandas as pd
-from crptmidfreq.stepper.rolling_rank import *
+from crptmidfreq.stepper.rolling_rank_bottleneck import *
 
-# pytest ./crptmidfreq/stepper/tests/test_rolling_rank.py --pdb --maxfail=1
+# pytest ./crptmidfreq/stepper/tests/test_rolling_rank_bottleneck.py --pdb --maxfail=1
 
 
 def generate_data(n_samples, n_codes):
@@ -30,7 +30,7 @@ def test_against_pandas():
     dt, dscode, serie = generate_data(n_samples, n_codes)
 
     # Create and run EwmStepper on first half
-    ewm = RollingRankStepper(folder='test_data', name='test_ewm', window=window)
+    ewm = BottleneckRankStepper(folder='test_data', name='test_ewm', window=window)
     seriec = ewm.update(dt, dscode, serie)
 
     # Create pandas DataFrame for comparison
@@ -42,9 +42,8 @@ def test_against_pandas():
     })
 
     # Calculate pandas EWM
-    df['serier'] = df.groupby('dscode')['serie'].transform(
-        lambda x: x.rolling(window=window).rank()
-    )
+    df['serier'] = df['serie'].rolling(window=window).rank()
+    
 
     # Compare results using correlation
     correlation = df['serier'].corr(df['seriec'])

@@ -40,14 +40,15 @@ def update_rolling_rank(timestamps,
 
         # ranking is done with argsort().argsort() -- twice !
         result[i] = np.argsort(rolling_dict[code]).argsort()[position_loc]
-        result[i]=(result[i]-window/2)/window
+        result[i] = (result[i]-window/2)/window
         position[code] = (position_loc + 1) % window
     return result
 
 
 class RollingRankStepper(RollingStepper):
     def update(self, dt, dscode, values):
-        self.validate_input(dt,dscode,values)
+        assert self.window > 0
+        self.validate_input(dt, dscode, values)
         res = update_rolling_rank(dt.view(np.int64), dscode, values,
                                   self.position, self.values, self.last_ts, self.window)
         return res

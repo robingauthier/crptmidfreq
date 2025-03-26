@@ -33,7 +33,6 @@ def calculate_restype(restype, price, entrylevel, maxlevel, minlevel, direction,
     return nan
 
 
-
 def update_pfp_values(dts, dscodes, prices, nbrev, last_pfp_states):
     """
     Incremental update of PFP values for each dscode.
@@ -115,7 +114,7 @@ def update_pfp_values(dts, dscodes, prices, nbrev, last_pfp_states):
 
 class PfPStepper(BaseStepper):
     def __init__(self, folder='', name='', nbrev=3, tick=1e-4):
-        super().__init__(folder,name)
+        super().__init__(folder, name)
         self.nbrev = nbrev
         self.tick = tick
 
@@ -128,34 +127,16 @@ class PfPStepper(BaseStepper):
         )
 
     def save(self):
-        """Save internal state to file."""
-        if not os.path.exists(self.folder):
-            os.makedirs(self.folder)
-
-        state = {code: dict(state) for code, state in self.last_pfp_states.items()}
-        filepath = os.path.join(self.folder, self.name + '.pkl')
-        with open(filepath, 'wb') as f:
-            pickle.dump({'states': state, 'nbrev': self.nbrev, 'tick': self.tick}, f)
+        self.save_utility()
 
     @classmethod
-    def load(cls, folder, name, nbrev=3, tick=1e-4):
-        """Load instance from saved state or create new if not exists."""
-        folder_path = os.path.join(get_analysis_folder(), folder)
-        filepath = os.path.join(folder_path, name + '.pkl')
-
-        if not os.path.exists(filepath):
-            return cls(folder=folder, name=name, nbrev=nbrev, tick=tick)
-
-        with open(filepath, 'rb') as f:
-            state = pickle.load(f)
-
-        instance = cls(folder=folder, name=name, nbrev=state['nbrev'], tick=state['tick'])
-        for code, s in state['states'].items():
-            dict_loc = Dict.empty(key_type=types.unicode_type, value_type=types.float64)
-            for k, v in s.items():
-                dict_loc[k] = v
-            instance.last_pfp_states[code] = dict_loc
-        return instance
+    def load(cls, folder, name,  nbrev=3, tick=1e-4):
+        """Load instance from saved state or create new if not exists"""
+        return PfPStepper.load_utility(cls, 
+                                       folder=folder,
+                                       name=name, 
+                                       nbrev=nbrev, 
+                                       tick=tick)
 
     def update(self, dts, dscodes, prices):
         """
@@ -168,7 +149,7 @@ class PfPStepper(BaseStepper):
         Returns:
             Dict mapping each restype to numpy arrays of results.
         """
-        self.validate_input(dts,dscodes,prices)
+        self.validate_input(dts, dscodes, prices)
 
         # code does not work with non nan prices
         assert np.sum(np.isnan(prices)) == 0

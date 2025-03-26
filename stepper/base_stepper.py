@@ -33,6 +33,13 @@ class BaseStepper:
         if not os.path.exists(self.folder):
             os.makedirs(self.folder)
 
+        is_empty = len(os.listdir(self.folder)) == 0
+        # if the folder is not empty it means we cannot detect issues
+        if is_empty:
+            detect_name_conflicts = True
+        else:
+            detect_name_conflicts = False
+
         # Dynamically get the state of the instance by filtering out callable objects
         state = {}
 
@@ -46,6 +53,8 @@ class BaseStepper:
 
         # Filepath where the state will be saved
         filepath = os.path.join(self.folder, self.name + '.pkl')
+        if detect_name_conflicts and os.path.exists(filepath):
+            raise(ValueError(f'there is a conflict for the stepper saved at: {filepath}'))
 
         # Save the state using pickle
         with open(filepath, 'wb') as f:
@@ -56,8 +65,6 @@ class BaseStepper:
         """Load instance from saved state or create new if not exists"""
         folder_path = os.path.join(get_feature_folder(), folder)
         filepath = os.path.join(folder_path, name + '.pkl')
-
-        print_ram_usage()
 
         if not os.path.exists(filepath):
             logger.info(f'Stepper creating instance {folder} {name}')

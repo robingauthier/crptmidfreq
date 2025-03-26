@@ -48,6 +48,17 @@ Things specific to crypto to add:
 
 # TODO: model the intraday volume curve
 
+# Pure time serie operators we need to code:
+- PfP is important
+- path operators
+- Use the SVD
+- Macd opeators are important
+- volume macd are important 
+- volume*ret ? 
+
+
+-- We will then need to implement pairs operators :: we need to start thinking about that yes !
+
 
 ## Distribution of an Ewm(X)
 
@@ -91,3 +102,17 @@ $$
 \text{ewm}_x(n) \sim \mathcal{N}\left(0,\; \sigma^2 \cdot \frac{1 - \alpha}{1 + \alpha}\right)
 }
 $$
+
+Hence code must be:
+```
+        # ewm(X) has Var = Var(x_i)* (1-alpha)/(1+alpha)
+        featd[f'todel_{ewm_col}'] = featd[ewm_col]*np.sqrt((1+alpha)/(1-alpha))
+```
+
+
+### How many points does 4 years represent ?
+we have 2Million dates in the data.
+```
+In [9]: 60*24*365*4/1e6
+Out[9]: 2.1024
+``` 

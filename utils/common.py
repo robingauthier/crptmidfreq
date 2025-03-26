@@ -137,3 +137,50 @@ def validate_input(dt, dscode, **kwargs):
     for k, v in kwargs.items():
         if len(dt) != len(v):
             raise ValueError(f"All inputs must have the same length --see: {k}")
+
+
+
+def merge_dicts(cfg,dcfg,name=''):
+    for k,v in dcfg.items():
+        if k not in cfg.keys():
+            logger.info(f'Missing key={k} in cfg for {name} -- will use default value')
+            cfg[k]=v
+    return cfg
+
+
+def filter_dict_to_univ(featd):
+    """filter the dictionary to a specific dscode"""
+    filter_numpy = (featd['univ'] > 0)
+    featd2 = {k: featd[k][filter_numpy] for k in featd.keys()}
+    return featd2
+
+
+def filter_dict_to_dscode(featd, dscode_str='BTCUSDT'):
+    """filter the dictionary to a specific dscode"""
+    filter_numpy = (featd['dscode_str'] == dscode_str)
+    featd2 = {k: featd[k][filter_numpy] for k in featd.keys()}
+    return featd2
+
+
+def filter_dict_to_dts(featd, dtsi=1):
+    """filter the dictionary to a specific dscode"""
+    filter_numpy = (featd['dtsi'] == dtsi)
+    featd2 = {k: featd[k][filter_numpy] for k in featd.keys()}
+    return featd2
+
+
+
+def save_features(featd, name=''):
+    wcols = (get_sigf_cols(featd) +
+             get_forward_cols(featd) +
+             ['dtsi', 'dscode', 'close', 'wgt', 'kmeans_cat', 'univ'])
+    df = pd.DataFrame({k: featd[k] for k in wcols})
+    df.to_parquet(os.path.join(get_analysis_folder(), f'{name}.pq'))
+
+
+def save_signal(featd, name=''):
+    wcols = (get_sig_cols(featd) +
+             get_forward_cols(featd) +
+             ['dtsi', 'dscode', 'close', 'wgt', 'univ'])
+    df = pd.DataFrame({k: featd[k] for k in wcols})
+    df.to_parquet(os.path.join(get_analysis_folder(), f'{name}.pq'))

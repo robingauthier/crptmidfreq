@@ -164,6 +164,8 @@ def bktest_stats(
     # If ypred is all zero (after replacing nans with 0), return rd.
     ypred_clean = np.where(np.isnan(ypred), 0.0, ypred)
     if np.all(ypred_clean == 0.0):
+        if out_dailypnl:
+            return None
         return rd
 
     # Replace inf with nan in ypred.
@@ -243,9 +245,6 @@ def bktest_stats(
     daily_trd = df_daily_ag['trd'].to_numpy()
     daily_gmv = df_daily_ag['gmv'].to_numpy()
 
-    # If too few days, return rd.
-    if df_daily_ag.size < 10:
-        return rd
     if out_dailypnl:
         return {
             'daily_dt': daily_dt,
@@ -254,6 +253,9 @@ def bktest_stats(
             'daily_trd': daily_trd,
             'daily_gmv': daily_gmv,
         }
+    # If too few days, return rd.
+    if df_daily_ag.size < 10:
+        return rd
     tot_trd = np.sum(daily_trd)
     tot_gmv = np.sum(daily_gmv)
     rd['trd_cost'] = 1e4 * np.sum(trd_cost) / tot_trd if tot_trd > 0 else np.nan

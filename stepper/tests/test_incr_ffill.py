@@ -4,7 +4,7 @@ from numba import types
 from numba.typed import Dict
 
 from ..incr_ffill import FfillStepper, ffill_values
-# pytest ./stepper/tests/test_incr_ffill.py --pdb --maxfail=1
+# pytest ./crptmidfreq/stepper/tests/test_incr_ffill.py --pdb --maxfail=1
 
 
 def test_ffill_values_basic():
@@ -60,7 +60,6 @@ def test_ffill_stepper_update():
     expected = np.array([10, 10, 20], dtype=np.float64)
 
     np.testing.assert_array_equal(result, expected)
-
 
 
 def test_ffill_stepper_with_empty_inputs():

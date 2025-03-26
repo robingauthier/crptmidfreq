@@ -5,8 +5,7 @@ from numba.typed import Dict
 
 from ..incr_clip import ClipStepper
 
-# pytest ./stepper/tests/test_incr_clip.py --pdb --maxfail=1
-
+# pytest ./crptmidfreq/stepper/tests/test_incr_clip.py --pdb --maxfail=1
 
 
 def test_ffill_stepper_update():

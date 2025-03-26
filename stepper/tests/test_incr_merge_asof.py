@@ -3,7 +3,7 @@ import pytest
 
 from crptmidfreq.stepper.incr_merge_asof import MergeAsofStepper
 
-# pytest ./stepper/tests/test_incr_merge_asof.py --pdb --maxfail=1
+# pytest ./crptmidfreq/stepper/tests/test_incr_merge_asof.py --pdb --maxfail=1
 
 
 def test_merge_asof_stepper_basic():

@@ -18,6 +18,8 @@ from crptmidfreq.stepper.rolling_max import RollingMaxStepper
 from crptmidfreq.stepper.rolling_mean import RollingMeanStepper
 from crptmidfreq.stepper.rolling_min import RollingMinStepper
 from crptmidfreq.stepper.rolling_reg import RollingRidgeStepper
+from crptmidfreq.stepper.rolling_rank import RollingRankStepper
+from crptmidfreq.stepper.rolling_rank_bottleneck import BottleneckRankStepper  # dscode ignored
 
 from crptmidfreq.stepper.incr_clip import ClipStepper
 
@@ -28,11 +30,13 @@ from crptmidfreq.stepper.incr_cs_rank import csRankStepper
 from crptmidfreq.stepper.incr_pivot import PivotStepper
 from crptmidfreq.stepper.incr_unpivot import UnPivotStepper
 from crptmidfreq.stepper.incr_expanding_quantile_tdigest import QuantileStepper
-# p2 is not working correctly
-#from crptmidfreq.stepper.incr_expanding_quantile_p2 import QuantileStepper
-from crptmidfreq.stepper.incr_expanding_bucketxy import BucketXYStepper
+from crptmidfreq.stepper.incr_expanding_bucketxy_fast import BucketXYStepper
 
 from crptmidfreq.stepper.incr_model import ModelStepper
 from crptmidfreq.stepper.incr_model_kmeans import KmeansStepper
 
 from crptmidfreq.stepper.incr_bktest import BktestStepper
+
+from crptmidfreq.stepper.incr_expanding_min import MinStepper
+from crptmidfreq.stepper.incr_expanding_max import MaxStepper
+from crptmidfreq.stepper.incr_expanding_mean import ExpandingMeanStepper

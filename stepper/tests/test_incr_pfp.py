@@ -3,7 +3,8 @@ import numpy as np
 from crptmidfreq.utils.common import clean_folder
 from ..incr_pfp import PfPStepper
 
-# pytest ./stepper/tests/test_incr_pfp.py --pdb --maxfail=1
+# pytest ./crptmidfreq/stepper/tests/test_incr_pfp.py --pdb --maxfail=1
+
 
 def test_pfp_stepper_update():
     clean_folder('test_pfp')
@@ -28,7 +29,7 @@ def test_pfp_stepper_save_and_load(tmp_path):
     res_price1, res_dir1, res_el1, res_perf1, res_perf2, res_dur1 = stepper1.update(dt[:c], dscode[:c], serie[:c])
     stepper1.save()
     stepper2 = PfPStepper.load(folder='test_pfp', name='')
-    res_price2, res_dir2, res_el2, res_perf3,res_perf4, res_dur2 = stepper2.update(dt[c:], dscode[c:], serie[c:])
+    res_price2, res_dir2, res_el2, res_perf3, res_perf4, res_dur2 = stepper2.update(dt[c:], dscode[c:], serie[c:])
     res_dir = np.concatenate([res_dir1, res_dir2])
     expected_dir = np.array([1, 1, 1, 1, 1, -1, -1, -1, 1, 1, 1, 1], dtype=np.float64)
     np.testing.assert_array_equal(res_dir, expected_dir)

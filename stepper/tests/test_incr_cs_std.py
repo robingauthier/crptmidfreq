@@ -3,8 +3,7 @@ import pandas as pd
 from crptmidfreq.stepper.incr_cs_std import *
 
 
-# pytest ./stepper/tests/test_incr_cs_std.py --pdb --maxfail=1
-
+# pytest ./crptmidfreq/stepper/tests/test_incr_cs_std.py --pdb --maxfail=1
 
 
 def generate_data(n_samples, n_codes):
@@ -20,7 +19,7 @@ def generate_data(n_samples, n_codes):
     # Generate increasing datetime
     base = np.datetime64('2024-01-01')
     dt0 = np.array([base + np.timedelta64(i, 'm') for i in range(n_samples)])
-    dt = np.sort(np.random.choice(dt0,size=n_samples,replace=True))
+    dt = np.sort(np.random.choice(dt0, size=n_samples, replace=True))
     return dt, dscode, serie
 
 
@@ -49,17 +48,15 @@ def test_against_pandas():
     df['serier'] = df.groupby('dt')['serie'].transform(
         lambda x: x.std()
     )
-    
 
-    check_ts=df['dt'].value_counts().index[0]
-    print(df[df['dt']==check_ts])
+    check_ts = df['dt'].value_counts().index[0]
+    print(df[df['dt'] == check_ts])
     print(df.tail())
-    
+
     # Compare results using correlation
     correlation = df['serier'].corr(df['seriec'])
     print(f"Correlation between pandas and implementation: {correlation}")
     assert correlation > 0.9, f"Expected correlation >0.9, got {correlation}"
-    
 
 
 def test_save_load_result():
@@ -79,7 +76,6 @@ def test_save_load_result():
     # Load saved state
     ewm_loaded = csStdStepper(folder='test_data2', name='test_ewm')
     serie2 = ewm_loaded.update(dt[half:], dscode[half:], serie[half:])
-
 
     # Create pandas DataFrame for comparison
     df = pd.DataFrame({

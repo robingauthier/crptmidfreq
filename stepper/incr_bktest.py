@@ -18,6 +18,15 @@ import matplotlib.pyplot as plt
 logger = get_logger()
 
 
+def try_to_save_png(tsave_graph_path):
+    try:
+        plt.savefig(tsave_graph_path)
+        logger.info(f'Bktest Graph saved to {tsave_graph_path}')
+    except Exception as e:
+        try_to_save_png(tsave_graph_path.replace('.png', '_bis.png'))
+    plt.close()
+
+
 class BktestStepper(BaseStepper):
     """Only way to backtest and keep information"""
 
@@ -25,8 +34,9 @@ class BktestStepper(BaseStepper):
         """
         """
         super().__init__(folder, name)
-        self.dailypnl = pd.DataFrame()
+        self.dailypnl = pd.DataFrame()  # minute/or any dataset unit
         self.statsdf = pd.DataFrame()
+        self.dailypnl2 = pd.DataFrame()  # actual date 2024-01-01, 2024-01-02
         self.with_txt = True
         with_plot = True
         if with_plot:
@@ -38,15 +48,15 @@ class BktestStepper(BaseStepper):
         self.save_utility()
 
     @classmethod
-    def load(cls, folder, name, lookback=300, minlookback=100,
-             fitfreq=10, gap=1, model_gen=None, with_fit=True,
-             featnames=[]):
+    def load(cls, folder, name):
         """Load instance from saved state or create new if not exists"""
         return BktestStepper.load_utility(cls, folder=folder, name=name)
 
     def display_stats(self):
         lr = []
         df = self.dailypnl
+        if df.shape[0] == 0:
+            return pd.DataFrame()
         for col, dfloc in df.groupby('colname'):
             if dfloc.shape[0] == 0:
                 continue
@@ -70,7 +80,9 @@ class BktestStepper(BaseStepper):
                 'avg_pos': np.nan,
                 'avg_gmv': np.nan,
                 'med_gmv': np.nan,
-                'ypred_std': np.nan
+                'ypred_std': np.nan,
+                'sdate': np.nan,  # start date
+                'edate': np.nan,  # end date
             }
             dt = dfloc['daily_dt']
             tot_pnl = dfloc['daily_gross_pnl']
@@ -85,14 +97,17 @@ class BktestStepper(BaseStepper):
             if self.save_graph_path is not None:
                 # Plot cumulative net pnl (using daily_net from pandas aggregation)
                 cum_net = np.cumsum(tot_pnl)
+                tot_gmv_ewm = tot_gmv.ewm(halflife=60).mean()
                 fig, ax = plt.subplots(figsize=(10, 6))
                 daily_dt_f = pd.to_datetime(dt*1e3)
-                ax.plot(daily_dt_f, cum_net)
+                ax.plot(daily_dt_f, cum_net, label='Cum PnL')
+                ax2 = ax.twinx()
+                ax2.plot(daily_dt_f, tot_gmv_ewm, alpha=0.3, label='Gross Delta')
                 ax.set_title(f'Cumulative Net PnL {col}')
+                ax.legend()
+                ax2.legend()
                 tsave_graph_path = self.save_graph_path.replace('COLNAME', col)
-                plt.savefig(tsave_graph_path)
-                plt.close(fig)
-                logger.info(f'Bktest Graph saved to {tsave_graph_path}')
+                try_to_save_png(tsave_graph_path)
 
         rptdf = pd.DataFrame(lr)
         rptdf1 = rptdf[['name', 'col', 'sr', 'rpt', 'mdd', 'rog', 'avg_gmv', 'ann_pnl', 'cnt']].round(2)
@@ -100,6 +115,18 @@ class BktestStepper(BaseStepper):
             print('Gross P&L Stats:')
             print(rptdf1)
         return rptdf1
+
+    def compute_daily_stats(self):
+        dailypnl = self.dailypnl.copy()
+        dailypnl['daily_dt'] = pd.to_datetime(dailypnl['daily_dt']*1e3)
+        dailypnl['date'] = pd.to_datetime(dailypnl['daily_dt'].dt.strftime('%Y-%m-%d'))
+        dailypnl2 = dailypnl\
+            .groupby(['date', 'colname'])\
+            .agg({'daily_net_pnl': 'sum',
+                  'daily_trd': 'sum',
+                  'daily_gmv': 'sum'})\
+            .reset_index()
+        return dailypnl2
 
     def update(self, featd):
         """
@@ -121,12 +148,19 @@ class BktestStepper(BaseStepper):
                 str(sig_col),  # name
                 out_dailypnl=True,
             )
+            if dpnl is None:
+                continue
+            if dpnl['daily_dt'].shape[0] == 0:
+                continue
             dfpnl = pd.DataFrame(dpnl)
             dfpnl['colname'] = sig_col
             ldf += [dfpnl]
-        df = pd.concat(ldf, axis=0, sort=False)
-        if self.dailypnl.shape[0] > 0:
-            self.dailypnl = pd.concat([self.dailypnl, df], axis=0)
-        else:
-            self.dailypnl = df
+        if len(ldf) > 0:
+            df = pd.concat(ldf, axis=0, sort=False)
+            if self.dailypnl.shape[0] > 0:
+                self.dailypnl = pd.concat([self.dailypnl, df], axis=0)
+            else:
+                self.dailypnl = df
+            self.dailypnl = self.dailypnl.sort_values('daily_dt')
+        self.dailypnl2 = self.compute_daily_stats()
         self.statsdf = self.display_stats()

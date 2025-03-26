@@ -107,6 +107,22 @@ def get_pivoted_data(tokens=['BTCUSDT', 'ETHUSDT'], sdate_str='2019-01-01'):
     return pdft
 
 
+def get_univ_cnt(sdate_str='2019-01-01'):
+    print('Reading data from DuckDB')
+    con = duckdb.connect(os.path.join(get_data_db_folder(), "my_database.db"), read_only=True)
+
+    df = con.execute(f'''
+        SELECT CAST(close_time AS DATE) AS trade_date, COUNT(DISTINCT dscode) AS unique_dscode_count
+        FROM klines
+        WHERE close_time > '{sdate_str}' 
+        GROUP BY trade_date;
+        ''').df()
+    tpath = os.path.join(get_analysis_folder(), 'univ_cnt.csv')
+    print(f'Please open :{tpath}')
+    df.to_csv(tpath)
+    return df
+
+
 def main():
     pX = get_pivoted_data()
 

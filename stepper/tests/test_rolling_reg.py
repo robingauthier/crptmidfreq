@@ -4,7 +4,7 @@ from crptmidfreq.utils.common import clean_folder
 from ..rolling_reg import RollingRidgeStepper
 
 
-# pytest ./stepper/tests/test_rolling_reg.py --pdb --maxfail=1
+# pytest ./crptmidfreq/stepper/tests/test_rolling_reg.py --pdb --maxfail=1
 
 def test_reg_stepper_update():
     clean_folder('test_corr')

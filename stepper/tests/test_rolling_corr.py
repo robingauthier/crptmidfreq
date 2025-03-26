@@ -3,7 +3,7 @@ import numpy as np
 from crptmidfreq.utils.common import clean_folder
 from ..rolling_corr import RollingCorrStepper
 
-# pytest ./stepper/tests/test_rolling_corr.py --pdb --maxfail=1
+# pytest ./crptmidfreq/stepper/tests/test_rolling_corr.py --pdb --maxfail=1
 
 
 def test_rcor_stepper_update():

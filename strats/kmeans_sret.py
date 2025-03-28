@@ -35,7 +35,7 @@ def kmeans_sret(featd, incol='tret_xmkt', oucol='sret_kmeans',
     # Fitting the model now / directly calling stepper
     def model_gen_kmeans():
         return KMeans(n_clusters=cfg.get('kmeans_k'), random_state=42, n_init='auto')
-    cls_model = KmeansStepper \
+    cls_model = PivotModelStepper \
         .load(folder=folder,
               name=f'{name}_model_kmeans',
               lookback=cfg.get('kmeans_lookback'),
@@ -45,7 +45,7 @@ def kmeans_sret(featd, incol='tret_xmkt', oucol='sret_kmeans',
               model_gen=model_gen_kmeans,
               with_fit=True)
     # kmeanres is 2dim array ndts x ndscode
-    kmeansres = cls_model.update(pdts, pX, yserie=None, wgtserie=None)
+    kmeansres = cls_model.update(pdts, pfeatd, yserie=None, wgtserie=None)
     r.add(cls_model)
 
     kmeansd = Dict.empty(
@@ -71,11 +71,10 @@ def kmeans_sret(featd, incol='tret_xmkt', oucol='sret_kmeans',
     featd = rename_key(featd, nfeats[0], 'kmeans_cat')
 
     # Now removing the cluster mean
-    featd['wgt_xuniv'] = featd['wgt']*featd['univ']
     featd, nfeats = perform_cs_demean(featd=featd,
                                       feats=[incol],
                                       by='kmeans_cat',
-                                      wgt='wgt_xuniv',
+                                      wgt='wgt',
                                       folder=folder,
                                       name=name,
                                       r=r)

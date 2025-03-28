@@ -26,7 +26,7 @@ def generate_data(n_samples, n_codes):
 def test_against_pandas():
     import pandas as pd
     # Generate test data
-    n_samples = 1000
+    n_samples = 100000
     n_codes = 10
 
     dt, dscode, serie = generate_data(n_samples, n_codes)
@@ -57,6 +57,81 @@ def test_against_pandas():
     correlation = df['serier'].corr(df['seriec'])
     print(f"Correlation between pandas and implementation: {correlation}")
     assert correlation > 0.9, f"Expected correlation >0.9, got {correlation}"
+    mae = (df['serier']-df['seriec']).abs().max()
+    assert mae < 1e-6
+
+
+def test_against_pandas_withby():
+    import pandas as pd
+    # Generate test data
+    n_samples = 100000
+    n_codes = 10
+
+    dt, dscode, serie = generate_data(n_samples, n_codes)
+    by = dscode = np.random.randint(0, 2, n_samples)
+
+    # Create and run EwmStepper on first half
+    ewm = csMeanStepper(folder='test_data', name='test_ewm')
+    seriec = ewm.update(dt, dscode, serie, by=by)
+
+    # Create pandas DataFrame for comparison
+    df = pd.DataFrame({
+        'dt': dt,
+        'by': by,
+        'dscode': dscode,
+        'serie': serie,
+        'seriec': seriec,
+
+    })
+
+    # Calculate pandas EWM
+    df['serier'] = df.groupby(['dt', 'by'])['serie'].transform(
+        lambda x: x.mean()
+    )
+
+    check_ts = df['dt'].value_counts().index[0]
+    print(df[df['dt'] == check_ts])
+    print(df.tail())
+
+    # Compare results using correlation
+    correlation = df['serier'].corr(df['seriec'])
+    print(f"Correlation between pandas and implementation: {correlation}")
+    assert correlation > 0.9, f"Expected correlation >0.9, got {correlation}"
+    mae = (df['serier']-df['seriec']).abs().max()
+    assert mae < 1e-6
+
+
+def test_against_pandas_zero():
+    import pandas as pd
+    # Generate test data
+
+    dt = np.array([1, 1, 1, 2, 2, 2, 3, 3, 3], dtype=np.int64)
+    dscode = np.array([1, 2, 3, 1, 2, 3, 1, 2, 3], dtype=np.int64)
+    serie = np.array([-1, 1, 0, 0, 0, 0, -6, 3, 3], dtype=np.float64)
+    wgt = np.array([1, 1, 1, 1, 1, 1, 1, 1, 1], dtype=np.float64)
+
+    # Create and run EwmStepper on first half
+    ewm = csMeanStepper(folder='test_data', name='test_ewm')
+    seriec = ewm.update(dt, dscode, serie, wgt=wgt)
+
+    # Create pandas DataFrame for comparison
+    assert np.max(np.abs(seriec)) < 1e-6
+
+
+def test_against_pandas_zero_wgt():
+    import pandas as pd
+
+    dt = np.array([1, 1, 1, 2, 2, 2, 3, 3, 3], dtype=np.int64)
+    dscode = np.array([1, 2, 3, 1, 2, 3, 1, 2, 3], dtype=np.int64)
+    serie = np.array([-1, 1, 0, 0, 0, 0, -6, 3, 3], dtype=np.float64)
+    wgt = np.array([1, 1, 1, 0, 0, 0, 0, 0, 0], dtype=np.float64)
+
+    # Create and run EwmStepper on first half
+    ewm = csMeanStepper(folder='test_data2', name='test_ewm')
+    seriec = ewm.update(dt, dscode, serie, wgt=wgt)
+
+    # Create pandas DataFrame for comparison
+    assert np.max(np.abs(seriec)) < 1e-6
 
 
 def test_save_load_result():
@@ -94,3 +169,5 @@ def test_save_load_result():
     correlation = df['serier'].corr(df['seriec'])
     print(f"Correlation between pandas and implementation: {correlation}")
     assert correlation > 0.9, f"Expected correlation >0.9, got {correlation}"
+    mae = (df['serier']-df['seriec']).abs().max()
+    assert mae < 1e-6

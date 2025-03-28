@@ -4,14 +4,16 @@ from numba.typed import Dict
 from numba import types
 from crptmidfreq.stepper.base_stepper import BaseStepper
 
+
 @njit
 def get_alpha(window):
     """Convert half-life to alpha"""
     return 1 - np.exp(np.log(0.5) / window)
 
+
 @njit
-def update_ewmskew_values(codes, values, timestamps, alpha, ewm_values, ewm_squared_values, 
-                         ewm_cubed_values, last_timestamps):
+def update_ewmskew_values(codes, values, timestamps, alpha, ewm_values, ewm_squared_values,
+                          ewm_cubed_values, last_timestamps):
     """
     Vectorized update of EWM values for skewness calculation
 
@@ -69,9 +71,9 @@ def update_ewmskew_values(codes, values, timestamps, alpha, ewm_values, ewm_squa
             # Calculate skewness using EWM values
             # Skewness = (E[X^3] - 3*E[X^2]*E[X] + 2*E[X]^3) / var^(3/2)
             variance = new_squared_value - (new_value * new_value)
-            if variance > 0:
+            if variance > 1e-9:
                 m3 = new_cubed_value - 3 * new_squared_value * new_value + \
-                     2 * new_value * new_value * new_value
+                    2 * new_value * new_value * new_value
                 skew = m3 / (variance ** 1.5)
             else:
                 skew = 0.0
@@ -87,10 +89,11 @@ def update_ewmskew_values(codes, values, timestamps, alpha, ewm_values, ewm_squa
 
     return result
 
+
 class EwmSkewStepper(BaseStepper):
-    
+
     def __init__(self, folder='', name='', window=1):
-        super().__init__(folder,name)
+        super().__init__(folder, name)
         self.window = window
         self.alpha = get_alpha(window)
 
@@ -118,7 +121,7 @@ class EwmSkewStepper(BaseStepper):
     @classmethod
     def load(cls, folder, name, window=1):
         """Load instance from saved state or create new if not exists"""
-        return EwmSkewStepper.load_utility(cls,folder=folder,name=name,window=window)
+        return EwmSkewStepper.load_utility(cls, folder=folder, name=name, window=window)
 
     def update(self, dt, dscode, serie):
         """
@@ -132,8 +135,8 @@ class EwmSkewStepper(BaseStepper):
         Returns:
             numpy array of same length as input arrays containing EWM skewness values
         """
-        self.validate_input(dt,dscode,serie)
-        
+        self.validate_input(dt, dscode, serie)
+
         # Update values and timestamps using numba function
         return update_ewmskew_values(
             dscode, serie, dt.view(np.int64),

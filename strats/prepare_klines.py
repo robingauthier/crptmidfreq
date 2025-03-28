@@ -19,6 +19,11 @@ def prepare_klines(start_date='2025-03-01',
                    r=None,  # stepper registry
                    cfg={}
                    ):
+    """
+    Reads the klines from the SQL database
+    - computes tret and tret_qtlclip
+    - computes wgt
+    """
     assert not folder is None
     dcfg = dict(
         window_volume_wgt=60*24*30,
@@ -90,7 +95,7 @@ def prepare_klines(start_date='2025-03-01',
         out=np.zeros_like(featd['close']),
         where=~np.isclose(featd['close'], np.zeros_like(featd['close'])))
 
-    # Clip tret
+    # Clip tret :: called tret_clipqtl
     featd, nfeats = perform_clip_quantile_global(featd,
                                                  feats=['tret'],
                                                  low_clip=0.05,
@@ -99,6 +104,7 @@ def prepare_klines(start_date='2025-03-01',
                                                  name=name,
                                                  r=r)
 
+    
     # adding the weight ewm(volume) clipped to X% quantile
     featd, nfeats_wgt1 = perform_ewm(featd=featd,
                                      feats=['turnover'],
@@ -117,23 +123,6 @@ def prepare_klines(start_date='2025-03-01',
     featd['wgt'] = np.where(featd[nfeats_wgt1[0]] < featd[nfeats_wgt2[0]],
                             featd[nfeats_wgt1[0]],
                             featd[nfeats_wgt2[0]])
+    featd['wgt'] = np.nan_to_num(featd['wgt'])
     featd['sigf_wgt'] = featd['wgt']
-
-    # Removing the market in tret => tret_xmkt
-    featd, nfeats = perform_cs_demean(featd=featd,
-                                      feats=['tret'],
-                                      by=None,
-                                      wgt='wgt',
-                                      folder=folder,
-                                      name=name,
-                                      r=r)
-    featd = rename_key(featd, nfeats[0], 'tret_xmkt_raw')
-    featd, nfeats = perform_clip_quantile_global(featd=featd,
-                                                 feats=['tret_xmkt_raw'],
-                                                 low_clip=0.05,
-                                                 high_clip=0.95,
-                                                 folder=folder,
-                                                 name=name,
-                                                 r=r)
-    featd['tret_xmkt'] = featd[nfeats[0]]
     return featd

@@ -12,4 +12,5 @@ from crptmidfreq.strats.pnl_feats import pnl_feats
 from crptmidfreq.strats.turnover_feats import excess_turnover
 from crptmidfreq.strats.volatility_feats import volatility_feats
 from crptmidfreq.strats.mom_feats import mom_feats
+from crptmidfreq.strats.remove_mkt import remove_mkt
 

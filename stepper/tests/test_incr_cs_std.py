@@ -18,7 +18,7 @@ def generate_data(n_samples, n_codes):
 
     # Generate increasing datetime
     base = np.datetime64('2024-01-01')
-    dt0 = np.array([base + np.timedelta64(i, 'm') for i in range(n_samples)])
+    dt0 = np.array([base + np.timedelta64(i, 'm') for i in range(int(0.1*n_samples))])
     dt = np.sort(np.random.choice(dt0, size=n_samples, replace=True))
     return dt, dscode, serie
 
@@ -26,7 +26,7 @@ def generate_data(n_samples, n_codes):
 def test_against_pandas():
     import pandas as pd
     # Generate test data
-    n_samples = 1000
+    n_samples = 10000
     n_codes = 10
 
     dt, dscode, serie = generate_data(n_samples, n_codes)
@@ -48,6 +48,8 @@ def test_against_pandas():
     df['serier'] = df.groupby('dt')['serie'].transform(
         lambda x: x.std()
     )
+    df['serier'] = df['serier'].fillna(0.0)
+    df['seriec'] = df['seriec'].fillna(0.0)
 
     check_ts = df['dt'].value_counts().index[0]
     print(df[df['dt'] == check_ts])
@@ -57,6 +59,8 @@ def test_against_pandas():
     correlation = df['serier'].corr(df['seriec'])
     print(f"Correlation between pandas and implementation: {correlation}")
     assert correlation > 0.9, f"Expected correlation >0.9, got {correlation}"
+    mae = (df['serier']-df['seriec']).abs().max()
+    assert mae < 1e-4
 
 
 def test_save_load_result():
@@ -89,8 +93,12 @@ def test_save_load_result():
     df['serier'] = df.groupby('dt')['serie'].transform(
         lambda x: x.std()
     )
+    df['serier'] = df['serier'].fillna(0.0)
+    df['seriec'] = df['seriec'].fillna(0.0)
 
     # Compare results using correlation
     correlation = df['serier'].corr(df['seriec'])
     print(f"Correlation between pandas and implementation: {correlation}")
     assert correlation > 0.9, f"Expected correlation >0.9, got {correlation}"
+    mae = (df['serier']-df['seriec']).abs().quantile(0.9)
+    assert mae < 1e-4

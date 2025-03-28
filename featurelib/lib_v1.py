@@ -73,12 +73,12 @@ def perform_macd(featd, feats=[], windows=[[12, 26]], folder=None, name=None, r=
             hlslow = hls[1]
 
             cls_ewm_fast = EwmStepper \
-                .load(folder=f"{folder}", name=f"{name}_{col}_ewm{hlfast}", window=hlfast)
+                .load(folder=f"{folder}", name=f"{name}_{col}_ewm{hlfast}_macd", window=hlfast)
             ewm_val_fast = cls_ewm_fast.update(featd['dtsi'], featd['dscode'], featd[col])
             r.add(cls_ewm_fast)
 
             cls_ewm_slow = EwmStepper \
-                .load(folder=f"{folder}", name=f"{name}_{col}_ewm{hlslow}", window=hlslow)
+                .load(folder=f"{folder}", name=f"{name}_{col}_ewm{hlslow}_macd", window=hlslow)
             ewm_val_slow = cls_ewm_slow.update(featd['dtsi'], featd['dscode'], featd[col])
             r.add(cls_ewm_slow)
 
@@ -340,14 +340,14 @@ def perform_ewm_scaled(featd, feats=[], windows=[1], folder=None, name=None, r=g
     for col in feats:
         for hl in windows:
             cls_ewm = EwmStepper \
-                .load(folder=f"{folder}", name=f"{name}_{col}_ewm{hl}", window=hl)
+                .load(folder=f"{folder}", name=f"{name}_{col}_ewm{hl}_ewmsc", window=hl)
             ewm_val = cls_ewm.update(featd['dtsi'], featd['dscode'], featd[col])
             r.add(cls_ewm)
             alpha = 1-ewm_alpha(hl)
             num = ewm_val*np.sqrt((1+alpha)/(1-alpha))
 
             cls_ewmstd = EwmStdStepper \
-                .load(folder=f"{folder}", name=f"{name}_{col}_ewmstd{hl}", window=hl)
+                .load(folder=f"{folder}", name=f"{name}_{col}_ewmstd{hl}_ewmsc", window=hl)
             ewm_val2 = cls_ewmstd.update(featd['dtsi'], featd['dscode'], featd[col])
             r.add(cls_ewmstd)
 
@@ -1100,6 +1100,7 @@ def perform_cs_demean(featd, feats=[], by=None, wgt=None, folder=None, name=None
                                 by=None if by is None else featd[by],
                                 wgt=None if wgt is None else featd[wgt])
         r.add(cls_qtl)
+        featd[f'{col}_csmean'] = csmean
         featd[f'{col}_csdemean'] = featd[col]-csmean
         nfeats += [f'{col}_csdemean']
     return featd, nfeats
@@ -1269,6 +1270,7 @@ def perform_bktest(featd,  with_plot=True, with_txt=True, folder=None, name=None
         .load(folder=f"{folder}", name=f"{name}_bktest")
     cls_bk.update(featd)
     r.add(cls_bk)
+    return cls_bk
 
 
 def perform_avg_features_fillna0(featd, xcols=[], outname='', folder=None, name=None, r=g_reg):

@@ -32,6 +32,11 @@ def compute_bucketxy(dt, dscode, x_values, y_values,
         xval = x_values[i]
         yval = y_values[i]
 
+        if np.isnan(yval):
+            continue
+        if np.isnan(xval):
+            continue
+
         # Update bucket stats
         bucket_index = None
         for j in range(n_buckets):
@@ -193,12 +198,14 @@ class BucketXYStepper(BaseStepper):
             df_buckets['std'] = np.sqrt(df_buckets['var'])
             df_buckets['std_tcl'] = df_buckets['std'] / np.sqrt(df_buckets['cnt'])
 
+            print(df_buckets)
             fig, ax = plt.subplots(figsize=(10, 6))
             ax.errorbar(df_buckets['x'],
                         df_buckets['avg'],
                         yerr=df_buckets['std_tcl'],
                         fmt='o', capsize=5,
                         label='Bucket Mean ± CI')
+
             ax.set_xlabel('Quantile (Bucket Index)')
             ax.set_ylabel('Mean Value')
             ax.set_title(f'Bucket Plot: {self.name}')

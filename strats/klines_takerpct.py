@@ -18,6 +18,8 @@ def klines_takerpct(featd, folder=None, name=None, r=None, cfg={}):
                                    r=r)
     featd['takerpct'] = featd[nfeats[0]]
     featd['takerpct'] = featd['takerpct'] - 0.5
+    
+    # TODO: all this is sub-efficient as you recomupte many times the same ewm
     # ewm(X)
     featd, nfeats1 = perform_ewm(featd=featd,
                                  feats=nfeats,

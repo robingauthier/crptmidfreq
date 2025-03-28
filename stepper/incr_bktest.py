@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 from crptmidfreq.stepper.base_stepper import BaseStepper
 from crptmidfreq.utils.common import get_logger
+from crptmidfreq.utils.common import to_csv
 from crptmidfreq.utils.bktester import bktest_stats
 from crptmidfreq.utils.bktester import get_daily_stats
 from crptmidfreq.config_loc import get_analysis_folder
@@ -109,6 +110,7 @@ class BktestStepper(BaseStepper):
         if self.with_txt:
             print('Gross P&L Stats:')
             print(rptdf1.sort_values('sr'))
+            to_csv(rptdf1, f'{self.name}_bktest_stats')
         return rptdf1
 
     def compute_daily_stats(self):

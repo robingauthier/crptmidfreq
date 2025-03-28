@@ -69,7 +69,6 @@ def mr_mual_feats(featd, feats=['sret_kmeans'], outname='mual', folder=None, nam
                                            folder=folder,
                                            name=name,
                                            r=r)
-
         featd = rename_key(featd, nfeats[0], f'zs_{win}')
         nfeats_zs += [f'zs_{win}']
 

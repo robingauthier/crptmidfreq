@@ -5,7 +5,6 @@ from crptmidfreq.utils.common import get_logger
 from crptmidfreq.stepper.incr_model_timeclf import TimeClfStepper
 from crptmidfreq.stepper.incr_model_timeclf import get_dts_max_before
 
-# Quite similar to the featurelib/timeclf.py
 
 logger = get_logger()
 
@@ -80,6 +79,8 @@ class ModelStepper(BaseStepper):
         if self.last_xmem.shape[0] == 0:
             nf = xseries.shape[1]
             self.last_xmem = np.ndarray(shape=(0, nf), dtype=np.float64)
+        if self.last_xmem.shape[1] != xseries.shape[1]:
+            pass
         new_xserie = np.concatenate([
             self.last_xmem[keep_idx_1],
             xseries[keep_idx_2]
@@ -148,7 +149,8 @@ class ModelStepper(BaseStepper):
                 model_loc = [x for x in self.hmodels if x['train_end_dt'] == train_stop_dt]['model']
 
             if model_loc is not None:
-                ypred = model_loc.predict(xseries[test_start_i:test_stop_i, :])
+                n_feats = self.last_xmem.shape[1]
+                ypred = model_loc.predict(xseries[test_start_i:test_stop_i, :n_feats])
                 result[test_start_i:test_stop_i] = ypred
             else:
                 result[test_start_i:test_stop_i] = 0.0

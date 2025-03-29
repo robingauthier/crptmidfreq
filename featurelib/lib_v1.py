@@ -699,9 +699,7 @@ def perform_expanding_max(featd, feats=[], folder=None, name=None):
     return featd, nfeats
 
 
-def perform_sma(featd, feats=[], windows=[1], folder=None, name=None, r=g_reg
-
-                ):
+def perform_sma(featd, feats=[], windows=[1], folder=None, name=None, r=g_reg):
     """
     """
     assert 'dtsi' in featd.keys()
@@ -716,6 +714,7 @@ def perform_sma(featd, feats=[], windows=[1], folder=None, name=None, r=g_reg
             cls_sma = RollingMeanStepper \
                 .load(folder=f"{folder}", name=f"{name}_{col}_sma{hl}", window=hl)
             sma_val = cls_sma.update(featd['dtsi'], featd['dscode'], featd[col])
+            r.add(cls_sma)
             featd[f'{col}_sma{hl}'] = sma_val
             nfeats += [f'{col}_sma{hl}']
     return featd, nfeats
@@ -1260,14 +1259,14 @@ def perform_drawdown(featd, sigcol='', pnlcol='', folder=None, name=None, r=g_re
     return featd, nfeats
 
 
-def perform_bktest(featd,  with_plot=True, with_txt=True, folder=None, name=None, r=g_reg):
+def perform_bktest(featd,  with_plot=True, with_txt=True, commbps=1.0, folder=None, name=None, r=g_reg):
     """
-
+    commbps is the commisson cost
     """
     assert 'dtsi' in featd.keys()
     assert 'dscode' in featd.keys()
     cls_bk = BktestStepper \
-        .load(folder=f"{folder}", name=f"{name}_bktest")
+        .load(folder=f"{folder}", name=f"{name}_bktest", commbps=commbps)
     cls_bk.update(featd)
     r.add(cls_bk)
     return cls_bk

@@ -26,7 +26,7 @@ def try_to_save_png(tsave_graph_path):
 class BktestStepper(BaseStepper):
     """Only way to backtest and keep information"""
 
-    def __init__(self, folder='', name=''):
+    def __init__(self, folder='', name='', commbps=0.0):
         """
         """
         super().__init__(folder, name)
@@ -35,6 +35,7 @@ class BktestStepper(BaseStepper):
         self.dailypnl2 = pd.DataFrame()  # actual date 2024-01-01, 2024-01-02
         self.with_txt = True
         with_plot = True
+        self.commbps = commbps
         if with_plot:
             self.save_graph_path = os.path.join(get_analysis_folder(), f'{self.name}_COLNAME.png')
         else:
@@ -44,9 +45,9 @@ class BktestStepper(BaseStepper):
         self.save_utility()
 
     @classmethod
-    def load(cls, folder, name):
+    def load(cls, folder, name, commbps=0.0):
         """Load instance from saved state or create new if not exists"""
-        return BktestStepper.load_utility(cls, folder=folder, name=name)
+        return BktestStepper.load_utility(cls, folder=folder, name=name, commbps=commbps)
 
     def display_stats(self):
         lr = []
@@ -61,9 +62,13 @@ class BktestStepper(BaseStepper):
                 'col': col,
                 'cnt': np.nan,
                 'sr': np.nan,
+                'sr_net': np.nan,
                 'mdd': np.nan,
+                'mdd_net': np.nan,
                 'rpt': np.nan,
+                'rpt_net': np.nan,
                 'rog': np.nan,
+                'rog_net': np.nan,
                 'ann_pnl': np.nan,
                 'factor': np.nan,
                 'sigma': np.nan,
@@ -79,12 +84,15 @@ class BktestStepper(BaseStepper):
                 'ypred_std': np.nan,
                 'sdate': np.nan,  # start date
                 'edate': np.nan,  # end date
+                'commbps': self.commbps,
             }
             dt = dfloc['daily_dt']
             tot_pnl = dfloc['daily_gross_pnl']
+            tot_pnl_net = dfloc['daily_net_pnl']
             tot_trd = dfloc['daily_trd']
             tot_gmv = dfloc['daily_gmv']
             rd = get_daily_stats(dt, tot_pnl, tot_trd, tot_gmv, rd=rd, suf='')
+            rd = get_daily_stats(dt, tot_pnl_net, tot_trd, tot_gmv, rd=rd, suf='_net')
             lr += [rd]
 
             # --------------------------
@@ -92,21 +100,32 @@ class BktestStepper(BaseStepper):
             # --------------------------
             if self.save_graph_path is not None:
                 # Plot cumulative net pnl (using daily_net from pandas aggregation)
-                cum_net = np.cumsum(tot_pnl)
                 tot_gmv_ewm = tot_gmv.ewm(halflife=60).mean()
+                tot_pnl_pct = np.divide(
+                    tot_pnl_net,
+                    tot_gmv_ewm,
+                    out=np.zeros_like(tot_gmv_ewm),
+                    where=~np.isclose(tot_gmv_ewm,
+                                      np.zeros_like(tot_gmv_ewm))
+                )
+                cum_net = np.cumsum(tot_pnl_pct)
+
                 fig, ax = plt.subplots(figsize=(10, 6))
                 daily_dt_f = pd.to_datetime(dt*1e3)
                 ax.plot(daily_dt_f, cum_net, label='Cum PnL')
                 ax2 = ax.twinx()
                 ax2.plot(daily_dt_f, tot_gmv_ewm, alpha=0.3, label='Gross Delta')
-                ax.set_title(f'Cumulative Net PnL {col}')
+                ax.set_title(f'Cumulative Net PnL in Pct Gross {col}')
                 ax.legend()
                 ax2.legend()
                 tsave_graph_path = self.save_graph_path.replace('COLNAME', col)
                 try_to_save_png(tsave_graph_path)
 
         rptdf = pd.DataFrame(lr)
-        rptdf1 = rptdf[['name', 'col', 'sr', 'rpt', 'mdd', 'rog', 'avg_gmv', 'ann_pnl', 'cnt']].round(2)
+        rptdf1 = rptdf[['name', 'col',
+                        'sr_net', 'rpt_net', 'rog_net',
+                        'sr', 'rpt', 'mdd', 'rog',
+                        'avg_gmv', 'ann_pnl', 'cnt', 'commbps']].round(2)
         if self.with_txt:
             print('Gross P&L Stats:')
             print(rptdf1.sort_values('sr'))
@@ -115,11 +134,14 @@ class BktestStepper(BaseStepper):
 
     def compute_daily_stats(self):
         dailypnl = self.dailypnl.copy()
+        if dailypnl.shape[0] == 0:
+            return dailypnl
         dailypnl['daily_dt'] = pd.to_datetime(dailypnl['daily_dt']*1e3)
         dailypnl['date'] = pd.to_datetime(dailypnl['daily_dt'].dt.strftime('%Y-%m-%d'))
         dailypnl2 = dailypnl\
             .groupby(['date', 'colname'])\
             .agg({'daily_net_pnl': 'sum',
+                  'daily_gross_pnl': 'sum',
                   'daily_trd': 'sum',
                   'daily_gmv': 'sum'})\
             .reset_index()
@@ -144,6 +166,7 @@ class BktestStepper(BaseStepper):
                 featd['wgt'],
                 str(sig_col),  # name
                 out_dailypnl=True,
+                comms=self.commbps,
             )
             if dpnl is None:
                 continue

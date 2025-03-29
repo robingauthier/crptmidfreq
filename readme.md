@@ -48,3 +48,4 @@ on bitmex we are at 1.5bps
 
 - finish test_model_stepper_sklearn_linear_changing_n
 
+- backtest graph must be in pctgross

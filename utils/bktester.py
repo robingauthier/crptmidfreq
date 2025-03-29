@@ -205,6 +205,7 @@ def bktest_stats(
     # --------------------------
     # Transaction Costs
     # --------------------------
+
     if costs:
         # Commission cost (assumed comms is scalar or a numpy array of same length as y).
         comm_cost = trd * 1e-4 * comms

@@ -14,23 +14,26 @@ def kmeans_sret(featd, incol='tret_xmkt', oucol='sret_kmeans',
     and outputs : oucol
     """
     assert incol in featd.keys()
+    assert 'univ' in featd.keys()
     dcfg = dict(
         kmeans_k=20,
         kmeans_lookback=10000,
-        kmeans_fitfreq=100
+        kmeans_fitfreq=100,
+
+        sret_clip=0.01,  # 3%
     )
     cfg = merge_dicts(cfg, dcfg, name='kmeans_sret')
+    # arguments always used
+    defargs = {'folder': folder, 'r': r, 'name': name}
 
     # pivotting for correlation matrix / clustering
     pdts, pfeatd = perform_pivot(featd=featd,
                                  feats=[incol],
-                                 folder=folder,
-                                 name=name,
-                                 r=r)
-    pX = np.array([v for k, v in pfeatd.items()])
-    pX = np.nan_to_num(pX)
-    pX = np.transpose(pX)  # ndts x ndscode
-    pdscodes = list(pfeatd.keys())
+                                 **defargs)
+
+    pdts, puniv = perform_pivot(featd=featd,
+                                feats=['univ'],
+                                **defargs)
 
     # Fitting the model now / directly calling stepper
     def model_gen_kmeans():
@@ -43,31 +46,20 @@ def kmeans_sret(featd, incol='tret_xmkt', oucol='sret_kmeans',
               fitfreq=cfg.get('kmeans_fitfreq'),
               gap=1,
               model_gen=model_gen_kmeans,
+              is_kmeans=True,
               with_fit=True)
     # kmeanres is 2dim array ndts x ndscode
-    kmeansres = cls_model.update(pdts, pfeatd, yserie=None, wgtserie=None)
+    kmeansd, kdts = cls_model.update(pdts, pfeatd, puniv)
     r.add(cls_model)
 
-    kmeansd = Dict.empty(
-        key_type=types.int64,    # Define the type of keys
-        value_type=types.Array(types.float64, 1, "C")  # Define the type of values
-    )
-    for i in range(len(pdscodes)):
-        kmeansd[pdscodes[i]] = kmeansres[:, i].copy(order='C')
-
     # res is a matrix ndst x ndscode
-    ndt, ndscode, nserie = perform_unpivot(pdts, kmeansd,
-                                           folder=folder,
-                                           name=name,
-                                           r=r)
+    ndt, ndscode, nserie = perform_unpivot(kdts, kmeansd, **defargs)
     featd2 = {'dtsi': ndt, 'dscode': ndscode, 'kmeans_cat': nserie}
 
     featd, nfeats = perform_merge_asof(featd,
                                        featd2,
                                        feats=['kmeans_cat'],
-                                       folder=folder,
-                                       name=name,
-                                       r=r)
+                                       **defargs)
     featd = rename_key(featd, nfeats[0], 'kmeans_cat')
 
     # Now removing the cluster mean
@@ -75,9 +67,17 @@ def kmeans_sret(featd, incol='tret_xmkt', oucol='sret_kmeans',
                                       feats=[incol],
                                       by='kmeans_cat',
                                       wgt='wgt',
-                                      folder=folder,
-                                      name=name,
-                                      r=r)
-    featd = rename_key(featd, nfeats[0], oucol)
+                                      **defargs)
 
+    # Clipping some large outliers
+    th = cfg.get('sret_clip')
+    featd, nfeats = perform_clip_quantile_global(featd=featd,
+                                                 feats=nfeats,
+                                                 low_clip=th,
+                                                 high_clip=1-th,
+                                                 folder=folder,
+                                                 name=name,
+                                                 r=r)
+
+    featd = rename_key(featd, nfeats[0], oucol)
     return featd

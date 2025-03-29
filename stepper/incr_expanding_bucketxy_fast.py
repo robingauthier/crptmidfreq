@@ -201,13 +201,13 @@ class BucketXYStepper(BaseStepper):
             print(df_buckets)
             fig, ax = plt.subplots(figsize=(10, 6))
             ax.errorbar(df_buckets['x'],
-                        df_buckets['avg'],
-                        yerr=df_buckets['std_tcl'],
+                        df_buckets['avg']*1e4,
+                        yerr=df_buckets['std_tcl']*1e4,
                         fmt='o', capsize=5,
-                        label='Bucket Mean ± CI')
-
-            ax.set_xlabel('Quantile (Bucket Index)')
-            ax.set_ylabel('Mean Value')
+                        label='Bucket Mean bps ± CI')
+            ax.grid()
+            ax.set_xlabel('Qtl X')
+            ax.set_ylabel('Y')
             ax.set_title(f'Bucket Plot: {self.name}')
             ax.legend()
             try_to_save_png(self.save_graph_path)

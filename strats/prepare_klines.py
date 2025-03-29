@@ -45,8 +45,10 @@ def prepare_klines(start_date='2025-03-01',
                    FROM klines
                    WHERE CAST(close_time AS DATE)>='{start_date}'
                    {token_cond}
-                   AND CAST(close_time AS DATE)<'{end_date}';
+                   AND CAST(close_time AS DATE)<'{end_date}'
+                   AND NOT regexp_matches(dscode, '^.*\_\d*$');
                    ''').df()
+    assert not 'BTCUSDT_230331' in df['dscode'].unique()
 
     # we need to convert dscode to an integer
     df['dscode_str'] = df['dscode'].copy()
@@ -104,7 +106,6 @@ def prepare_klines(start_date='2025-03-01',
                                                  name=name,
                                                  r=r)
 
-    
     # adding the weight ewm(volume) clipped to X% quantile
     featd, nfeats_wgt1 = perform_ewm(featd=featd,
                                      feats=['turnover'],

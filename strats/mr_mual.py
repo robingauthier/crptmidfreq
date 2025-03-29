@@ -22,9 +22,11 @@ def mr_mual_feats(featd, feats=['sret_kmeans'], outname='mual', folder=None, nam
                                        r=r)
 
     # mual_std :: computing the volatility of the sret_kmeans
+    # std windows cannot be < 20
+    windows_std = [4*x for x in cfg.get('windows_ewm') if 4*x >= 30]
     featd, nfeats_vol_sr = perform_ewm_std(featd=featd,
                                            feats=feats,
-                                           windows=cfg.get('windows_ewm'),
+                                           windows=windows_std,
                                            folder=folder,
                                            name=name,
                                            r=r)

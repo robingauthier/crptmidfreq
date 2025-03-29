@@ -41,6 +41,11 @@ class PivotModelStepper(BaseStepper):
             key_type=types.int64,
             value_type=types.Array(types.float64, 1, 'C')
         )
+        self.last_umem = Dict.empty(
+            key_type=types.int64,  # dsocode
+            value_type=types.float64,  # 1/0 for currently in or out univ
+        )
+
         self.last_dts = np.array([], dtype=np.int64)
         self.last_ymem = np.array([], dtype=np.float64)
         self.last_wmem = np.array([], dtype=np.float64)
@@ -49,7 +54,10 @@ class PivotModelStepper(BaseStepper):
         self.model_i = 0  # counting the models
 
         # This is very special to the Kmeans
-        self.kmeans_cat = None
+        self.kmeans_cat = Dict.empty(
+            key_type=types.int64,  # dscode
+            value_type=types.int64  # cluster name
+        )
 
         # History of models
         self.hmodels = []
@@ -72,8 +80,7 @@ class PivotModelStepper(BaseStepper):
                                               is_kmeans=is_kmeans
                                               )
 
-    def manage_history(self, dts, xseriesd, yserie, wgtserie, train_start_dt, train_stop_dt):
-
+    def manage_history(self, dts, xseriesd, univd, yserie, wgtserie, train_start_dt, train_stop_dt):
         keep_idx_1 = (self.last_dts >= train_start_dt) & (self.last_dts <= train_stop_dt)
         keep_idx_2 = (dts >= train_start_dt) & (dts <= train_stop_dt)
         new_dts = np.concatenate([
@@ -98,6 +105,10 @@ class PivotModelStepper(BaseStepper):
                 self.last_xmem[k][keep_idx_1],
                 xseriesd[k][keep_idx_2]
             ])
+        for k in univd.keys():
+            # must be a float
+            self.last_umem[k] = univd[k][keep_idx_2][-1]
+
         logger.info('PivotedModelStepper :: updating the memory ')
 
         # filling nan
@@ -105,41 +116,75 @@ class PivotModelStepper(BaseStepper):
             self.last_xmem[k] = np.nan_to_num(self.last_xmem[k])
 
     def fit_model(self):
-        logger.info(f'Fitting Kmeans {self.folder} {self.name} i={self.model_i}')
+        logger.info(f'Fitting Kmeans {self.name} i={self.model_i}')
         model_loc = self.model_gen()
-        pX = np.array([self.last_xmem[k] for k in self.last_xorder])
+
+        pX = np.array([self.last_xmem[k] for k in self.last_xorder if self.last_umem[k] > 0])
+
         # model_loc.fit_predict(X=np.transpose(pX))
         # Kmeans works on X =(n_samples, n_features)
         # and returns labels = (n_samples) -- Index of the cluster each sample belongs to.
         model_loc.fit_predict(X=pX)
         if self.is_kmeans:
-            assert model_loc.labels_.shape[0] == len(self.last_xorder)
-            self.kmeans_cat = model_loc.labels_
+            jj = 0
+            for code in self.last_xorder:
+                if self.last_umem[code] > 0:
+                    self.kmeans_cat[code] = model_loc.labels_[jj]
+                    jj += 1
+                else:
+                    self.kmeans_cat[code] = -1
         self.model_i += 1
         return model_loc
 
+    def predict_model_kmeans(self, result, ndts, test_start_dt):
+        ndts = np.append(ndts, test_start_dt)
+        for i in range(len(self.last_xorder)):
+            code = self.last_xorder[i]
+            fillzero = self.last_umem[code] == 0 or (i >= len(self.kmeans_cat))
+            if not fillzero:
+                result[code] = np.append(result[code], self.kmeans_cat[i])
+            else:
+                result[code] = np.append(result[code], -1)
+        return ndts, result
+
     def get_pX(self, xseriesd):
         """ensures the order is always the same ! """
-        pX = np.array([xseriesd[k] for k in self.last_xorder])
+        nu = len(self.last_umem)
+        if nu > 0:
+            pX = np.array([xseriesd[k] for k in self.last_xorder if self.last_umem[k] > 0])
+        else:
+            pX = np.array([xseriesd[k] for k in self.last_xorder])
         return np.transpose(pX)
 
-    def normalize_new_dscode(self, xseriesd):
+    def infer_len(self, xseriesd):
+        n = 0
+        for col in xseriesd:
+            if n == 0:
+                n = xseriesd[col].shape[0]
+            else:
+                assert n == xseriesd[col].shape[0]
+        return n
+
+    def normalize_new_dscode(self, xseriesd, univd):
         # making sure every dscode has an xmem and is in series
         # this is taking care of new symbols..
+        n1 = self.infer_len(xseriesd)
+        n2 = self.infer_len(self.last_xmem)
         for code in xseriesd:
             if code not in self.last_xmem:
-                self.last_xmem[code] = np.zeros(self.lookback, dtype=np.float64)
+                self.last_xmem[code] = np.zeros(n2, dtype=np.float64)
                 self.last_xorder += [code]
         for code in self.last_xmem:
             if code not in xseriesd:
-                xseriesd[code] = np.zeros(n, dtype=np.float64)
+                xseriesd[code] = np.zeros(n1, dtype=np.float64)
+                univd[code] = np.zeros(n1, dtype=np.float64)
         assert np.all(
             sorted(list(xseriesd))
             ==
             sorted(list(self.last_xmem)))
-        return xseriesd
+        return xseriesd, univd
 
-    def update(self, dts, xseriesd, yserie=None, wgtserie=None):
+    def update(self, dts, xseriesd, univd=None, yserie=None, wgtserie=None):
         """
         xseriesd must be a pivoted table numba Dict where keys are dscode
         For example it can be obtained using
@@ -150,6 +195,8 @@ class PivotModelStepper(BaseStepper):
                                  r=r)
         xseriesd = pfeatd
 
+        univd is the pivoted universe 0/1 dictionary as numba Dict as well
+
         This function will return result a pivoted table numba Dict where keys are dscode
         and ndts the dates.
 
@@ -157,6 +204,14 @@ class PivotModelStepper(BaseStepper):
 
         assert isinstance(xseriesd, Dict)
         n = dts.shape[0]
+        if univd is None:
+            univd = Dict.empty(
+                key_type=types.int64,  # dsocode
+                value_type=types.Array(types.float64, 1, 'C'),  # 1/0 for currently in or out univ
+            )
+            for code in xseriesd:
+                univd[code] = np.ones(n, dtype=np.float64)
+
         for k, v in xseriesd.items():
             assert len(v) == n, 'issue on key={k}'
 
@@ -172,7 +227,7 @@ class PivotModelStepper(BaseStepper):
         self.timeclf.update(dts, np.zeros(n), np.zeros(n))
         ltimes = self.timeclf.ltimes
 
-        xseriesd = self.normalize_new_dscode(xseriesd)
+        xseriesd, univd = self.normalize_new_dscode(xseriesd, univd)
 
         model_loc = None
         for ltime in ltimes:
@@ -193,7 +248,7 @@ class PivotModelStepper(BaseStepper):
 
             if self.with_fit:
                 logger.info(f'Fitting model {time_str}')
-                self.manage_history(dts, xseriesd, yserie, wgtserie, train_start_dt, train_stop_dt)
+                self.manage_history(dts, xseriesd, univd, yserie, wgtserie, train_start_dt, train_stop_dt)
                 model_loc = self.fit_model()
                 self.hmodels += [{
                     'train_start_dt': train_start_dt,
@@ -215,13 +270,7 @@ class PivotModelStepper(BaseStepper):
                     for k in range(test_start_i, test_stop_i):
                         result[k] = ypred
                 else:
-                    ndts = np.append(ndts, test_start_dt)
-                    for i in range(len(self.last_xorder)):
-                        code = self.last_xorder[i]
-                        if i < len(self.kmeans_cat):
-                            result[code] = np.append(result[code], self.kmeans_cat[i])
-                        else:
-                            result[code] = np.append(result[code], -1)
+                    ndts, result = self.predict_model_kmeans(result, ndts, test_start_dt)
 
         # check all have same lenght
         n2 = ndts.shape[0]

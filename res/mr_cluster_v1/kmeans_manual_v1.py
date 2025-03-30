@@ -18,8 +18,8 @@ logger = get_logger()
 
 g_folder = 'res_kmeans_v1'
 g_r = StepperRegistry()
-g_all_features = True
-g_hardcoded_universe = True
+g_all_features = False
+g_hardcoded_universe = False
 hardcoded_universe = ['BTCUSDT',
                       'ETHUSDT',
                       'SOLUSDT',
@@ -101,12 +101,12 @@ def main_features(start_date='2025-03-01', end_date='2026-01-01'):
     if g_hardcoded_universe:
         featd['sret_kmeans'] = featd['tret_xmkt_raw_clipqtl']
 
-    if g_all_features:
+    if True:
         # momentum on sret
         featd = mom_feats(featd,
                           feats=['sret_kmeans'],
                           **defargs)
-
+    if g_all_features:
         # PfP features -- this is too slow for now ! 2 minutes for 1 month
         featd = pfp_feats(featd,
                           feats=['tret_xmkt'],
@@ -130,13 +130,14 @@ def main_features(start_date='2025-03-01', end_date='2026-01-01'):
                                  feats=['tret_xmkt'],
                                  **defargs)
 
+    featd, _ = perform_clean_memory(featd)
     g_r.save()
     return featd
 
 
 def main_model(featd):
     unit_day = 60*24
-    model_lookback = unit_day*100
+    model_lookback = unit_day*30  # I get into RAM issues otherwise
     model_fitfreq = unit_day*10
 
     featd = filter_dict_to_univ(featd)

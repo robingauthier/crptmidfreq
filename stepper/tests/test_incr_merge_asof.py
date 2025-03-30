@@ -24,23 +24,7 @@ def test_merge_asof_stepper_basic():
     print(stepper.right_timestamps)
     print(stepper.right_values)
     # Expected results for first batch
-    expected_value2 = np.array([np.nan, 1.0, 2.0, 3.0, 3.0], dtype=np.float64)
-    np.testing.assert_array_almost_equal(merged_value2, expected_value2)
-
-    # Second batch - should use historical data
-    time1_b2 = np.array([10, 11, 14, 16], dtype=np.int64)
-    dscode1_b2 = np.array([1, 1, 1, 1], dtype=np.int64)
-
-    time2_b2 = np.array([12, 13, 15, 17], dtype=np.int64)
-    dscode2_b2 = np.array([1, 1, 1, 1], dtype=np.int64)
-    value2_b2 = np.array([4.0, 5.0, 6.0, 7.0], dtype=np.float64)
-
-    merged_value2 = stepper.update(
-        time1_b2, dscode1_b2, time2_b2, dscode2_b2, value2_b2
-    )
-
-    # Expected results for second batch
-    expected_value2 = np.array([3.0, 3.0, 5.0, 6.0], dtype=np.float64)
+    expected_value2 = np.array([1.0, 1.0, 2.0, 2.0, 3.0], dtype=np.float64)
     np.testing.assert_array_almost_equal(merged_value2, expected_value2)
 
 
@@ -90,6 +74,39 @@ def test_merge_asof_stepper_dscode():
     merged_value2 = stepper.update(
         time1, dscode1, time2, dscode2, value2
     )
+    expected_value2 = np.array([np.nan, np.nan, 1.0, 2.0, 3.0], dtype=np.float64)
+    np.testing.assert_array_almost_equal(merged_value2, expected_value2)
+
+    # Second batch - should use historical data
+    time1_b2 = np.array([10, 11, 14, 16], dtype=np.int64)
+    dscode1_b2 = np.array([1, 1, 2, 1], dtype=np.int64)
+    time2_b2 = np.array([12, 13, 15, 17], dtype=np.int64)
+    dscode2_b2 = np.array([1, 2, 2, 1], dtype=np.int64)
+    value2_b2 = np.array([4.0, 5.0, 6.0, 7.0], dtype=np.float64)
+    merged_value2 = stepper.update(
+        time1_b2, dscode1_b2, time2_b2, dscode2_b2, value2_b2
+    )
+    # Expected results for second batch
+    expected_value2 = np.array([3.0, 3.0, 5.0, 4.0], dtype=np.float64)
+    np.testing.assert_array_almost_equal(merged_value2, expected_value2)
+
+
+def test_merge_asof_stepper_left():
+    # Create stepper
+    stepper = MergeAsofStepper(folder='test', name='basic')
+
+    # First batch
+    time1 = np.array([1, 1, 2, 2, 3], dtype=np.int64)
+    dscode1 = np.array([1, 1, 1, 1, 1], dtype=np.int64)
+
+    time2 = np.array([1, 2, 3], dtype=np.int64)
+    dscode2 = np.array([1, 1, 1], dtype=np.int64)
+    value2 = np.array([1.0, 2.0, 3.0], dtype=np.float64)
+    merged_value2 = stepper.update(
+        time1, dscode1, time2, dscode2, value2
+    )
+    import pdb
+    pdb.set_trace()
     expected_value2 = np.array([np.nan, np.nan, 1.0, 2.0, 3.0], dtype=np.float64)
     np.testing.assert_array_almost_equal(merged_value2, expected_value2)
 

@@ -1,6 +1,7 @@
 import pandas as pd
 import os
 from crptmidfreq.utils.common import rename_key
+from pprint import pprint
 from functools import partial
 from crptmidfreq.featurelib.lib_v1 import *
 from crptmidfreq.strats import *
@@ -13,6 +14,7 @@ from crptmidfreq.utils.common import filter_dict_to_dts
 from crptmidfreq.utils.common import save_features
 from crptmidfreq.utils.common import save_signal
 from crptmidfreq.utils.common import to_csv
+from crptmidfreq.utils.univ import hardcoded_universe_1
 
 
 # This will give you intuitions as to what kind of strategies should work
@@ -21,15 +23,6 @@ logger = get_logger()
 
 g_folder = 'res_kmeans_naive_v1'
 g_r = StepperRegistry()
-# arguments always used
-g_hardcoded_universe = True
-hardcoded_universe = ['BTCUSDT',
-                      'ETHUSDT',
-                      'SOLUSDT',
-                      'TRXUSDT',
-                      'BNBUSDT',
-                      'ADAUSDT',
-                      'XRPUSDT']
 
 
 def main_features(start_date='2025-03-01', end_date='2026-01-01'):
@@ -46,48 +39,68 @@ def main_features(start_date='2025-03-01', end_date='2026-01-01'):
         sret_clip=0.005,  # we should not cut too much
 
         # kmeans config
-        kmeans_lookback=24*60*30,
-        kmeans_fitfreq=24*60*10,
+        kmeans_lookback=24*60*5,  # this is in time units
+        kmeans_fitfreq=24*60*3,  # this is in time units
         kmeans_k=20,
+        svd_lookback=24*60*20,
+        svd_fitfreq=60,
+        svd_k=20,
+        kmeans_or_svd_or_naive='svd',
+
 
         # univ config
         universe_count=200,
 
         # applyops
         window_appops=1000,
+
+        hardcoded_universe=True,
+
     )
+    if cfg['hardcoded_universe']:
+        cfg['kmeans_k'] = 2
+        cfg['svd_k'] = 2
     defargs = {'folder': g_folder, 'name': None, 'r': g_r, 'cfg': cfg}
+    pprint(cfg)
+
     # read the data from the DuckDB
     featd = prepare_klines(start_date=start_date,
                            end_date=end_date,
-                           tokens=hardcoded_universe if g_hardcoded_universe else 'all',
+                           tokens=hardcoded_universe_1 if cfg['hardcoded_universe'] else 'all',
                            **defargs)
 
     # Universe definition
     # Very important to put a weight of 0 when outside of the universe
-    if not g_hardcoded_universe:
+    if not cfg['hardcoded_universe']:
         featd = define_univ(featd,
                             **defargs)
     else:
         featd['univ'] = np.ones_like(featd['dtsi'])
 
     # forward_fh1 definition
+    # and tret_xmkt definition
     featd = define_forward_fh(featd,
                               incol='tret',
                               **defargs)
 
     # running the kmeans
-    if not g_hardcoded_universe:
+    kind = cfg.get('kmeans_or_svd_or_naive')
+    if kind == 'kmeans':
         featd = kmeans_sret(featd,
                             incol='tret_xmkt',
-                            oucol='sret_kmeans',
+                            oucol='sret',
                             **defargs)
+    elif kind == 'svd':
+        featd = svd_sret(featd,
+                         incol='tret_xmkt',
+                         oucol='sret',
+                         **defargs)
     else:
-        featd['sret_kmeans'] = featd['tret_xmkt_raw_clipqtl']
+        featd['sret'] = featd['tret_xmkt']  # it is clipped yes
 
     # MR mual
     featd = mr_mual_feats(featd,
-                          feats=['sret_kmeans'],
+                          feats=['sret'],
                           outname='mual',
                           **defargs)
 
@@ -98,10 +111,9 @@ def main_features(start_date='2025-03-01', end_date='2026-01-01'):
 
     # Conditioning on univ - just in case
     for col in get_sig_cols(featd):
-        #featd[col] = featd[col]*(featd['sigf_ipocnt'] > ipo_burn)
         featd[col] = featd[col]*featd['univ']
 
-    # for bench
+    # for bench and checking that sharpe is 0.0
     featd['sig_one'] = np.ones_like(featd['wgt'])
 
     g_r.save()
@@ -133,7 +145,7 @@ def dump_extract(featd):
     logger.info('Dumping the data for manual checks')
 
     icols = ['dtsi', 'dscode_str', 'close', 'sig_zs_100', 'sig_mual',
-             'univ', 'kmeans_cat']
+             'univ', 'sret']
     df = pd.DataFrame({k: v for k, v in featd.items() if k in icols})
     df['dtsi'] = pd.to_datetime(df['dtsi']*1e3)
 
@@ -163,7 +175,8 @@ def dump_extract(featd):
 
 def main():
     clean_folder(g_folder)
-    dts = pd.date_range('2022-01-01', '2025-05-01', freq='2MS')
+    #dts = pd.date_range('2022-01-01', '2025-05-01', freq='2MS')
+    dts = pd.date_range('2022-01-01', '2025-05-01', freq='1MS')
     for i in range(len(dts)-1):
         start_dt = dts[i].strftime('%Y-%m-%d')
         end_dt = dts[i+1].strftime('%Y-%m-%d')

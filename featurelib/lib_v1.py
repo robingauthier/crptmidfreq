@@ -7,6 +7,8 @@ from crptmidfreq.utils.common import rename_key
 from crptmidfreq.utils.common import get_hash
 from crptmidfreq.utils.common import ewm_alpha
 from crptmidfreq.utils.common import get_logger
+from crptmidfreq.utils.common import get_sig_cols
+from crptmidfreq.utils.common import get_sigf_cols
 
 g_reg = StepperRegistry()
 logger = get_logger()
@@ -752,15 +754,15 @@ def perform_sto(featd, feats=[], windows=[1], lags=[0], folder=None, name=None):
     return featd, nfeats
 
 
-def perform_merge_asof(featd_l, featd_r, feats=[], folder=None, name=None, r=g_reg):
+def perform_merge_asof(featd_l, featd_r, feats=[], key='dscode', folder=None, name=None, r=g_reg):
     """
     """
     assert 'dtsi' in featd_l.keys()
-    assert 'dscode' in featd_l.keys()
+    assert key in featd_l.keys()
     assert np.all(np.diff(featd_l['dtsi']) >= 0)
 
     assert 'dtsi' in featd_r.keys()
-    assert 'dscode' in featd_r.keys()
+    assert key in featd_r.keys()
     assert np.all(np.diff(featd_r['dtsi']) >= 0)
 
     if len(feats) == 0:
@@ -772,8 +774,8 @@ def perform_merge_asof(featd_l, featd_r, feats=[], folder=None, name=None, r=g_r
     for col in feats:
         cls_merge = MergeAsofStepper \
             .load(folder=f"{folder}", name=f"{name}_{col}_masof")
-        merge_val = cls_merge.update(featd_l['dtsi'], featd_l['dscode'],
-                                     featd_r['dtsi'], featd_r['dscode'], featd_r[col])
+        merge_val = cls_merge.update(featd_l['dtsi'], featd_l[key],
+                                     featd_r['dtsi'], featd_r[key], featd_r[col])
 
         r.add(cls_merge)
         featd_l[f'{col}_masof'] = merge_val
@@ -1310,6 +1312,21 @@ def perform_bucketplot(featd, xcols=[], ycols=[],
                 f'{xcol}_{ycol}_bucketxy_mean',
                 f'{xcol}_{ycol}_bucketxy_std']
     return featd, nfeats
+
+
+def perform_clean_memory(featd, folder=None, name=None, r=g_reg):
+    """
+    """
+    assert 'dtsi' in featd.keys()
+    assert 'dscode' in featd.keys()
+    keep_cols = ['dtsi', 'dscode', 'wgt', 'univ', 'close']
+    keep_cols += get_sig_cols(featd)
+    keep_cols += get_sigf_cols(featd)
+
+    for col in featd.keys():
+        if not col in keep_cols:
+            featd.pop(col)
+    return featd, []
 
 
 # ipython -i -m featurelib.lib_v1

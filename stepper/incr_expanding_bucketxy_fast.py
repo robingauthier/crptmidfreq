@@ -132,6 +132,8 @@ class BucketXYStepper(BaseStepper):
 
     def save(self):
         self.qutile_steppers.save()
+        import pdb
+        pdb.set_trace()  # TODO: this takes 400MB
         self.save_utility(skip=['qutile_steppers'])
 
     @classmethod

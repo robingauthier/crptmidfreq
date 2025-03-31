@@ -41,3 +41,6 @@ from crptmidfreq.stepper.incr_bktest import BktestStepper
 from crptmidfreq.stepper.incr_expanding_min import MinStepper
 from crptmidfreq.stepper.incr_expanding_max import MaxStepper
 from crptmidfreq.stepper.incr_expanding_mean import ExpandingMeanStepper
+
+
+from crptmidfreq.stepper.incr_distance_correl import CorrelDistanceStepper

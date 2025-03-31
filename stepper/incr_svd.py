@@ -31,7 +31,7 @@ def diag(arr):
     return np.ascontiguousarray(res)
 
 
-# @njit
+@njit
 def incremental_svd(xseriesd, univd,
                     last_xmem, last_univ, last_xorder,
                     lookback,
@@ -186,6 +186,10 @@ class SVDStepper(BaseStepper):
             )
             for code in xseriesd:
                 univd[code] = np.ones(n, dtype=np.float64)
+        else:
+            for code in univd:
+                univd[code] = np.nan_to_num(univd[code])
+                univd[code] = np.int64(univd[code])
 
         resultd = Dict.empty(
             key_type=types.int64,

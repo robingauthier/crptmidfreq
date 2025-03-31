@@ -6,7 +6,7 @@ from crptmidfreq.config_loc import get_data_db_folder
 from crptmidfreq.featurelib.lib_v1 import *
 from crptmidfreq.utils.common import get_logger
 from crptmidfreq.utils.common import merge_dicts
-
+from crptmidfreq.utils.lazy_dict import LazyDict
 
 logger = get_logger()
 
@@ -26,6 +26,7 @@ def prepare_klines(start_date='2025-03-01',
     """
     assert not folder is None
     dcfg = dict(
+        use_lazy_dict=True,
         window_volume_wgt=60*24*30,
     )
     cfg = merge_dicts(cfg, dcfg, name='kmeans_sret')
@@ -59,7 +60,13 @@ def prepare_klines(start_date='2025-03-01',
     df.sort_values('close_time', ascending=True, inplace=True)
 
     # working on numpy now
-    featd = {col: df[col].values for col in df.columns}
+    if cfg.get('use_lazy_dict'):
+        # we need to create a sub-folder for the lazydict
+        featd = LazyDict(folder=folder+f'/lazydict_{start_date}_{end_date}')
+    else:
+        featd = {}
+    for col in df.columns:
+        featd[col] = df[col].values
 
     # Casing to float64 -- otherwise we have issues later
     featd, _ = perform_cast_float64(featd,

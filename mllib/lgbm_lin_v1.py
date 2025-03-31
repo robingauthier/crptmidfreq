@@ -11,7 +11,7 @@ def gen_lgbm_lin_v1(n_samples):
         objective='regression_l2',
         verbosity=-1,
         n_jobs=10,
-        linear_tree=True,  # main difference
+        linear_tree=False,  # main difference
         boosting=boosting_loc,
         learning_rate=1e-3,
         n_estimators=400,

@@ -35,21 +35,36 @@ on bitmex we are at 1.5bps
 
 
 ## Current issues
- - the incr_pivot does not handle well additional stocks or stocks removed I think
- same for the clustering / Kmeans I fear.
-
- - the tret_xmkt does not have a daily mean of 0 I think ! --> FIXED NOW
-
-- tret_csdemean y a un -1 qui apparait a la fin car toutes les valeurs sont 0.0 ? 
-
-- you might want to clip before computing sret_kmeans_ewmstd100
 
 - add a conditioning on high rpt for the mual signal as well !
 
 - finish test_model_stepper_sklearn_linear_changing_n
 
-- backtest graph must be in pctgross
 
 
 ## We would need to have an optimizer as well
-- e
+- not sure cvxpy is the best solution ?
+
+## Ideas for the PfP
+- we need a variable tick size that is function of the volatility !
+
+## write pairs functions !
+write incr_distance_corr stepper
+puis write la selection des paires 
+puis write la creation du nouveau rack !
+
+
+## ML must use batches I think, no? 
+
+## N-beats??? Attention matrix for stock tokens ??
+
+## Adding Gaps / news related Gaps and so on!
+
+## excess-volume * PIN ? 
+
+## HMM forward pass for patterns
+
+
+
+## P&L stats:
+- add sdt,edt and nb stocks

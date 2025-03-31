@@ -11,3 +11,11 @@ Remove unused imports with autoflake:
 ```
 autoflake --in-place --remove-all-unused-imports --ignore-init-module-imports --recursive /Users/sachadrevet/src/crptmidfreq
 ```
+
+
+
+## Checking storage
+```
+du -sh ./* | sort -h
+
+```

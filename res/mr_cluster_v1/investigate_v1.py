@@ -1,6 +1,6 @@
 import pandas as pd
 import os
-from crptmidfreq.res.mr_cluster_v1.kmeans_manual_v1 import g_folder
+from res.mr_cluster_v1.old.kmeans_manual_v1 import g_folder
 from crptmidfreq.stepper.incr_bktest import BktestStepper
 from crptmidfreq.utils.common import to_csv
 from crptmidfreq.utils.common import get_analysis_folder

@@ -941,6 +941,8 @@ def perform_pfp(featd, feats=[], nbrevs=[1], ticks=[3.0],
                 pfp_price, pfp_dir, pfp_el, pfp_perf, pfp_perf2, pfp_dur = \
                     cls_pfp.update(featd['dtsi'], featd['dscode'], featd[col])
                 r.add(cls_pfp)
+                featd[f'{ncol}_px'] = pfp_price
+                featd[f'{ncol}_el'] = pfp_el
                 featd[f'{ncol}_dir'] = pfp_dir
                 featd[f'{ncol}_perf'] = pfp_perf
                 featd[f'{ncol}_perf2'] = pfp_perf2
@@ -952,7 +954,7 @@ def perform_pfp(featd, feats=[], nbrevs=[1], ticks=[3.0],
                 r.add(cls_diff)
                 featd[f'{ncol}_dir_chg'] = np.sign(np.abs(val_diff))
                 nfeats += [f'{ncol}_dir', f'{ncol}_dir_chg',
-                           f'{ncol}_perf', f'{ncol}_dur']
+                           f'{ncol}_perf2', f'{ncol}_dur']
                 # and some ewm of the dir_chg
                 for halflife in windows:
                     cls_ewm = EwmStepper \
@@ -961,11 +963,6 @@ def perform_pfp(featd, feats=[], nbrevs=[1], ticks=[3.0],
                     r.add(cls_ewm)
                     featd[f'{ncol}_dir_chg_ewm{halflife}'] = val_diff_ewm
                     nfeats += [f'{ncol}_dir_chg_ewm{halflife}']
-                if debug:
-                    print('pfp :: Warning debug mode')
-                    featd[f'{ncol}_px'] = pfp_price
-                    featd[f'{ncol}_el'] = pfp_el
-                    nfeats += [f'{ncol}_px', f'{ncol}_el']
     return featd, nfeats
 
 

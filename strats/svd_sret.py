@@ -58,6 +58,8 @@ def svd_sret(featd,
                                        feats=['sret_svd_1'],
                                        **defargs)
 
+    featd = rename_key(featd, nfeats[0], oucol)
+
     # Adding the diag_arr for variance explained
     featd['all'] = np.ones_like(featd['dtsi'], dtype=np.int64)
     diag_d = {'dtsi': pdts,
@@ -72,7 +74,6 @@ def svd_sret(featd,
                                        key='all',
                                        feats=nfeats,
                                        **defargs)
-    import pdb
-    pdb.set_trace()
-    featd = rename_key(featd, nfeats[0], oucol)
+    featd, _ = perform_to_sigf(featd, nfeats, **defargs)
+
     return featd

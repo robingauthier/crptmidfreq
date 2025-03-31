@@ -28,6 +28,7 @@ def define_forward_fh(featd, incol='tret', folder=None, name=None, r=None, cfg={
     assert 'wgt' in featd.keys()
     dcfg = dict(
         windows_forward=[10],
+        forward_xmkt=True,
     )
     cfg = merge_dicts(cfg, dcfg, name='kmeans_sret')
     defargs = {'folder': folder, 'r': r, 'name': name}
@@ -45,12 +46,15 @@ def define_forward_fh(featd, incol='tret', folder=None, name=None, r=None, cfg={
                                         windows=[-1],
                                         **defargs)
 
-    # uses wgt to remove the market
-    featd = remove_mkt(featd,
-                       incol=f'forward_{incol}_lag-1',
-                       outcol='forward_fh1',
-                       with_clip=False,
-                       **defargs)
+    if cfg.get('forward_xmkt'):
+        # uses wgt to remove the market
+        featd = remove_mkt(featd,
+                           incol=f'forward_{incol}_lag-1',
+                           outcol='forward_fh1',
+                           with_clip=False,
+                           **defargs)
+    else:
+        featd['forward_fh1'] = featd[f'forward_{incol}_lag-1']
 
     # adding forward return X units
     for window_forward in cfg.get('windows_forward'):
@@ -62,10 +66,12 @@ def define_forward_fh(featd, incol='tret', folder=None, name=None, r=None, cfg={
                                             feats=nfeats,
                                             windows=[-1*window_forward],
                                             **defargs)
-        featd = remove_mkt(featd,
-                           incol=nfeats[0],
-                           outcol=f'forward_fh{window_forward}',
-                           with_clip=False,
-                           **defargs)
-
+        if cfg.get('forward_xmkt'):
+            featd = remove_mkt(featd,
+                               incol=nfeats[0],
+                               outcol=f'forward_fh{window_forward}',
+                               with_clip=False,
+                               **defargs)
+        else:
+            featd[f'forward_fh{window_forward}'] = featd[nfeats[0]]
     return featd

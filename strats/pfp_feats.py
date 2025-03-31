@@ -24,6 +24,7 @@ def pfp_feats(featd, feats=['tret_xmkt'], folder=None, name=None, r=None, cfg={}
 
     # pfp operates on prices, or I1 series
     # taking the log and then cumsum
+    # perf2 is the most important one here ! 
     featd, nfeats = perform_pfp(featd,
                                 feats=feats_px,
                                 nbrevs=cfg.get('pfp_nbrevs'),

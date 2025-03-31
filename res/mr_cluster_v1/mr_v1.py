@@ -1,6 +1,7 @@
 import pandas as pd
 import os
 from crptmidfreq.utils.common import rename_key
+from pprint import pprint
 from functools import partial
 from crptmidfreq.featurelib.lib_v1 import *
 from crptmidfreq.strats import *
@@ -13,73 +14,108 @@ from crptmidfreq.utils.common import filter_dict_to_dts
 from crptmidfreq.utils.common import save_features
 from crptmidfreq.utils.common import save_signal
 from crptmidfreq.utils.common import to_csv
+from crptmidfreq.mllib.lgbm_lin_v1 import gen_lgbm_lin_v1
+from crptmidfreq.utils.univ import hardcoded_universe_1
+
+
+# This will give you intuitions as to what kind of strategies should work
 
 logger = get_logger()
 
-g_folder = 'res_kmeans_v1'
+g_folder = 'res_kmeans_naive_v1'
 g_r = StepperRegistry()
-g_all_features = False
-g_hardcoded_universe = False
-hardcoded_universe = ['BTCUSDT',
-                      'ETHUSDT',
-                      'SOLUSDT',
-                      'TRXUSDT',
-                      'BNBUSDT',
-                      'ADAUSDT',
-                      'XRPUSDT']
 
 
 def main_features(start_date='2025-03-01', end_date='2026-01-01'):
     logger.info(f'mr_cluster start_date={start_date} end_date={end_date}')
     # all the hyper parameters
+    unit_day = 60*24
+
     cfg = dict(
+        use_lazy_dict=True,
+
         window_volume_wgt=60*24*30,
         window_volume_univ=60*24*20,
 
         windows_ewm=[5, 20, 100, 200, 800],
-        windows_macd=[[5, 20], [20, 100], [200, 800]],
-        windows_macd_signal=[[5, 20, 9], [20, 100, 30], [100, 200, 100]],
 
-        windows_sharpe=[2000],
-
-        # forward
         windows_forward=[10],
+        forward_xmkt=True,  # removes mkt from forward return
+
+        sret_clip=0.005,  # we should not cut too much
 
         # kmeans config
-        kmeans_lookback=24*60*30,
-        kmeans_fitfreq=24*60*10,
+        kmeans_lookback=unit_day*5,  # this is in time units
+        kmeans_fitfreq=unit_day*3,  # this is in time units
         kmeans_k=20,
+        svd_lookback=unit_day*20,
+        svd_fitfreq=60,
+        svd_k=20,
+        kmeans_or_svd_or_naive='naive',
 
         # univ config
         universe_count=100,
+        hardcoded_universe=False,
 
         # applyops
         window_appops=1000,
+
+        nb_fetures=1,  # 1,2  1 is minimum amount of features
+
+        model_lookback=unit_day*30,  # I get into RAM issues otherwise
+        model_fitfreq=unit_day*10,
+
+        ml_kind='ml',
+
     )
-    # arguments always used
+    if cfg['hardcoded_universe']:
+        cfg['kmeans_k'] = 2
+        cfg['svd_k'] = 2
     defargs = {'folder': g_folder, 'name': None, 'r': g_r, 'cfg': cfg}
+    pprint(cfg)
 
     # read the data from the DuckDB
     featd = prepare_klines(start_date=start_date,
                            end_date=end_date,
+                           tokens=hardcoded_universe_1 if cfg['hardcoded_universe'] else 'all',
                            **defargs)
 
     # Universe definition
     # Very important to put a weight of 0 when outside of the universe
-    featd = define_univ(featd,
-                        folder=g_folder,
-                        name=None,
-                        r=g_r,
-                        cfg=cfg)
-    if g_hardcoded_universe:
+    if not cfg['hardcoded_universe']:
+        featd = define_univ(featd,
+                            **defargs)
+    else:
         featd['univ'] = np.ones_like(featd['dtsi'])
 
     # forward_fh1 definition
+    # and tret_xmkt definition
     featd = define_forward_fh(featd,
                               incol='tret',
                               **defargs)
 
-    if g_all_features:
+    # running the kmeans
+    kind = cfg.get('kmeans_or_svd_or_naive')
+    if kind == 'kmeans':
+        featd = kmeans_sret(featd,
+                            incol='tret_xmkt',
+                            oucol='sret',
+                            **defargs)
+    elif kind == 'svd':
+        featd = svd_sret(featd,
+                         incol='tret_xmkt',
+                         oucol='sret',
+                         **defargs)
+    else:
+        featd['sret'] = featd['tret_xmkt']  # it is clipped yes
+
+    # MR mual
+    featd = mr_mual_feats(featd,
+                          feats=['sret'],
+                          outname='mual',
+                          **defargs)
+
+    if cfg.get('nb_fetures') > 1:
         # features on the taker field in klines
         featd = klines_takerpct(featd,
                                 **defargs)
@@ -93,103 +129,80 @@ def main_features(start_date='2025-03-01', end_date='2026-01-01'):
         featd['tret_xturnover'] = featd['turnover_excess']*featd['tret']
         featd['tret_xmkt_xturnover'] = featd['turnover_excess']*featd['tret_xmkt']
 
-    # running the kmeans
-    featd = kmeans_sret(featd,
-                        incol='tret_xmkt',
-                        oucol='sret_kmeans',
-                        **defargs)
-    if g_hardcoded_universe:
-        featd['sret_kmeans'] = featd['tret_xmkt_raw_clipqtl']
-
-    if True:
         # momentum on sret
         featd = mom_feats(featd,
-                          feats=['sret_kmeans'],
+                          feats=['sret'],
                           **defargs)
-    if g_all_features:
+
         # PfP features -- this is too slow for now ! 2 minutes for 1 month
         featd = pfp_feats(featd,
                           feats=['tret_xmkt'],
                           **defargs)
 
-    # MR mual
-    featd = mr_mual_feats(featd,
-                          feats=['sret_kmeans'],
-                          outname='mual',
+        # P&L features
+        featd = pnl_feats(featd,
+                          incol='mual',
+                          fretcol='tret_xmkt',
                           **defargs)
 
-    # P&L features
-    featd = pnl_feats(featd,
-                      incol='mual',
-                      fretcol='tret_xmkt',
-                      **defargs)
-
-    if g_all_features:
         # volatility features
         featd = volatility_feats(featd,
                                  feats=['tret_xmkt'],
                                  **defargs)
 
-    featd, _ = perform_clean_memory(featd)
-    g_r.save()
-    return featd
+    if cfg.get('ml_kind') == 'no_ml':
+        # Converting sigf to sig
+        for col in get_sigf_cols(featd):
+            ncol = col.replace('sigf_', 'sig_')
+            featd = rename_key(featd, col, ncol)
+    elif cfg.get('ml_kind') == 'ml':
+        featd = filter_dict_to_univ(featd)
+        featd, nfeats = perform_model(featd,
+                                      feats=get_sigf_cols(featd),
+                                      wgt='wgt',
+                                      ycol='forward_fh1',
+                                      folder=g_folder,
+                                      name="None",
+                                      lookback=cfg.get('model_lookback'),
+                                      minlookback=int(0.2*cfg.get('model_lookback')),
+                                      fitfreq=cfg.get('model_fitfreq'),
+                                      gap=1,
+                                      model_gen=partial(gen_lgbm_lin_v1, n_samples=1_000_000),
+                                      with_fit=True,
+                                      r=g_r)
+        featd = rename_key(featd, nfeats[0], 'sig_ml')
+    else:
+        raise(ValueError('issue ml kind'))
 
-
-def main_model(featd):
-    unit_day = 60*24
-    model_lookback = unit_day*30  # I get into RAM issues otherwise
-    model_fitfreq = unit_day*10
-
-    featd = filter_dict_to_univ(featd)
-
-    from crptmidfreq.mllib.lgbm_lin_v1 import gen_lgbm_lin_v1
-    featd, nfeats = perform_model(featd,
-                                  feats=get_sigf_cols(featd),
-                                  wgt='wgt',
-                                  ycol='forward_fh1',
-                                  folder=g_folder,
-                                  name="None",
-                                  lookback=model_lookback,
-                                  minlookback=int(0.2*model_lookback),
-                                  fitfreq=model_fitfreq,
-                                  gap=1,
-                                  model_gen=partial(gen_lgbm_lin_v1, n_samples=1_000_000),
-                                  with_fit=True,
-                                  r=g_r)
-    featd = rename_key(featd, nfeats[0], 'sig_ml')
-    g_r.save()
-    return featd
-
-
-def main_signal_naive(featd):
-    ipo_burn = 60*24
-
-    for col in get_sigf_cols(featd):
-        ncol = col.replace('sigf_', 'sig_')
-        featd = rename_key(featd, col, ncol)
-
-    # removing post IPO   20days
+    # Conditioning on univ - just in case
     for col in get_sig_cols(featd):
-        #featd[col] = featd[col]*(featd['sigf_ipocnt'] > ipo_burn)
         featd[col] = featd[col]*featd['univ']
 
-    # for bench
+    # for bench and checking that sharpe is 0.0
     featd['sig_one'] = np.ones_like(featd['wgt'])
+    #featd, _ = perform_clean_memory(featd)
+    g_r.save()
     return featd
 
 
 def bktest(featd):
-    stats = perform_bktest(featd, folder=g_folder, name="None")
+    defargs = {'folder': g_folder, 'name': None, 'r': g_r}
+
+    # Actual backtest
+    stats = perform_bktest(featd, **defargs)
+
+    pnlcols = []
+    for col in get_sig_cols(featd):
+        featd[f'pnl_{col}'] = featd[col]*featd['forward_fh1']
+        pnlcols += [f'pnl_{col}']
 
     # Common Bucketplots
     featd, nfeats = perform_bucketplot(featd,
                                        xcols=['wgt'],
-                                       ycols=['forward_fh1'],
+                                       ycols=pnlcols,
                                        n_buckets=8,
-                                       freq=int(60*24*5),
-                                       folder=g_folder,
-                                       name="None",
-                                       r=g_r)
+                                       freq=int(60*24*1),  # freq quantile updates
+                                       **defargs)
 
 
 def dump_extract(featd):
@@ -197,7 +210,7 @@ def dump_extract(featd):
     logger.info('Dumping the data for manual checks')
 
     icols = ['dtsi', 'dscode_str', 'close', 'sig_zs_100', 'sig_mual',
-             'univ', 'kmeans_cat', 'turnover_excess']
+             'univ', 'sret']
     df = pd.DataFrame({k: v for k, v in featd.items() if k in icols})
     df['dtsi'] = pd.to_datetime(df['dtsi']*1e3)
 
@@ -227,23 +240,19 @@ def dump_extract(featd):
 
 def main():
     clean_folder(g_folder)
-    dts = pd.date_range('2023-01-01', '2025-05-01', freq='1MS')
-    #dts = pd.date_range('2024-01-01', '2025-05-01', freq='5D')
-    #dts = pd.date_range('2020-01-01', '2021-01-01', freq='1M')
+    #dts = pd.date_range('2022-01-01', '2025-05-01', freq='2MS')
+    dts = pd.date_range('2022-01-01', '2025-05-01', freq='1MS')
     for i in range(len(dts)-1):
         start_dt = dts[i].strftime('%Y-%m-%d')
         end_dt = dts[i+1].strftime('%Y-%m-%d')
         featd = main_features(start_date=start_dt, end_date=end_dt)
-        featd = main_model(featd)
-        #featd = main_signal_naive(featd)
         # return featd
         # dump_extract(featd)
         # saving down
-        save_features(featd, name=f'kmeans_features_{start_dt}_{end_dt}')
-        save_signal(featd, name=f'kmeans_signal_{start_dt}_{end_dt}')
+        # save_signal(featd, name=f'kmeans_signal_{start_dt}_{end_dt}')
         bktest(featd=featd)
 
 
-# ipython -i -m crptmidfreq.res.mr_cluster_v1.kmeans_manual_v1
+# ipython -i -m crptmidfreq.res.mr_cluster_v1.mr_v1
 if __name__ == '__main__':
     featd = main()

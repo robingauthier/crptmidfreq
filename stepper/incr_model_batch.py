@@ -45,6 +45,7 @@ class ModelBatchStepper(BaseStepper):
                  gap=1,
                  epochs=10,
                  batch_size=128,
+                 weight_decay=1e-3,
                  lr=1e-3,
                  model_gen=None,
                  with_fit=True,
@@ -82,6 +83,7 @@ class ModelBatchStepper(BaseStepper):
 
         self.epochs = epochs
         self.batch_size = batch_size
+        self.weight_decay = weight_decay
         self.lr = lr
 
         self.xcols = None
@@ -95,6 +97,7 @@ class ModelBatchStepper(BaseStepper):
              ramlookback=10,
              epochs=10,
              batch_size=128,
+             weight_decay=1e-3,
              lr=1e-3,
              model_gen=None,
              with_fit=True,
@@ -106,6 +109,7 @@ class ModelBatchStepper(BaseStepper):
                                               minlookback=minlookback,
                                               fitfreq=fitfreq,
                                               gap=gap,
+                                              weight_decay=weight_decay,
                                               model_gen=model_gen,
                                               with_fit=with_fit,
                                               featnames=featnames,
@@ -148,6 +152,8 @@ class ModelBatchStepper(BaseStepper):
         df = pd.DataFrame(self.last_xmem)
         if self.xcols is not None:
             df.columns = self.xcols
+        elif self.featnames is not None:
+            df.columns = self.featnames
         else:
             header = [f"feature_{j}" for j in range(df.shape[1])]
             df.columns = header
@@ -159,6 +165,12 @@ class ModelBatchStepper(BaseStepper):
         os.makedirs(self.folder_ml, exist_ok=True)
         assert df.shape[0] > 0
         df = df.fillna(0.0)  # does not accept nan
+
+        kurtdf = df.kurtosis()
+        if kurtdf.max() > 40:
+            print('Potential kurtosis issues')
+            print(kurtdf[kurtdf > 20])
+
         df.to_parquet(self.folder_ml+f'data_{fdts}_{ldts}.pq')
 
         # resetting the memory
@@ -170,14 +182,15 @@ class ModelBatchStepper(BaseStepper):
     def fit_model(self, sdt, edt):
         filterf = partial(filterfile, sdt=sdt, edt=edt)
         model_loc = self.model_gen(n_features=self.nfeats)
-        train_model(self.folder_ml,
-                    model_loc,
-                    filterfile=filterf,
-                    target='forward_target',
-                    epochs=self.epochs,
-                    batch_size=self.batch_size,
-                    lr=self.lr,
-                    batch_up=-1)
+        model_loc = train_model(self.folder_ml,
+                                model_loc,
+                                filterfile=filterf,
+                                target='forward_target',
+                                epochs=self.epochs,
+                                batch_size=self.batch_size,
+                                weight_decay=self.weight_decay,
+                                lr=self.lr,
+                                batch_up=-1)
         return model_loc
 
     def update(self, dts, xseries, yserie=None, wgtserie=None, xcols=None):
@@ -211,7 +224,6 @@ class ModelBatchStepper(BaseStepper):
         result = np.zeros(xseries.shape[0], dtype=np.float64)
 
         model_loc = None
-
         # saving down the data
         for ltime in ltimes_mem:
             train_start_dt = ltime['train_start_dt']
@@ -232,6 +244,8 @@ class ModelBatchStepper(BaseStepper):
             self.manage_history(dts, xseries, yserie, wgtserie, train_start_dt, train_stop_dt)
             self.save_history()
 
+        if len(ltimes) == 0:
+            print('ModelBatch ::  caution ltimes is empty')
         # Now running fit and predict
         for ltime in ltimes:
             train_start_dt = ltime['train_start_dt']
@@ -261,6 +275,8 @@ class ModelBatchStepper(BaseStepper):
 
             # to inspect the weights do:
             # print(model_loc.state_dict())
+            #import pdb
+            # pdb.set_trace()
 
             if model_loc is not None:
                 xseries_tensor = torch.tensor(xseries[test_start_i:test_stop_i], dtype=torch.float32)
@@ -268,10 +284,8 @@ class ModelBatchStepper(BaseStepper):
                 ypred = ypred.detach().numpy().flatten()
 
                 if np.std(ypred) < 1e-14:
-                    print('ModelBatch issue your prediction is mainly 0.0')
                     # it happens when you have outliers in the input or you did not scale the inputs
-                    import pdb
-                    pdb.set_trace()
+                    assert False, 'ModelBatch issue your prediction is mainly 0.0'
                 result[test_start_i:test_stop_i] = ypred
             else:
                 result[test_start_i:test_stop_i] = 0.0

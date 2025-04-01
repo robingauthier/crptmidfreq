@@ -6,6 +6,7 @@ def klines_takerpct(featd, folder=None, name=None, r=None, cfg={}):
     dcfg = dict(
         windows_ewm=[5, 20, 100, 500, 1000],
         windows_macd=[[5, 20], [20, 100], [100, 500]],
+        window_appops=3000,
     )
     cfg = merge_dicts(cfg, dcfg, name='klines_takerpct')
 
@@ -18,7 +19,7 @@ def klines_takerpct(featd, folder=None, name=None, r=None, cfg={}):
                                    r=r)
     featd['takerpct'] = featd[nfeats[0]]
     featd['takerpct'] = featd['takerpct'] - 0.5
-    
+
     # TODO: all this is sub-efficient as you recomupte many times the same ewm
     # ewm(X)
     featd, nfeats1 = perform_ewm(featd=featd,
@@ -42,10 +43,15 @@ def klines_takerpct(featd, folder=None, name=None, r=None, cfg={}):
                                         folder=folder,
                                         name=name,
                                         r=r)
-
+    featd, nfeats4 = perform_cs_appops(featd,
+                                       feats=nfeats3,
+                                       windows=[cfg.get('window_appops')],
+                                       folder=folder,
+                                       name=name,
+                                       r=r)
     # Cross sectional step now
     featd, _ = perform_to_sigf(featd,
-                               nfeats1+nfeats2+nfeats3,
+                               nfeats4,
                                folder=folder,
                                name=name,
                                r=r)

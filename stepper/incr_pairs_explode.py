@@ -103,11 +103,12 @@ class PairsExplodeStepper(BaseStepper):
                                 sdts, sdscode1, sdscode2,
                                 rdts, rdscode1, rdscode2, rserie1, rserie2,
                                 self.last_sdts, self.last_sdscode1, self.last_sdscode2)
+
         featd = {
-            'dts': rdts,
-            'dscode1': rdscode1,
-            'dscode2': rdscode2,
-            'serie1': rserie1,
-            'serie2': rserie2,
+            'dts': np.array(rdts, dtype=np.int64),
+            'dscode1': np.array(rdscode1, dtype=np.float64),
+            'dscode2': np.array(rdscode2, dtype=np.float64),
+            'serie1': np.array(rserie1, dtype=np.float64),
+            'serie2': np.array(rserie2, dtype=np.float64),
         }
         return featd

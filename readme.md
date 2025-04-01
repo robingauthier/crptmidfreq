@@ -61,6 +61,7 @@ puis write la creation du nouveau rack !
 ## Adding Gaps / news related Gaps and so on!
 
 ## excess-volume * PIN ? 
+## work with volume*minute return
 
 ## HMM forward pass for patterns
 
@@ -71,6 +72,14 @@ puis write la creation du nouveau rack !
 
 ## work on the intraday volume curve ! and what is a correct excess volume
 
-## work with volume*minute return
-
 ## TODO: add wgt in the pytorch models ! 
+
+## Can we write the lightgbm as a batch learner ? 
+
+
+
+The ML prediction shows some gaps
+
+
+## List of sorted things
+The ML must be trained on forward_fh1_clip 

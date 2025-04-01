@@ -45,3 +45,5 @@ from crptmidfreq.stepper.incr_expanding_mean import ExpandingMeanStepper
 
 
 from crptmidfreq.stepper.incr_distance_correl import CorrelDistanceStepper
+from crptmidfreq.stepper.incr_pairs_explode import PairsExplodeStepper
+from crptmidfreq.stepper.incr_pairs_sel_k import PairsSelKStepper

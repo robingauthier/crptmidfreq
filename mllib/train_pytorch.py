@@ -15,6 +15,7 @@ def train_model(folder_path, model,
                 epochs=10,
                 batch_size=128,
                 lr=1e-3,
+                weight_decay=1e-3,
                 batch_up=-1):
     """
     Trains a feedforward network on a 'huge' CSV dataset, streaming from disk.
@@ -30,10 +31,21 @@ def train_model(folder_path, model,
         num_workers=0,     # set >0 if you want parallel data loading
         pin_memory=True,   # might help if using GPU
     )
+    if hasattr(model, 'fit') and callable(getattr(model, 'fit')):
+        # case of torch-ensemble for instance
+        # https://ensemble-pytorch.readthedocs.io/en/latest/quick_start.html#choose-the-ensemble
+        # https://ensemble-pytorch.readthedocs.io/en/latest/parameters.html#gradientboostingregressor
+        model.fit(
+            loader,
+            epochs=epochs,
+            save_model=False,
+        )
+        model.eval()
+        return model
 
     # 3) Create the model, loss, optimizer
     criterion = nn.MSELoss()  # or nn.BCEWithLogitsLoss() for classification
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr,weight_decay=weight_decay)
 
     # Optionally move model to GPU if available
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

@@ -1065,7 +1065,7 @@ def perform_model(featd, feats=[], wgt=None, ycol=None, folder=None, name=None,
 
 def perform_model_batch(featd, feats=[], wgt=None, ycol=None, folder=None, name=None,
                         lookback=300, minlookback=100, ramlookback=10,
-                        batch_size=300, lr=1e-3, epochs=10,
+                        batch_size=300, lr=1e-3, epochs=10, weight_decay=1e-3,
                         fitfreq=10, gap=1, model_gen=None,
                         with_fit=True, r=g_reg):
 
@@ -1082,6 +1082,7 @@ def perform_model_batch(featd, feats=[], wgt=None, ycol=None, folder=None, name=
               minlookback=minlookback,
               epochs=epochs,
               batch_size=batch_size,
+              weight_decay=weight_decay,
               lr=lr,
               fitfreq=fitfreq,
               gap=gap,

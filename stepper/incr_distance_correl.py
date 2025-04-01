@@ -65,8 +65,8 @@ def incremental_distance_correl(
                 for code2 in xseriesd:
                     if code1 >= code2:
                         continue
-                    clus1 = clusterd[code1][i]
-                    clus2 = clusterd[code2][i]
+                    clus1 = np.int64(clusterd[code1][i])
+                    clus2 = np.int64(clusterd[code2][i])
                     if clus1 != clus2:
                         continue
                     corr = np.corrcoef(
@@ -149,9 +149,9 @@ class CorrelDistanceStepper(BaseStepper):
             self.last_i,
         )
         rfeat = {
-            'dtsi': rdts,
-            'dscode1': rdscode1,
-            'dscode2': rdscode2,
-            'dist': rdist,
+            'dtsi': np.array(rdts, dtype=np.int64),
+            'dscode1': np.array(rdscode1, dtype=np.int64),
+            'dscode2': np.array(rdscode2, dtype=np.int64),
+            'dist': np.array(rdist, dtype=np.float64),
         }
         return rfeat

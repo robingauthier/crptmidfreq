@@ -16,6 +16,8 @@ from crptmidfreq.utils.common import save_signal
 from crptmidfreq.utils.common import to_csv
 from crptmidfreq.mllib.lgbm_lin_v1 import gen_lgbm_lin_v1
 from crptmidfreq.mllib.feedforward_v1 import gen_feed_forward
+from crptmidfreq.mllib.boosting_torch import gen_boosting_torch
+from crptmidfreq.mllib.linear_torch import gen_linear_torch
 from crptmidfreq.utils.univ import hardcoded_universe_1
 
 
@@ -41,7 +43,7 @@ def main_features(start_date='2025-03-01', end_date='2026-01-01'):
         windows_ewm=[5, 20, 100, 200, 800],
 
         windows_forward=[10],
-        forward_xmkt=True,  # removes mkt from forward return
+        forward_xmkt=True,  # removes mkt from forward return TODO True
 
         sret_clip=0.005,  # we should not cut too much
 
@@ -56,7 +58,7 @@ def main_features(start_date='2025-03-01', end_date='2026-01-01'):
 
         # univ config
         universe_count=100,
-        hardcoded_universe=True,
+        hardcoded_universe=False,  # TODO: roll back
 
         # applyops
         window_appops=1000,
@@ -64,6 +66,7 @@ def main_features(start_date='2025-03-01', end_date='2026-01-01'):
         nb_fetures=1,  # 1,2  1 is minimum amount of features
 
         model_lookback=unit_day*200,  # I get into RAM issues otherwise
+        model_minlookback=unit_day*10,
         model_fitfreq=unit_day*20,
 
         ml_kind='mlpytorch',
@@ -161,11 +164,11 @@ def main_features(start_date='2025-03-01', end_date='2026-01-01'):
         featd, nfeats_ml = perform_model(featd,
                                          feats=get_sigf_cols(featd),
                                          wgt='wgt',
-                                         ycol='forward_fh1',
+                                         ycol='forward_fh1_clip',
                                          folder=g_folder,
                                          name="None",
                                          lookback=cfg.get('model_lookback'),
-                                         minlookback=int(0.2*cfg.get('model_lookback')),
+                                         minlookback=cfg.get('model_minlookback'),
                                          fitfreq=cfg.get('model_fitfreq'),
                                          gap=1,
                                          model_gen=partial(gen_lgbm_lin_v1, n_samples=1_000_000),
@@ -176,18 +179,21 @@ def main_features(start_date='2025-03-01', end_date='2026-01-01'):
         featd, nfeats_ml = perform_model_batch(featd,
                                                feats=get_sigf_cols(featd),
                                                wgt='wgt',
-                                               ycol='forward_fh1',
+                                               ycol='forward_fh1_clip',
                                                folder=g_folder,
                                                name="None",
                                                lookback=cfg.get('model_lookback'),
-                                               minlookback=int(0.2*cfg.get('model_lookback')),
+                                               minlookback=cfg.get('model_minlookback'),
                                                ramlookback=1*unit_day,
                                                batch_size=300,
                                                epochs=10,
-                                               lr=1e-3,
+                                               lr=1e-4,
+                                               weight_decay=1e-2,
                                                fitfreq=cfg.get('model_fitfreq'),
                                                gap=1,
-                                               model_gen=gen_feed_forward,
+                                               model_gen=gen_linear_torch,
+                                               #model_gen=partial(gen_feed_forward, hidden_dim=20),
+                                               #model_gen=partial(gen_boosting_torch, hidden_dim=20),
                                                with_fit=True,
                                                r=g_r)
     else:

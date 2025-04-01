@@ -4,14 +4,16 @@ from numba.typed import Dict
 from numba import types
 from crptmidfreq.stepper.base_stepper import BaseStepper
 
+
 @njit
 def get_alpha(window):
     """Convert half-life to alpha"""
     return 1 - np.exp(np.log(0.5) / window)
 
+
 @njit
-def update_ewmkurt_values(codes, values, timestamps, alpha, ewm_values, ewm_squared_values, 
-                         ewm_cubed_values, ewm_fourth_values, last_timestamps):
+def update_ewmkurt_values(codes, values, timestamps, alpha, ewm_values, ewm_squared_values,
+                          ewm_cubed_values, ewm_fourth_values, last_timestamps):
     """
     Vectorized update of EWM values for kurtosis calculation
 
@@ -74,10 +76,10 @@ def update_ewmkurt_values(codes, values, timestamps, alpha, ewm_values, ewm_squa
             # Calculate kurtosis using EWM values
             # Kurtosis = (E[X^4] - 4*E[X^3]*E[X] + 6*E[X^2]*E[X]^2 - 3*E[X]^4) / var^2 - 3
             variance = new_squared_value - (new_value * new_value)
-            if variance > 0:
+            if variance > 1e-14:
                 m4 = new_fourth_value - 4 * new_cubed_value * new_value + \
-                     6 * new_squared_value * new_value * new_value - \
-                     3 * new_value * new_value * new_value * new_value
+                    6 * new_squared_value * new_value * new_value - \
+                    3 * new_value * new_value * new_value * new_value
                 kurt = m4 / (variance * variance) - 3
             else:
                 kurt = 0.0
@@ -94,10 +96,11 @@ def update_ewmkurt_values(codes, values, timestamps, alpha, ewm_values, ewm_squa
 
     return result
 
+
 class EwmKurtStepper(BaseStepper):
-    
+
     def __init__(self, folder='', name='', window=1):
-        super().__init__(folder,name)
+        super().__init__(folder, name)
         self.window = window
         self.alpha = get_alpha(window)
 
@@ -122,14 +125,14 @@ class EwmKurtStepper(BaseStepper):
             key_type=types.int64,
             value_type=types.int64
         )
-        
+
     def save(self):
         self.save_utility()
 
     @classmethod
     def load(cls, folder, name, window=1):
         """Load instance from saved state or create new if not exists"""
-        return EwmKurtStepper.load_utility(cls,folder=folder,name=name,window=window)
+        return EwmKurtStepper.load_utility(cls, folder=folder, name=name, window=window)
 
     def update(self, dt, dscode, serie):
         """
@@ -143,8 +146,8 @@ class EwmKurtStepper(BaseStepper):
         Returns:
             numpy array of same length as input arrays containing EWM kurtosis values
         """
-        self.validate_input(dt,dscode,serie)
-        
+        self.validate_input(dt, dscode, serie)
+
         # Update values and timestamps using numba function
         return update_ewmkurt_values(
             dscode, serie, dt.view(np.int64),

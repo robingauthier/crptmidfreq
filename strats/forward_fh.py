@@ -56,6 +56,16 @@ def define_forward_fh(featd, incol='tret', folder=None, name=None, r=None, cfg={
     else:
         featd['forward_fh1'] = featd[f'forward_{incol}_lag-1']
 
+    # forward_fh1_clip
+    featd, nfeats = perform_clip_quantile_global(featd,
+                                                 feats=['forward_fh1'],
+                                                 low_clip=0.03,
+                                                 high_clip=0.97,
+                                                 folder=folder,
+                                                 name=name,
+                                                 r=r)
+    featd = rename_key(featd, nfeats[0], 'forward_fh1_clip')
+
     # adding forward return X units
     for window_forward in cfg.get('windows_forward'):
         featd, nfeats = perform_sma(featd,

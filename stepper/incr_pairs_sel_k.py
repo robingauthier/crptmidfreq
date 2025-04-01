@@ -66,11 +66,11 @@ class PairsSelKStepper(BaseStepper):
                 # resetting now
                 fi = min(n-1, i)
                 current_dt = dts[fi]
-
-        featd = {
-            'dtsi': rdts,
-            'dscode1': rdscode1,
-            'dscode2': rdscode2,
-            'dist': rdistance,
+        rfeat = {
+            'dtsi': np.array(rdts, dtype=np.int64),
+            'dscode1': np.array(rdscode1, dtype=np.int64),
+            'dscode2': np.array(rdscode2, dtype=np.int64),
+            'dist': np.array(rdistance, dtype=np.float64),
         }
-        return featd
+
+        return rfeat

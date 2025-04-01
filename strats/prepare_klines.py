@@ -85,11 +85,14 @@ def prepare_klines(start_date='2025-03-01',
                                        name=name,
                                        r=r)
     featd = rename_key(featd, 'cnt_exists', 'sigf_ipocnt')
+    max_clip = 60*24*20
+    featd['sigf_ipocnt'] = np.clip(featd['sigf_ipocnt'], a_max=max_clip, a_min=0)
+    featd['sigf_ipocnt'] = featd['sigf_ipocnt']/max_clip*1.0
 
     # adding the time of the day -- I confirm it works
     one_day_unit = int(3600*24*1e6)
     featd['sigf_timeofday'] = np.mod(featd['dtsi'], one_day_unit)
-    featd['sigf_timeofday'] = featd['sigf_timeofday']/one_day_unit*24
+    featd['sigf_timeofday'] = featd['sigf_timeofday']/one_day_unit*2
 
     # adding returns
     featd, nfeats = perform_diff(featd=featd,
@@ -132,5 +135,5 @@ def prepare_klines(start_date='2025-03-01',
                             featd[nfeats_wgt1[0]],
                             featd[nfeats_wgt2[0]])
     featd['wgt'] = np.nan_to_num(featd['wgt'])
-    featd['sigf_wgt'] = featd['wgt']
+    featd['sigf_wgt'] = featd['wgt']/featd[nfeats_wgt2[0]]
     return featd

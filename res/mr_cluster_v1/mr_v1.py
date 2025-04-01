@@ -15,6 +15,7 @@ from crptmidfreq.utils.common import save_features
 from crptmidfreq.utils.common import save_signal
 from crptmidfreq.utils.common import to_csv
 from crptmidfreq.mllib.lgbm_lin_v1 import gen_lgbm_lin_v1
+from crptmidfreq.mllib.feedforward_v1 import gen_feed_forward
 from crptmidfreq.utils.univ import hardcoded_universe_1
 
 
@@ -55,17 +56,17 @@ def main_features(start_date='2025-03-01', end_date='2026-01-01'):
 
         # univ config
         universe_count=100,
-        hardcoded_universe=False,
+        hardcoded_universe=True,
 
         # applyops
         window_appops=1000,
 
         nb_fetures=1,  # 1,2  1 is minimum amount of features
 
-        model_lookback=unit_day*30,  # I get into RAM issues otherwise
-        model_fitfreq=unit_day*10,
+        model_lookback=unit_day*200,  # I get into RAM issues otherwise
+        model_fitfreq=unit_day*20,
 
-        ml_kind='ml',
+        ml_kind='mlpytorch',
 
     )
     if cfg['hardcoded_universe']:
@@ -157,23 +158,47 @@ def main_features(start_date='2025-03-01', end_date='2026-01-01'):
             featd = rename_key(featd, col, ncol)
     elif cfg.get('ml_kind') == 'ml':
         featd = filter_dict_to_univ(featd)
-        featd, nfeats = perform_model(featd,
-                                      feats=get_sigf_cols(featd),
-                                      wgt='wgt',
-                                      ycol='forward_fh1',
-                                      folder=g_folder,
-                                      name="None",
-                                      lookback=cfg.get('model_lookback'),
-                                      minlookback=int(0.2*cfg.get('model_lookback')),
-                                      fitfreq=cfg.get('model_fitfreq'),
-                                      gap=1,
-                                      model_gen=partial(gen_lgbm_lin_v1, n_samples=1_000_000),
-                                      with_fit=True,
-                                      r=g_r)
-        featd = rename_key(featd, nfeats[0], 'sig_ml')
+        featd, nfeats_ml = perform_model(featd,
+                                         feats=get_sigf_cols(featd),
+                                         wgt='wgt',
+                                         ycol='forward_fh1',
+                                         folder=g_folder,
+                                         name="None",
+                                         lookback=cfg.get('model_lookback'),
+                                         minlookback=int(0.2*cfg.get('model_lookback')),
+                                         fitfreq=cfg.get('model_fitfreq'),
+                                         gap=1,
+                                         model_gen=partial(gen_lgbm_lin_v1, n_samples=1_000_000),
+                                         with_fit=True,
+                                         r=g_r)
+    elif cfg.get('ml_kind') == 'mlpytorch':
+        featd = filter_dict_to_univ(featd)
+        featd, nfeats_ml = perform_model_batch(featd,
+                                               feats=get_sigf_cols(featd),
+                                               wgt='wgt',
+                                               ycol='forward_fh1',
+                                               folder=g_folder,
+                                               name="None",
+                                               lookback=cfg.get('model_lookback'),
+                                               minlookback=int(0.2*cfg.get('model_lookback')),
+                                               ramlookback=1*unit_day,
+                                               batch_size=300,
+                                               epochs=10,
+                                               lr=1e-3,
+                                               fitfreq=cfg.get('model_fitfreq'),
+                                               gap=1,
+                                               model_gen=gen_feed_forward,
+                                               with_fit=True,
+                                               r=g_r)
     else:
         raise(ValueError('issue ml kind'))
 
+    featd, nfeats_ml2 = perform_cs_appops(featd, feats=nfeats_ml,
+                                          folder=g_folder,
+                                          windows=[cfg.get('window_appops')],
+                                          name=None,
+                                          r=g_r)
+    featd = rename_key(featd, nfeats_ml2[0], 'sig_ml')
     # Conditioning on univ - just in case
     for col in get_sig_cols(featd):
         featd[col] = featd[col]*featd['univ']

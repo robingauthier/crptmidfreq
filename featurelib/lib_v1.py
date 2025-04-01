@@ -1063,6 +1063,41 @@ def perform_model(featd, feats=[], wgt=None, ycol=None, folder=None, name=None,
     return featd, nfeats
 
 
+def perform_model_batch(featd, feats=[], wgt=None, ycol=None, folder=None, name=None,
+                        lookback=300, minlookback=100, ramlookback=10,
+                        batch_size=300, lr=1e-3, epochs=10,
+                        fitfreq=10, gap=1, model_gen=None,
+                        with_fit=True, r=g_reg):
+
+    assert 'dtsi' in featd.keys()
+    assert 'dscode' in featd.keys()
+    check_cols(featd, feats)
+    assert np.all(np.diff(featd['dtsi']) >= 0)
+    xcols = get_hash('_'.join(feats))[:8]
+    cls_model = ModelBatchStepper \
+        .load(folder=f"{folder}",
+              name=f"{name}_model_batch_{xcols}_{wgt}_{ycol}",
+              lookback=lookback,
+              ramlookback=ramlookback,
+              minlookback=minlookback,
+              epochs=epochs,
+              batch_size=batch_size,
+              lr=lr,
+              fitfreq=fitfreq,
+              gap=gap,
+              model_gen=model_gen,
+              with_fit=with_fit,
+              featnames=feats)
+    xseries = np.transpose(np.stack([v for k, v in featd.items() if k in feats]))
+    wgtserie = featd[wgt]
+    yserie = featd[ycol]
+    res = cls_model.update(featd['dtsi'], xseries, yserie=yserie, wgtserie=wgtserie)
+    r.add(cls_model)
+    featd[f'modelb_{ycol}_{wgt}'] = res
+    nfeats = [f'modelb_{ycol}_{wgt}']
+    return featd, nfeats
+
+
 def perform_corr(featd, feats1=[], feats2=[], windows=[100], folder=None, name=None, r=g_reg):
     """
     """

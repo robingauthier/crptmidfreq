@@ -20,3 +20,7 @@ class FeedForwardNet(nn.Module):
 
     def forward(self, x):
         return self.net(x)
+
+
+def gen_feed_forward(n_features=10):
+    return FeedForwardNet(input_dim=n_features, hidden_dim=n_features, output_dim=1)

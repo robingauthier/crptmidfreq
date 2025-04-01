@@ -1,0 +1,279 @@
+import pandas as pd
+import numpy as np
+import re
+import os
+from functools import partial
+import torch
+from crptmidfreq.stepper.base_stepper import BaseStepper
+from crptmidfreq.utils.common import get_logger
+from crptmidfreq.stepper.incr_model_timeclf import TimeClfStepper
+from crptmidfreq.stepper.incr_model_timeclf import get_dts_max_before
+from crptmidfreq.mllib.train_pytorch import train_model
+
+logger = get_logger()
+
+# Does not use a lot of RAM. It relies on batches.
+
+
+def filterfile(filename, sdt, edt):
+    """
+    Parse a filename like 'data_{fdts}_{ldts}.pq'.
+    Return True if ldts < edt and ldts > sdt, else False.
+    """
+    pattern = r'^data_(\d+)_(\d+)\.pq$'
+    match = re.match(pattern, filename)
+    assert match is not None, 'issue'
+
+    fdts_str, ldts_str = match.groups()
+    fdts = int(fdts_str)
+    ldts = int(ldts_str)
+
+    if (ldts < edt) and (ldts > sdt):
+        return True
+    else:
+        return False
+
+
+class ModelBatchStepper(BaseStepper):
+    """Relies on the pivot first and then runs an SVD"""
+
+    def __init__(self, folder='', name='',
+                 lookback=300,
+                 ramlookback=10,
+                 minlookback=100,
+                 fitfreq=10,
+                 gap=1,
+                 epochs=10,
+                 batch_size=128,
+                 lr=1e-3,
+                 model_gen=None,
+                 with_fit=True,
+                 featnames=[]):
+        """
+        """
+        super().__init__(folder, name)
+        self.folder_ml = self.folder+f'/ml_{name}/'
+
+        self.ramlookback = ramlookback
+
+        self.timeclf = TimeClfStepper(folder=folder, name=name,
+                                      lookback=lookback, minlookback=minlookback,
+                                      fitfreq=fitfreq, gap=gap)
+
+        self.timeclf_mem = TimeClfStepper(folder=folder, name=name,
+                                          lookback=ramlookback,
+                                          minlookback=ramlookback,
+                                          fitfreq=ramlookback,
+                                          gap=0)
+
+        # Initialize empty state for the memory
+        self.last_xmem = np.ndarray(shape=(0, 0), dtype=np.float64)
+        self.last_ymem = np.array([], dtype=np.float64)
+        self.last_wmem = np.array([], dtype=np.float64)
+        self.last_dts = np.array([], dtype=np.int64)
+
+        # History of models
+        self.model_gen = model_gen
+        self.hmodels = []
+
+        self.with_fit = with_fit
+        self.featnames = featnames
+        self.nfeats = 0
+
+        self.epochs = epochs
+        self.batch_size = batch_size
+        self.lr = lr
+
+        self.xcols = None
+
+    def save(self):
+        self.save_utility()
+
+    @classmethod
+    def load(cls, folder, name, lookback=300, minlookback=100,
+             fitfreq=10, gap=1,
+             ramlookback=10,
+             epochs=10,
+             batch_size=128,
+             lr=1e-3,
+             model_gen=None,
+             with_fit=True,
+             featnames=[]):
+        """Load instance from saved state or create new if not exists"""
+        return ModelBatchStepper.load_utility(cls, folder=folder, name=name,
+                                              lookback=lookback,
+                                              ramlookback=ramlookback,
+                                              minlookback=minlookback,
+                                              fitfreq=fitfreq,
+                                              gap=gap,
+                                              model_gen=model_gen,
+                                              with_fit=with_fit,
+                                              featnames=featnames,
+                                              epochs=epochs,
+                                              batch_size=batch_size,
+                                              lr=lr
+                                              )
+
+    def manage_history(self, dts, xseries, yserie, wgtserie, train_start_dt, train_stop_dt):
+        keep_idx_1 = (self.last_dts >= train_start_dt) & (self.last_dts <= train_stop_dt)
+        keep_idx_2 = (dts >= train_start_dt) & (dts <= train_stop_dt)
+        new_dts = np.concatenate([
+            self.last_dts[keep_idx_1],
+            dts[keep_idx_2]
+        ])
+        new_yserie = np.concatenate([
+            self.last_ymem[keep_idx_1],
+            yserie[keep_idx_2]
+        ])
+        new_wserie = np.concatenate([
+            self.last_wmem[keep_idx_1],
+            wgtserie[keep_idx_2]
+        ])
+        if self.last_xmem.shape[0] == 0:
+            nf = xseries.shape[1]
+            self.last_xmem = np.ndarray(shape=(0, nf), dtype=np.float64)
+        if self.last_xmem.shape[1] != xseries.shape[1]:
+            pass
+        new_xserie = np.concatenate([
+            self.last_xmem[keep_idx_1],
+            xseries[keep_idx_2]
+        ])
+        # assigning back
+        self.last_dts = new_dts
+        self.last_wmem = np.nan_to_num(new_wserie)
+        self.last_ymem = np.nan_to_num(new_yserie)
+        self.last_xmem = new_xserie
+
+    def save_history(self):
+        df = pd.DataFrame(self.last_xmem)
+        if self.xcols is not None:
+            df.columns = self.xcols
+        else:
+            header = [f"feature_{j}" for j in range(df.shape[1])]
+            df.columns = header
+
+        df['forward_target'] = self.last_ymem
+        #df['wgt'] = self.last_wmem
+        fdts = np.min(self.last_dts)
+        ldts = np.max(self.last_dts)
+        os.makedirs(self.folder_ml, exist_ok=True)
+        assert df.shape[0] > 0
+        df = df.fillna(0.0)  # does not accept nan
+        df.to_parquet(self.folder_ml+f'data_{fdts}_{ldts}.pq')
+
+        # resetting the memory
+        self.last_xmem = np.ndarray(shape=(0, 0), dtype=np.float64)
+        self.last_ymem = np.array([], dtype=np.float64)
+        self.last_wmem = np.array([], dtype=np.float64)
+        self.last_dts = np.array([], dtype=np.int64)
+
+    def fit_model(self, sdt, edt):
+        filterf = partial(filterfile, sdt=sdt, edt=edt)
+        model_loc = self.model_gen(n_features=self.nfeats)
+        train_model(self.folder_ml,
+                    model_loc,
+                    filterfile=filterf,
+                    target='forward_target',
+                    epochs=self.epochs,
+                    batch_size=self.batch_size,
+                    lr=self.lr,
+                    batch_up=-1)
+        return model_loc
+
+    def update(self, dts, xseries, yserie=None, wgtserie=None, xcols=None):
+        """
+        We need to respect the dtsi here. 
+        """
+        if self.nfeats == 0:
+            self.nfeats = xseries.shape[1]
+
+        if xcols is not None:
+            self.xcols = xcols
+        if wgtserie is None:
+            wgtserie = np.ones(xseries.shape[0])
+        if yserie is None:
+            assert not self.with_fit
+            yserie = np.zeros(xseries.shape[0])
+        self.validate_input(dts, dscode=np.ones(yserie.shape[0], dtype=np.int64),
+                            serie=yserie, serie2=wgtserie)
+
+        n = xseries.shape[0]
+        first_time = dts[0]
+        last_time = dts[-1]
+
+        # Updating the timeclf
+        self.timeclf.update(dts, np.zeros(n), np.zeros(n))
+        self.timeclf_mem.update(dts, np.zeros(n), np.zeros(n))
+
+        ltimes = self.timeclf.ltimes
+        ltimes_mem = self.timeclf_mem.ltimes
+
+        result = np.zeros(xseries.shape[0], dtype=np.float64)
+
+        model_loc = None
+
+        # saving down the data
+        for ltime in ltimes_mem:
+            train_start_dt = ltime['train_start_dt']
+            train_stop_dt = ltime['train_stop_dt']
+
+            test_start_dt = ltime['test_start_dt']
+            test_stop_dt = ltime['test_stop_dt']
+            time_str = ltime['str']
+
+            if test_stop_dt < first_time:
+                continue
+            if test_start_dt > last_time:
+                break
+
+            test_start_i = get_dts_max_before(dts, test_start_dt)
+            test_stop_i = get_dts_max_before(dts, test_stop_dt)
+
+            self.manage_history(dts, xseries, yserie, wgtserie, train_start_dt, train_stop_dt)
+            self.save_history()
+
+        # Now running fit and predict
+        for ltime in ltimes:
+            train_start_dt = ltime['train_start_dt']
+            train_stop_dt = ltime['train_stop_dt']
+
+            test_start_dt = ltime['test_start_dt']
+            test_stop_dt = ltime['test_stop_dt']
+            time_str = ltime['str']
+
+            if test_stop_dt < first_time:
+                continue
+            if test_start_dt > last_time:
+                break
+
+            test_start_i = get_dts_max_before(dts, test_start_dt)
+            test_stop_i = get_dts_max_before(dts, test_stop_dt)
+
+            if self.with_fit:
+                logger.info(f'Fitting model {time_str}')
+                model_loc = self.fit_model(sdt=train_start_dt, edt=train_stop_dt)
+                self.hmodels += [{
+                    'train_start_dt': train_start_dt,
+                    'train_end_dt': train_stop_dt,
+                    'model': model_loc}]
+            else:
+                model_loc = [x for x in self.hmodels if x['train_end_dt'] == train_stop_dt]['model']
+
+            # to inspect the weights do:
+            # print(model_loc.state_dict())
+
+            if model_loc is not None:
+                xseries_tensor = torch.tensor(xseries[test_start_i:test_stop_i], dtype=torch.float32)
+                ypred = model_loc.forward(xseries_tensor)
+                ypred = ypred.detach().numpy().flatten()
+
+                if np.std(ypred) < 1e-14:
+                    print('ModelBatch issue your prediction is mainly 0.0')
+                    # it happens when you have outliers in the input or you did not scale the inputs
+                    import pdb
+                    pdb.set_trace()
+                result[test_start_i:test_stop_i] = ypred
+            else:
+                result[test_start_i:test_stop_i] = 0.0
+
+        return result

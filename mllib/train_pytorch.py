@@ -9,15 +9,17 @@ from crptmidfreq.mllib.iterable_data import ParquetIterableDataset
 import csv
 
 
-def train_model(folder_path, model, target='forward_fh1',
+def train_model(folder_path, model,
+                target='forward_fh1',
+                filterfile=None,
                 epochs=10,
                 batch_size=128,
                 lr=1e-3,
-                batch_up=100):
+                batch_up=-1):
     """
     Trains a feedforward network on a 'huge' CSV dataset, streaming from disk.
     """
-    dataset = ParquetIterableDataset(folder_path, target=target)
+    dataset = ParquetIterableDataset(folder_path, target=target, filterfile=filterfile)
 
     # 2) Build DataLoader with our IterableDataset
     #    shuffle is not supported for IterableDataset by default,
@@ -60,13 +62,14 @@ def train_model(folder_path, model, target='forward_fh1',
             samples_processed += features.size(0)
 
             # You could print status or check memory usage every N steps:
-            if (batch_idx+1) % batch_up == 0:
+            if batch_up > 0 and ((batch_idx+1) % batch_up == 0):
                 avg_loss = epoch_loss / samples_processed
                 print(f"Epoch [{epoch+1}/{epochs}], Step {batch_idx+1}, Avg Loss: {avg_loss:.4f}")
 
         # End of epoch
         avg_loss = epoch_loss / max(1, samples_processed)
-        print(f"Epoch [{epoch+1}/{epochs}] finished. Avg Loss: {avg_loss:.4f}")
+        if batch_up > 0:
+            print(f"Epoch [{epoch+1}/{epochs}] finished. Avg Loss: {avg_loss:.4f}")
 
     # 5) Done. Save the model if desired
     #save_path = "model.pth"

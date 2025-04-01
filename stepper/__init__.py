@@ -34,6 +34,7 @@ from crptmidfreq.stepper.incr_expanding_quantile_tdigest import QuantileStepper
 from crptmidfreq.stepper.incr_expanding_bucketxy_fast import BucketXYStepper
 
 from crptmidfreq.stepper.incr_model import ModelStepper
+from crptmidfreq.stepper.incr_model_batch import ModelBatchStepper
 from crptmidfreq.stepper.incr_model_pivoted import PivotModelStepper
 
 from crptmidfreq.stepper.incr_bktest import BktestStepper

@@ -68,3 +68,9 @@ puis write la creation du nouveau rack !
 
 ## P&L stats:
 - add sdt,edt and nb stocks
+
+## work on the intraday volume curve ! and what is a correct excess volume
+
+## work with volume*minute return
+
+## TODO: add wgt in the pytorch models ! 

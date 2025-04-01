@@ -13,7 +13,7 @@ class ParquetIterableDataset(IterableDataset):
     and does not load the entire folder's data in memory at once.
     """
 
-    def __init__(self, folder_path, target='forward_fh1'):
+    def __init__(self, folder_path, target='forward_fh1', filterfile=None):
         """
         Args:
             folder_path (str): Path to the folder containing Parquet files.
@@ -24,6 +24,7 @@ class ParquetIterableDataset(IterableDataset):
         os.makedirs(self.folder_path, exist_ok=True)
         self.num_features = -1
         self.target = target
+        self.filterfile = filterfile
 
     def __iter__(self):
         """
@@ -36,6 +37,10 @@ class ParquetIterableDataset(IterableDataset):
             f for f in os.listdir(self.folder_path)
             if f.lower().endswith(".pq")
         ])
+        if self.filterfile is not None:
+            file_list = [x for x in file_list if self.filterfile(x)]
+        else:
+            print('Warning :: ParquetIterableDataset filterfile is missing')
 
         for filename in file_list:
             file_path = os.path.join(self.folder_path, filename)

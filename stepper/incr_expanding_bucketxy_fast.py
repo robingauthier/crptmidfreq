@@ -103,7 +103,6 @@ class BucketXYStepper(BaseStepper):
                   qs=lqs,
                   freq=freq)
 
-        self.qtls_x = None  # array of the quantile values for each dt,dscode
         self.bucket_cnt = Dict.empty(
             key_type=types.int64,
             value_type=types.int64
@@ -132,8 +131,6 @@ class BucketXYStepper(BaseStepper):
 
     def save(self):
         self.qutile_steppers.save()
-        import pdb
-        pdb.set_trace()  # TODO: this takes 400MB
         self.save_utility(skip=['qutile_steppers'])
 
     @classmethod
@@ -175,10 +172,10 @@ class BucketXYStepper(BaseStepper):
         results_std = np.zeros((n, self.n_buckets), dtype=np.float64)  # std / np.sqrt(n)
 
         # Retrieve current quantiles
-        self.qtls_x = self.qutile_steppers.update(dt, dscode, x_values)
+        qtls_x = self.qutile_steppers.update(dt, dscode, x_values)
         compute_bucketxy(dt,
                          dscode, x_values, y_values,
-                         self.qtls_x,
+                         qtls_x,
                          self.bucket_cnt,
                          self.bucket_sum,
                          self.bucket_sum2,

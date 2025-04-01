@@ -4,6 +4,7 @@ from crptmidfreq.featurelib.lib_v1 import *
 from crptmidfreq.utils.common import merge_dicts
 from crptmidfreq.utils.lazy_dict import LazyDict
 
+
 def pairs_feats(featd, incol='tret_xmkt',
                 folder=None, name=None, r=None, cfg={}):
 
@@ -47,8 +48,10 @@ def pairs_feats(featd, incol='tret_xmkt',
                                   dstfeatd2['dtsi'], dstfeatd2['dscode1'], dstfeatd2['dscode2'])
 
     r.add(cls_pairs)
-    
-    rd=LazyDict()
+
+    # Putting all of this in a LazyDict
+    rd = LazyDict()
+
     import pdb
     pdb.set_trace()
 

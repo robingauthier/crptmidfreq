@@ -199,12 +199,15 @@ def main_features(start_date='2025-03-01', end_date='2026-01-01'):
     else:
         raise(ValueError('issue ml kind'))
 
-    featd, nfeats_ml2 = perform_cs_appops(featd, feats=nfeats_ml,
+    featd = rename_key(featd, nfeats_ml[0], 'sig_ml')
+    featd, nfeats_ml2 = perform_cs_appops(featd,
+                                          feats=['sig_ml'],
                                           folder=g_folder,
                                           windows=[cfg.get('window_appops')],
                                           name=None,
                                           r=g_r)
-    featd = rename_key(featd, nfeats_ml2[0], 'sig_ml')
+    featd = rename_key(featd, nfeats_ml2[0], 'sig_ml_appops')
+
     # Conditioning on univ - just in case
     for col in get_sig_cols(featd):
         featd[col] = featd[col]*featd['univ']

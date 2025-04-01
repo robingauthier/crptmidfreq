@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import os
+import lightgbm as lgb
 import torch
 from crptmidfreq.config_loc import get_feature_folder
 from crptmidfreq.mllib.iterable_data import ParquetIterableDataset

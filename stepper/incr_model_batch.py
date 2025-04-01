@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import re
+import lightgbm as lgb
 import os
 from functools import partial
 import torch
@@ -8,7 +9,13 @@ from crptmidfreq.stepper.base_stepper import BaseStepper
 from crptmidfreq.utils.common import get_logger
 from crptmidfreq.stepper.incr_model_timeclf import TimeClfStepper
 from crptmidfreq.stepper.incr_model_timeclf import get_dts_max_before
-from crptmidfreq.mllib.train_pytorch import train_model
+from crptmidfreq.mllib.train_lgbm import train_model as train_model_lgbm
+from crptmidfreq.mllib.train_pytorch import train_model as train_model_torch
+
+
+def keepimport():
+    m = lgb.LGBMRegressor()
+
 
 logger = get_logger()
 
@@ -48,12 +55,16 @@ class ModelBatchStepper(BaseStepper):
                  weight_decay=1e-3,
                  lr=1e-3,
                  model_gen=None,
+                 is_torch=False,
                  with_fit=True,
                  featnames=[]):
         """
         """
         super().__init__(folder, name)
         self.folder_ml = self.folder+f'/ml_{name}/'
+
+        # lgbm or pytorch model. .. both have different syntax
+        self.is_torch = is_torch
 
         self.ramlookback = ramlookback
 
@@ -152,7 +163,7 @@ class ModelBatchStepper(BaseStepper):
         df = pd.DataFrame(self.last_xmem)
         if self.xcols is not None:
             df.columns = self.xcols
-        elif self.featnames is not None:
+        elif len(self.featnames) > 0:
             df.columns = self.featnames
         else:
             header = [f"feature_{j}" for j in range(df.shape[1])]
@@ -181,16 +192,28 @@ class ModelBatchStepper(BaseStepper):
 
     def fit_model(self, sdt, edt):
         filterf = partial(filterfile, sdt=sdt, edt=edt)
-        model_loc = self.model_gen(n_features=self.nfeats)
-        model_loc = train_model(self.folder_ml,
-                                model_loc,
-                                filterfile=filterf,
-                                target='forward_target',
-                                epochs=self.epochs,
-                                batch_size=self.batch_size,
-                                weight_decay=self.weight_decay,
-                                lr=self.lr,
-                                batch_up=-1)
+
+        if self.is_torch:
+            model_loc = self.model_gen(n_features=self.nfeats)
+            model_loc = train_model_torch(self.folder_ml,
+                                          model_loc,
+                                          filterfile=filterf,
+                                          target='forward_target',
+                                          epochs=self.epochs,
+                                          batch_size=self.batch_size,
+                                          weight_decay=self.weight_decay,
+                                          lr=self.lr,
+                                          batch_up=-1)
+        else:
+            model_loc = train_model_lgbm(self.folder_ml,
+                                         model_param_generator=self.model_gen,
+                                         filterfile=filterf,
+                                         target='forward_target',
+                                         epochs=self.epochs,
+                                         batch_size=self.batch_size,
+                                         weight_decay=self.weight_decay,
+                                         lr=self.lr,
+                                         batch_up=-1)
         return model_loc
 
     def update(self, dts, xseries, yserie=None, wgtserie=None, xcols=None):
@@ -279,10 +302,13 @@ class ModelBatchStepper(BaseStepper):
             # pdb.set_trace()
 
             if model_loc is not None:
-                xseries_tensor = torch.tensor(xseries[test_start_i:test_stop_i], dtype=torch.float32)
-                ypred = model_loc.forward(xseries_tensor)
-                ypred = ypred.detach().numpy().flatten()
-
+                if self.is_torch:
+                    xseries_tensor = torch.tensor(xseries[test_start_i:test_stop_i], dtype=torch.float32)
+                    ypred = model_loc.forward(xseries_tensor)
+                    ypred = ypred.detach().numpy().flatten()
+                else:
+                    xseries_loc = xseries[test_start_i:test_stop_i].astype(np.float32)
+                    ypred = model_loc.predict(xseries_loc)
                 if np.std(ypred) < 1e-14:
                     # it happens when you have outliers in the input or you did not scale the inputs
                     assert False, 'ModelBatch issue your prediction is mainly 0.0'

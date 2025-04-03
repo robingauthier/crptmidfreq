@@ -54,6 +54,8 @@ class BktestStepper(BaseStepper):
         df = self.dailypnl
         if df.shape[0] == 0:
             return pd.DataFrame()
+        sd_g = pd.to_datetime(df['daily_dt'].min()*1e3)
+        ed_g = pd.to_datetime(df['daily_dt'].max()*1e3)
         for col, dfloc in df.groupby('colname'):
             if dfloc.shape[0] == 0:
                 continue
@@ -85,6 +87,9 @@ class BktestStepper(BaseStepper):
                 'sdate': np.nan,  # start date
                 'edate': np.nan,  # end date
                 'commbps': self.commbps,
+                'nbstk': np.nan,
+                'sd': sd_g,
+                'ed': ed_g,
             }
             dt = dfloc['daily_dt']
             tot_pnl = dfloc['daily_gross_pnl']
@@ -122,10 +127,13 @@ class BktestStepper(BaseStepper):
                 try_to_save_png(tsave_graph_path)
 
         rptdf = pd.DataFrame(lr)
+        rptdf['sd'] = rptdf['sd'].dt.strftime('%Y-%m-%d')
+        rptdf['ed'] = rptdf['ed'].dt.strftime('%Y-%m-%d')
         rptdf1 = rptdf[['name', 'col',
                         'sr_net', 'rpt_net', 'rog_net',
                         'sr', 'rpt', 'mdd', 'rog',
-                        'avg_gmv', 'ann_pnl', 'cnt', 'commbps']].round(2)
+                        'avg_gmv', 'ann_pnl', 'cnt', 'nbstk',
+                        'commbps', 'sd', 'ed']].round(2)
         if self.with_txt:
             print('Gross P&L Stats:')
             print(rptdf1.sort_values('sr'))

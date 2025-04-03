@@ -6,9 +6,10 @@ from crptmidfreq.stepper.base_stepper import BaseStepper
 
 
 @njit
-def update_cs_mean_values(codes, values, bys, wgts, timestamps, last_timestamps, last_sums, last_wgts):
+def update_cs_mean_values(codes, values, bys, wgts, timestamps,
+                          last_timestamps, last_sums, last_wgts,
+                          is_sum):
     """
-
     """
     result = np.empty(len(codes), dtype=np.float64)
 
@@ -75,7 +76,9 @@ def update_cs_mean_values(codes, values, bys, wgts, timestamps, last_timestamps,
     while j < len(codes):
         # the last value is not assigned
         by2 = bys[j]
-        if last_wgts[by2] > 0:
+        if is_sum:
+            result[j] = last_sums[by2]
+        elif last_wgts[by2] > 0:
             result[j] = last_sums[by2]/last_wgts[by2]
         else:
             result[j] = 0.0
@@ -85,7 +88,7 @@ def update_cs_mean_values(codes, values, bys, wgts, timestamps, last_timestamps,
 
 class csMeanStepper(BaseStepper):
 
-    def __init__(self, folder='', name=''):
+    def __init__(self, folder='', name='', is_sum=False):
         super().__init__(folder, name)
 
         # Initialize empty state
@@ -101,14 +104,15 @@ class csMeanStepper(BaseStepper):
             key_type=types.int64,
             value_type=types.int64
         )
+        self.is_sum = is_sum
 
     def save(self):
         self.save_utility()
 
     @classmethod
-    def load(cls, folder, name):
+    def load(cls, folder, name, is_sum=False):
         """Load instance from saved state or create new if not exists"""
-        return csMeanStepper.load_utility(cls, folder=folder, name=name)
+        return csMeanStepper.load_utility(cls, folder=folder, name=name, is_sum=is_sum)
 
     def update(self, dt, dscode, serie, by=None, wgt=None):
         """
@@ -136,5 +140,6 @@ class csMeanStepper(BaseStepper):
         # Update values and timestamps using numba function
         return update_cs_mean_values(
             dscode, serie, by, wgt, dt.view(np.int64),
-            self.last_timestamps, self.last_sums, self.last_wgts
+            self.last_timestamps, self.last_sums, self.last_wgts,
+            self.is_sum
         )

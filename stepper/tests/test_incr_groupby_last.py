@@ -14,6 +14,8 @@ def test_groupby_last_stepper_update():
     dt = np.array([1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 4, 4, 5, 6, 7, 7, 7, 7, 7, 8], dtype='int64')
     dscode = np.array([1, 1, 1, 1, 2, 1, 1, 2, 1, 1, 1, 1, 1, 2, 1, 1, 2, 2, 1, 1, 1])
     serie = np.float64(np.arange(0, 21))
+    
+    
     df = pd.DataFrame({'dt': dt, 'dscode': dscode, 'serie': serie})
     ldf = df \
         .drop_duplicates(subset=['dt', 'dscode'], keep='last') \

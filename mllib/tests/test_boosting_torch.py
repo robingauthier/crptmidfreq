@@ -35,3 +35,4 @@ def test_train():
     dftest['ypred'] = ypred.detach().numpy().flatten()
     correlation = dftest[['ypred', 'forward_fh2']].corr().iloc[0, 1]
     assert correlation > 0.8
+

@@ -6,6 +6,7 @@ from crptmidfreq.config_loc import get_data_db_folder
 from crptmidfreq.featurelib.lib_v1 import *
 from crptmidfreq.utils.common import get_logger
 from crptmidfreq.utils.common import merge_dicts
+from crptmidfreq.utils.common import get_day_of_week_unix
 from crptmidfreq.utils.lazy_dict import LazyDict
 
 logger = get_logger()
@@ -75,6 +76,8 @@ def prepare_klines(start_date='2025-03-01',
                                     name=name,
                                     r=r)
 
+    featd['sigf_dscode'] = featd['dscode']
+
     # turnover = volume*close  should be in USDT
     featd['turnover'] = featd['volume']*featd['close']
 
@@ -84,15 +87,18 @@ def prepare_klines(start_date='2025-03-01',
                                        folder=folder,
                                        name=name,
                                        r=r)
-    featd = rename_key(featd, 'cnt_exists', 'sigf_ipocnt')
+    featd = rename_key(featd, 'cnt_exists', 'ipocnt')
     max_clip = 60*24*20
-    featd['sigf_ipocnt'] = np.clip(featd['sigf_ipocnt'], a_max=max_clip, a_min=0)
-    featd['sigf_ipocnt'] = featd['sigf_ipocnt']/max_clip*1.0
+    featd['ipocnt'] = np.clip(featd['ipocnt'], a_max=max_clip, a_min=0)
+    featd['ipocnt'] = featd['ipocnt']/max_clip*1.0
 
     # adding the time of the day -- I confirm it works
     one_day_unit = int(3600*24*1e6)
     featd['sigf_timeofday'] = np.mod(featd['dtsi'], one_day_unit)
     featd['sigf_timeofday'] = featd['sigf_timeofday']/one_day_unit*2
+
+    # adding the day of the week
+    featd['sigf_dayofweek'] = get_day_of_week_unix(featd['dtsi'])
 
     # adding returns
     featd, nfeats = perform_diff(featd=featd,

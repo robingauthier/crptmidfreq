@@ -496,7 +496,7 @@ def perform_cumsum(featd, feats=[], folder=None, name=None, r=g_reg):
     for col in feats:
         cls_cum = CumSumStepper \
             .load(folder=f"{folder}", name=f"{name}_{col}_cumsum")
-        cum_val = cls_cum.update(featd['dtsi'], featd['dscode'], featd[col])
+        cum_val = cls_cum.update(featd['dtsi'], featd['dscode'], np.nan_to_num(featd[col]))
         r.add(cls_cum)
         featd[f'{col}_cumsum'] = cum_val
         nfeats += [f'{col}_cumsum']
@@ -625,7 +625,7 @@ def perform_abs(featd, feats=[], folder=None, name=None, r=g_reg):
     return featd, nfeats
 
 
-def perform_rolling_max(featd, feats=[], windows=[1], folder=None, name=None):
+def perform_rolling_max(featd, feats=[], windows=[1], folder=None, name=None, r=g_reg):
     """
     """
     assert 'dtsi' in featd.keys()
@@ -640,12 +640,13 @@ def perform_rolling_max(featd, feats=[], windows=[1], folder=None, name=None):
             cls_max = RollingMaxStepper \
                 .load(folder=f"{folder}", name=f"{name}_{col}_max{hl}", window=hl)
             max_val = cls_max.update(featd['dtsi'], featd['dscode'], featd[col])
+            r.add(cls_max)
             featd[f'{col}_max{hl}'] = max_val
             nfeats += [f'{col}_max{hl}']
     return featd, nfeats
 
 
-def perform_rolling_min(featd, feats=[], windows=[1], folder=None, name=None):
+def perform_rolling_min(featd, feats=[], windows=[1], folder=None, name=None, r=g_reg):
     """
     """
     assert 'dtsi' in featd.keys()
@@ -660,12 +661,13 @@ def perform_rolling_min(featd, feats=[], windows=[1], folder=None, name=None):
             cls_min = RollingMinStepper \
                 .load(folder=f"{folder}", name=f"{name}_{col}_max{hl}", window=hl)
             min_val = cls_min.update(featd['dtsi'], featd['dscode'], featd[col])
+            r.add(cls_min)
             featd[f'{col}_min{hl}'] = min_val
             nfeats += [f'{col}_min{hl}']
     return featd, nfeats
 
 
-def perform_expanding_min(featd, feats=[], folder=None, name=None):
+def perform_expanding_min(featd, feats=[], folder=None, name=None, r=g_reg):
     """
     """
     assert 'dtsi' in featd.keys()
@@ -678,12 +680,13 @@ def perform_expanding_min(featd, feats=[], folder=None, name=None):
         cls_min = MinStepper \
             .load(folder=f"{folder}", name=f"{name}_{col}_expmin")
         min_val = cls_min.update(featd['dtsi'], featd['dscode'], featd[col])
+        r.add(cls_min)
         featd[f'{col}_expmin'] = min_val
         nfeats += [f'{col}_expmin']
     return featd, nfeats
 
 
-def perform_expanding_max(featd, feats=[], folder=None, name=None):
+def perform_expanding_max(featd, feats=[], folder=None, name=None, r=g_reg):
     """
     """
     assert 'dtsi' in featd.keys()
@@ -696,6 +699,7 @@ def perform_expanding_max(featd, feats=[], folder=None, name=None):
         cls_min = MaxStepper \
             .load(folder=f"{folder}", name=f"{name}_{col}_expmax")
         min_val = cls_min.update(featd['dtsi'], featd['dscode'], featd[col])
+        r.add(cls_min)
         featd[f'{col}_expmax'] = min_val
         nfeats += [f'{col}_expmax']
     return featd, nfeats
@@ -1066,7 +1070,7 @@ def perform_model(featd, feats=[], wgt=None, ycol=None, folder=None, name=None,
 def perform_model_batch(featd, feats=[], wgt=None, ycol=None, folder=None, name=None,
                         lookback=300, minlookback=100, ramlookback=10,
                         batch_size=300, lr=1e-3, epochs=10, weight_decay=1e-3,
-                        fitfreq=10, gap=1, model_gen=None,
+                        fitfreq=10, gap=1, model_gen=None, is_torch=True,
                         with_fit=True, r=g_reg):
 
     assert 'dtsi' in featd.keys()
@@ -1084,6 +1088,7 @@ def perform_model_batch(featd, feats=[], wgt=None, ycol=None, folder=None, name=
               batch_size=batch_size,
               weight_decay=weight_decay,
               lr=lr,
+              is_torch=is_torch,
               fitfreq=fitfreq,
               gap=gap,
               model_gen=model_gen,

@@ -1,6 +1,14 @@
 import lightgbm as lgb
 import numpy as np
+import pandas as pd
 from crptmidfreq.mllib.iterable_data_lgbm import ParquetIterableDataset
+
+
+def featimp_lgbm(model_loc, feat_names):
+    if model_loc is None:
+        return
+    fimp = pd.Series(model_loc.feature_importance(), index=model_loc.feature_name())
+    print(fimp.sort_values(ascending=False).head(20))
 
 
 def gen_lgbm_lin_params(n_samples=10e6):
@@ -28,8 +36,16 @@ def gen_lgbm_lin_params(n_samples=10e6):
     lgb_kwargs = dict(
         objective='regression_l2',
         learning_rate=1e-3,
+        n_jobs=10,
+        linear_tree=False,
+        verbosity=-1,
+        # feature_fraction=0.2,  # should make it a lot faster !
         n_estimators=400,
-        boosting='gbdt'
+        max_bin=60,
+        num_leaves=15,
+        max_depth=15,
+        boosting='gbdt',
+        min_data_in_leaf=2000,
     )
     return lgb_kwargs
 
@@ -40,7 +56,7 @@ def train_model(folder_path,
                 filterfile=None,
                 epochs=1,
                 batch_size=128,
-                num_boost_round=10,
+                num_boost_round=50,
                 lr=1e-3,
                 weight_decay=1e-3,
                 batch_up=-1):
@@ -50,9 +66,14 @@ def train_model(folder_path,
     dataset = ParquetIterableDataset(folder_path, target=target, filterfile=filterfile)
 
     model = None
-
+    feat_names = None
+    cnt = 0
     for epoch in range(epochs):
         for (data, labels) in dataset:
+            print(f'train_model_lgbm iter={cnt}')
+            cnt += 1
+            if feat_names is None:
+                feat_names = data.columns.tolist()
             data_arr = data.values.astype(np.float32)
             labels_arr = labels.values.astype(np.float32)
 
@@ -79,4 +100,5 @@ def train_model(folder_path,
                     keep_training_booster=True,
                 )
 
+    featimp_lgbm(model, feat_names)
     return model

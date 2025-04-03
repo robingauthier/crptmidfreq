@@ -32,7 +32,7 @@ https://www.binance.com/en-GB/fee/trading
 https://www.bitmex.com/app/wallet/fees
 on bitmex we are at 1.5bps
 
-
+The beta between stocks is not 1.0
 
 ## Current issues
 
@@ -66,9 +66,8 @@ puis write la creation du nouveau rack !
 ## HMM forward pass for patterns
 
 
+In the clustering version just add the correlation to the market ! as a feature for conditioning !
 
-## P&L stats:
-- add sdt,edt and nb stocks
 
 ## work on the intraday volume curve ! and what is a correct excess volume
 
@@ -76,10 +75,25 @@ puis write la creation du nouveau rack !
 
 ## Can we write the lightgbm as a batch learner ? 
 
+coder le stochastic as a perform_sto
 
 
-The ML prediction shows some gaps
+Priority 1 : The ML prediction shows some gaps :: it is almost fixed
 
+Priority 2 : Deeply check the mual code it seems to have an issue in it!
+
+## Trend R2 of the OLS vs droite !
+
+# in each pair scale by the stdev first and then look at the spread.
+
+## TODO: kbest put a warmup period please
+
+# TODO: plot over time the fraction of volume that BTC and ETH represent !
 
 ## List of sorted things
-The ML must be trained on forward_fh1_clip 
+The ML must be trained on forward_fh1_clip
+P&L stats:- add sdt,edt and nb stocks
+
+## TODO: add the day of the week
+
+bucketplot against the time of the day please !!!

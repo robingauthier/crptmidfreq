@@ -84,4 +84,14 @@ def define_forward_fh(featd, incol='tret', folder=None, name=None, r=None, cfg={
                                **defargs)
         else:
             featd[f'forward_fh{window_forward}'] = featd[nfeats[0]]
+
+        # forward_fhX_clip
+        featd, nfeats = perform_clip_quantile_global(featd,
+                                                     feats=[f'forward_fh{window_forward}'],
+                                                     low_clip=0.03,
+                                                     high_clip=0.97,
+                                                     folder=folder,
+                                                     name=name,
+                                                     r=r)
+        featd = rename_key(featd, nfeats[0], f'forward_fh{window_forward}_clip')
     return featd

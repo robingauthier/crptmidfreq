@@ -9,6 +9,7 @@ from crptmidfreq.stepper.base_stepper import BaseStepper
 from crptmidfreq.utils.common import get_logger
 from crptmidfreq.stepper.incr_model_timeclf import TimeClfStepper
 from crptmidfreq.stepper.incr_model_timeclf import get_dts_max_before
+from crptmidfreq.stepper.incr_model_timeclf import get_dts_max_before2
 from crptmidfreq.mllib.train_lgbm import train_model as train_model_lgbm
 from crptmidfreq.mllib.train_pytorch import train_model as train_model_torch
 
@@ -111,6 +112,7 @@ class ModelBatchStepper(BaseStepper):
              weight_decay=1e-3,
              lr=1e-3,
              model_gen=None,
+             is_torch=True,
              with_fit=True,
              featnames=[]):
         """Load instance from saved state or create new if not exists"""
@@ -123,6 +125,7 @@ class ModelBatchStepper(BaseStepper):
                                               weight_decay=weight_decay,
                                               model_gen=model_gen,
                                               with_fit=with_fit,
+                                              is_torch=is_torch,
                                               featnames=featnames,
                                               epochs=epochs,
                                               batch_size=batch_size,
@@ -160,6 +163,8 @@ class ModelBatchStepper(BaseStepper):
         self.last_xmem = new_xserie
 
     def save_history(self):
+        if self.last_xmem.shape[0] == 0:
+            return
         df = pd.DataFrame(self.last_xmem)
         if self.xcols is not None:
             df.columns = self.xcols
@@ -261,14 +266,15 @@ class ModelBatchStepper(BaseStepper):
             if test_start_dt > last_time:
                 break
 
-            test_start_i = get_dts_max_before(dts, test_start_dt)
-            test_stop_i = get_dts_max_before(dts, test_stop_dt)
+            test_start_i = get_dts_max_before2(dts, test_start_dt)
+            test_stop_i = get_dts_max_before2(dts, test_stop_dt)
 
             self.manage_history(dts, xseries, yserie, wgtserie, train_start_dt, train_stop_dt)
             self.save_history()
 
         if len(ltimes) == 0:
             print('ModelBatch ::  caution ltimes is empty')
+
         # Now running fit and predict
         for ltime in ltimes:
             train_start_dt = ltime['train_start_dt']
@@ -283,8 +289,16 @@ class ModelBatchStepper(BaseStepper):
             if test_start_dt > last_time:
                 break
 
-            test_start_i = get_dts_max_before(dts, test_start_dt)
-            test_stop_i = get_dts_max_before(dts, test_stop_dt)
+            test_start_i = get_dts_max_before2(dts, test_start_dt)
+            test_stop_i = get_dts_max_before2(dts, test_stop_dt)
+            from pprint import pprint
+            print('-'*20)
+            pprint({
+                'test_start_i': test_start_i,
+                'test_stop_i': test_stop_i,
+                'n': n,
+            })
+            pprint(ltime)
 
             if self.with_fit:
                 logger.info(f'Fitting model {time_str}')
@@ -316,4 +330,8 @@ class ModelBatchStepper(BaseStepper):
             else:
                 result[test_start_i:test_stop_i] = 0.0
 
+        #pct_zero = np.mean(result == 0.0)
+        # if pct_zero > 0.2:
+        #    import pdb
+        #    pdb.set_trace()
         return result

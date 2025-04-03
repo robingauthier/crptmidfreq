@@ -187,3 +187,30 @@ def load_parquet(name=''):
     df = pd.read_parquet(os.path.join(get_analysis_folder(), f'{name}.pq'))
     featd = {col: df[col].values for col in df.columns}
     return featd
+
+
+def get_day_of_week_unix(timestamps_sec):
+    # Constants for Sakamoto's method
+    sakamoto_table = np.array([0, 3, 2, 5, 0, 3, 5, 1, 4, 6, 2, 4])
+
+    # Convert Unix timestamps (in seconds) to datetime components
+    dates = np.datetime64('1970-01-01') + timestamps_sec.astype('timedelta64[s]')
+    dates = dates.astype('datetime64[D]')  # truncate to date only (no time)
+
+    # Extract year, month, day as arrays
+    years = dates.astype('datetime64[Y]').astype(int) + 1970
+    months = (dates.astype('datetime64[M]').astype(int) % 12) + 1
+    days = (dates - dates.astype('datetime64[M]')).astype(int) + 1
+
+    # Adjust year for Jan and Feb
+    year_adj = years - (months < 3)
+
+    # Apply Sakamoto's method
+    dow = (year_adj + year_adj // 4 - year_adj // 100 + year_adj // 400 +
+           sakamoto_table[months - 1] + days) % 7
+
+    # Sakamoto: 0 = Sunday, ..., 6 = Saturday
+    # Pandas:   0 = Monday, ..., 6 = Sunday → Convert accordingly:
+    dow = (dow - 1) % 7  # Now 0 = Monday, ..., 6 = Sunday (matches pandas)
+
+    return dow

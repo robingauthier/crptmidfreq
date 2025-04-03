@@ -15,6 +15,13 @@ def get_dts_max_before(dts, train_start_dt):
     return 0
 
 
+def get_dts_max_before2(dts, train_start_dt):
+    resp = np.where(dts <= train_start_dt)[0]
+    if resp.shape[0] > 0:
+        return resp.max()+1
+    return 0
+
+
 def get_dts_min_after(dts, train_end_dt):
     resp = np.where(dts > train_end_dt)[0]
     if resp.shape[0] > 0:
@@ -34,7 +41,7 @@ class TimeClfStepper(BaseStepper):
         self.gap = gap
         self.lookback = lookback  # in time units
         self.minlookback = minlookback  # in time units
-
+        self.first_date_dt = None
         # History of train/test dates
         self.time_unit = None
         self.ltimes = []
@@ -77,18 +84,22 @@ class TimeClfStepper(BaseStepper):
         n = serie.shape[0]
         result = np.zeros(n, dtype=np.float64)
 
-        first_date_dt = dts[0]
+        if self.first_date_dt is None:
+            self.first_date_dt = dts[0]
         last_date_dt = dts[-1]
 
         if len(self.ltimes) == 0:
-            train_end_dt = first_date_dt + self.minlookback * self.time_unit
+            train_end_dt = self.first_date_dt + self.minlookback * self.time_unit
         else:
             train_end_dt = self.ltimes[-1]['train_stop_dt']
             # Incrementing train_end_dt
             train_end_dt = train_end_dt+self.fitfreq*self.time_unit
 
+        is_last_iteration = False
         while train_end_dt < last_date_dt:
             # we work on train_end_dt
+            if is_last_iteration:
+                break
 
             # Define the training window: use the last 'lookback' samples (or fewer if at the start).
             train_start_dt = max(0, train_end_dt - self.lookback * self.time_unit)
@@ -100,6 +111,8 @@ class TimeClfStepper(BaseStepper):
             test_start_dt = train_end_dt+self.gap*self.time_unit
             test_start = get_dts_min_after(dts, test_start_dt)
             test_end_dt = test_start_dt+self.fitfreq*self.time_unit
+            if test_end_dt >= last_date_dt:
+                is_last_iteration = True
             test_end_dt = min(test_end_dt, last_date_dt)
             test_end = get_dts_min_after(dts, test_end_dt)
 
@@ -107,6 +120,13 @@ class TimeClfStepper(BaseStepper):
             train_end_dt_str = pd.to_datetime(train_end_dt*1e3).strftime('%Y-%m-%d')
             test_start_dt_str = pd.to_datetime(test_start_dt*1e3).strftime('%Y-%m-%d')
             test_end_dt_str = pd.to_datetime(test_end_dt*1e3).strftime('%Y-%m-%d')
+            last_dt_str = pd.to_datetime(last_date_dt*1e3).strftime('%Y-%m-%d')
+
+            if test_end_dt_str == test_start_dt_str:
+                if len(self.ltimes) > 0:
+                    self.ltimes[-1]['test_stop_i'] = n
+                    self.ltimes[-1]['test_stop_dt'] = last_date_dt
+                continue
 
             strloc = (f'Train on [{train_start_dt_str} - {train_end_dt_str}] ' +
                       f'Predict on [{test_start_dt_str} - {test_end_dt_str}] ')
@@ -128,6 +148,8 @@ class TimeClfStepper(BaseStepper):
 
                 'test_start_i': test_start,
                 'test_stop_i': test_end,
+
+                'last_dtn': last_dt_str,
 
                 'str': strloc}]
 

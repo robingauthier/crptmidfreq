@@ -158,7 +158,8 @@ def bktest_stats(
         'avg_pos': np.nan,
         'avg_gmv': np.nan,
         'med_gmv': np.nan,
-        'ypred_std': np.nan
+        'ypred_std': np.nan,
+        'nbstk': np.nan,
     }
 
     # If ypred is all zero (after replacing nans with 0), return rd.
@@ -238,6 +239,7 @@ def bktest_stats(
         'net_pnl': net_pnl,
         'trd': trd,
         'gmv': np.abs(s),
+        'nbstk': 1.0*(np.abs(s) > 0),
     })
     df_daily_ag = df_daily.groupby('dt').sum().reset_index()
     daily_dt = df_daily_ag['dt'].to_numpy()
@@ -245,6 +247,7 @@ def bktest_stats(
     daily_net_pnl = df_daily_ag['net_pnl'].to_numpy()
     daily_trd = df_daily_ag['trd'].to_numpy()
     daily_gmv = df_daily_ag['gmv'].to_numpy()
+    daily_nbstk = df_daily_ag['nbstk'].to_numpy()
 
     if out_dailypnl:
         return {
@@ -253,6 +256,7 @@ def bktest_stats(
             'daily_gross_pnl': daily_gross_pnl,
             'daily_trd': daily_trd,
             'daily_gmv': daily_gmv,
+            'daily_nbstk': daily_nbstk,
         }
     # If too few days, return rd.
     if df_daily_ag.size < 10:
@@ -269,7 +273,7 @@ def bktest_stats(
 
     rd['avg_gmv'] = np.mean(daily_gmv) / 1e6   # in millions
     rd['med_gmv'] = np.median(daily_gmv) / 1e6   # in millions
-
+    rd['nbstk'] = np.mean(daily_nbstk)
     # --------------------------
     # Optional: Save Graphs and Daily PnL
     # --------------------------

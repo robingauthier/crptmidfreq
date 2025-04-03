@@ -150,7 +150,7 @@ class csStdStepper(BaseStepper):
             wgt = np.ones_like(serie)
         if by is None:
             by = np.ones_like(serie)
-
+        self.mincnt = max(2, self.mincnt)
         self.validate_input(dt, dscode, serie, by=by, wgt=wgt)
 
         # by must be integers

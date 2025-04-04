@@ -191,6 +191,10 @@ def main_features(start_date='2025-03-01', end_date='2026-01-01', icfg={}):
                               folder=g_folder,
                               clip_pnlpct=0.05,  # clip P&L vs gross on stock and daily level
                               name="None",
+                              sharpe_th=3.0,
+                              dd_th=5.0,
+                              rpt_th=2.0,
+                              hold_th=24*60*5,
                               r=g_r)
     elif cfg.get('ml_kind') == 'ml':
         featd = filter_dict_to_univ(featd)
@@ -350,9 +354,9 @@ def dump_extract(featd):
 
 def main(icfg={}):
     clean_folder(g_folder)
-    #dts = pd.date_range('2022-01-01', '2025-05-01', freq='2MS')
+    dts = pd.date_range('2022-01-01', '2025-05-01', freq='6MS')
     #dts = pd.date_range('2022-01-01', '2025-05-01', freq='1MS')
-    dts = pd.date_range('2022-01-01', '2025-05-01', freq='20D')
+    #dts = pd.date_range('2022-01-01', '2025-05-01', freq='20D')
     for i in range(len(dts)-1):
         start_dt = dts[i].strftime('%Y-%m-%d')
         end_dt = dts[i+1].strftime('%Y-%m-%d')
@@ -381,7 +385,7 @@ if __name__ == '__main__':
             'hardcoded_universe': False,
             'nb_fetures': 1,
         })
-    if True:
+    if False:
         # complex
         featd = main(icfg={
             'forward_xmkt': False,
@@ -396,4 +400,12 @@ if __name__ == '__main__':
             'kmeans_or_svd_or_naive': 'tret_turnover_cs',
             'hardcoded_universe': True,
             'nb_fetures': 1,
+        })
+    if True:
+        # this one below is good
+        featd = main(icfg={
+            'forward_xmkt': False,
+            'kmeans_or_svd_or_naive': 'mkt',
+            'hardcoded_universe': True,
+            'nb_fetures': 2,
         })

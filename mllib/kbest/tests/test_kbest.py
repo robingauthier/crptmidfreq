@@ -56,6 +56,9 @@ def gen_data():
 def test_kbest():
     clean_folder('test_kbest')
     featd = gen_data()
+    n = featd['dtsi'].shape[0]
+    featd['sigf_2'] = np.random.normal(0.0, 1, size=n)
+
     featd = perform_kbest(featd,
                           retcol='sret',
                           wgtcol='wgt',

@@ -10,7 +10,7 @@ from crptmidfreq.utils.common import get_logger
 logger = get_logger()
 
 
-class BaseStepper:
+cdef class BaseStepper:
 
     _instances = {}  # Class variable to track loaded instances
     verbose = 3

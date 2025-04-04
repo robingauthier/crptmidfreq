@@ -185,6 +185,7 @@ def perform_kbest_loc(featd,
         denum,
         out=np.zeros_like(denum),
         where=~np.isclose(denum, np.zeros_like(denum)))
+    pnlgd[f'{col}_pnl_hold'] = np.nan_to_num(pnlgd[f'{col}_pnl_hold'])
 
     ############## SELECTION RULES #########
     # first rule has a prior which is go long this signal !
@@ -214,15 +215,15 @@ def perform_kbest_loc(featd,
     featd[f'kbest_{col}_xsel'] = featd[f'kbest_{col}_sel']*featd[f'{col}']
     featd[f'kbest_sum'] = featd[f'kbest_sum']+featd[f'kbest_{col}_xsel']
     featd[f'kbest_cnt'] = featd[f'kbest_cnt']+np.abs(featd[f'kbest_{col}_sel'])
-    lstats += [{'col': col,
-                'abs_sel': np.mean(np.abs(featd[f'kbest_{col}_sel'])),
-                'sel':np.mean(featd[f'kbest_{col}_sel']),
-                'sr':np.mean(pnlgd[f'{col}_pnl_sharpe']),
-                'rpt':np.mean(pnlgd[f'{col}_pnl_rpt']),
-                'dd':np.mean(pnlgd[f'{col}_pnl_dd']),
-                'ddn':np.mean(pnlgd[f'{col}_pnl_ddn']),
-                'hold':np.mean(pnlgd[f'{col}_pnl_hold']),
-                }]
+    stats = {'col': col,
+             'abs_sel': np.mean(np.abs(featd[f'kbest_{col}_sel'])),
+             'sel': np.mean(featd[f'kbest_{col}_sel']),
+             'sr': np.mean(pnlgd[f'{col}_pnl_sharpe']),
+             'rpt': np.mean(pnlgd[f'{col}_pnl_rpt']),
+             'dd': np.mean(pnlgd[f'{col}_pnl_dd']),
+             'ddn': np.mean(pnlgd[f'{col}_pnl_ddn']),
+             'hold': np.mean(pnlgd[f'{col}_pnl_hold']),
+             }
     if debug:
         cls_merge_dd = MergeAsofStepper \
             .load(folder=f"{folder}", name=f"kbest{name}_{col}_masof")
@@ -238,7 +239,7 @@ def perform_kbest_loc(featd,
 
         dfg = pd.DataFrame({k: pnlgd[k] for k in pnlgd.keys()})
         to_csv(dfg, f'debug_kbest_{col}')
-    return featd
+    return stats
 
 
 def perform_kbest(featd,
@@ -252,6 +253,8 @@ def perform_kbest(featd,
                   sharpe_th=3.0,
                   dd_th=5.0,
                   rpt_th=2.0,
+                  hold_th=24*60*5,
+                  n_jobs=5,
                   r=g_reg):
     """
     retcol : how we measure the P&L
@@ -288,15 +291,17 @@ def perform_kbest(featd,
         sharpe_th=sharpe_th,
         dd_th=dd_th,
         rpt_th=rpt_th,
+        hold_th=hold_th,
         r=r
 
     )
-    r = Parallel(n_jobs=3)(delayed(perform_kbest_loc2(col=col)) for col in sigfs)
-    import pdb
-    pdb.set_trace()
+    lstats = Parallel(n_jobs=n_jobs)(delayed(perform_kbest_loc2)(col=col) for col in sigfs)
 
     print('Kbest stats:::')
-    print(pd.DataFrame(lstats))
+    statsdf = pd.DataFrame(lstats)\
+        .assign(abssel=lambda x: x['sel'].abs())\
+        .sort_values('abssel', ascending=False)
+    print(statsdf)
 
     num = featd[f'kbest_sum']
     denum = featd[f'kbest_cnt']

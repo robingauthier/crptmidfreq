@@ -8,7 +8,7 @@ from crptmidfreq.utils.common import get_logger
 logger = get_logger()
 
 
-@njit
+@njit(cache=True)
 def mean_values(codes, values, timestamps, last_sum, last_cnt, last_timestamps):
     """
     Expanding Mean

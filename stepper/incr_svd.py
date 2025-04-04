@@ -8,7 +8,7 @@ from numba import njit
 # because fitfreq can be a lot higher ( 1 or 2) we will not use TimeClf here
 
 
-@njit
+@njit(cache=True)
 def stack(last_xmem, last_univ, lookback):
     # pX = np.stack([last_xmem[k] for k in last_univ])
     # pX = np.transpose(pX)
@@ -22,7 +22,7 @@ def stack(last_xmem, last_univ, lookback):
     return np.ascontiguousarray(pX)
 
 
-@njit
+@njit(cache=True)
 def diag(arr):
     n = len(arr)
     res = np.zeros((n, n), dtype=np.float64)
@@ -31,7 +31,7 @@ def diag(arr):
     return np.ascontiguousarray(res)
 
 
-@njit
+@njit(cache=True)
 def incremental_svd(xseriesd, univd,
                     last_xmem, last_univ, last_xorder,
                     lookback,

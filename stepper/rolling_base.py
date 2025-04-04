@@ -7,7 +7,7 @@ from numba.typed import Dict
 from crptmidfreq.stepper.base_stepper import BaseStepper
 
 
-@njit
+@njit(cache=True)
 def update_rolling_values(timestamps,
                           dscode,
                           values,
@@ -54,7 +54,7 @@ def update_rolling_values(timestamps,
 
 class RollingStepper(BaseStepper):
     def __init__(self, folder='', name='', window=1):
-        super().__init__(folder,name)
+        super().__init__(folder, name)
         self.window = window
         self.position = Dict.empty(
             key_type=types.int64,
@@ -75,12 +75,11 @@ class RollingStepper(BaseStepper):
     @classmethod
     def load(cls, folder, name, window=1):
         """Load instance from saved state or create new if not exists"""
-        return RollingStepper.load_utility(cls,folder=folder,name=name,window=window)
-
+        return RollingStepper.load_utility(cls, folder=folder, name=name, window=window)
 
     def update_memory(self, dt, dscode, values):
         """
         """
-        self.validate_input(dt,dscode,values)
+        self.validate_input(dt, dscode, values)
         update_rolling_values(dt.view(np.int64), dscode, values,
                               self.position, self.values, self.last_ts, self.window)

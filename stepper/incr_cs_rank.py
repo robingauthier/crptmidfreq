@@ -5,15 +5,15 @@ from numba import types
 from crptmidfreq.stepper.base_stepper import BaseStepper
 
 
-@njit
+@njit(cache=True)
 def update_cs_rank_values(codes, values, bys, wgts, timestamps,
                           last_timestamps, last_vals, last_ranks, last_cnts, percent):
     result = np.empty(len(codes), dtype=np.float64)
-    
+
     g_last_ts = 0
     # Set block_start to mark the beginning of the current block of rows.
     block_start = 0
-    
+
     # First, get the global last timestamp from last_timestamps.
     for k, v in last_timestamps.items():
         if v > g_last_ts:
@@ -37,7 +37,7 @@ def update_cs_rank_values(codes, values, bys, wgts, timestamps,
             raise ValueError("DateTime must be strictly increasing per code")
         if ts < g_last_ts:
             raise ValueError("DateTime must be strictly increasing across instruments")
-        
+
         # If we detect a new timestamp compared to the global one,
         # process the current block.
         if ts != g_last_ts:
@@ -49,9 +49,9 @@ def update_cs_rank_values(codes, values, bys, wgts, timestamps,
                 if last_cnts[by2] <= 1:
                     result[j] = 0.0
                 else:
-                    if percent==0:
+                    if percent == 0:
                         result[j] = (last_ranks[by2][0] - (last_cnts[by2]-1)/2) / (last_cnts[by2]-1)*2
-                    elif percent==1:
+                    elif percent == 1:
                         result[j] = last_ranks[by2][0]
                     else:
                         result[j] = last_cnts[by2]-last_ranks[by2][0]
@@ -80,9 +80,9 @@ def update_cs_rank_values(codes, values, bys, wgts, timestamps,
             if last_cnts[by2] <= 1:
                 result[j] = 0.0
             else:
-                if percent==0:
+                if percent == 0:
                     result[j] = (last_ranks[by2][0] - (last_cnts[by2]-1)/2) / (last_cnts[by2]-1)*2
-                elif percent==1:
+                elif percent == 1:
                     result[j] = last_ranks[by2][0]
                 else:
                     result[j] = last_cnts[by2]-last_ranks[by2][0]
@@ -93,10 +93,9 @@ def update_cs_rank_values(codes, values, bys, wgts, timestamps,
 
 class csRankStepper(BaseStepper):
 
-
-    def __init__(self, folder='', name='',percent=0):
-        super().__init__(folder,name) 
-        self.percent = percent 
+    def __init__(self, folder='', name='', percent=0):
+        super().__init__(folder, name)
+        self.percent = percent
         # Initialize empty state
         self.last_vals = Dict.empty(
             key_type=types.int64,
@@ -114,16 +113,16 @@ class csRankStepper(BaseStepper):
             key_type=types.int64,
             value_type=types.int64
         )
-        
+
     def save(self):
         self.save_utility()
 
     @classmethod
-    def load(cls, folder, name,percent=0):
+    def load(cls, folder, name, percent=0):
         """Load instance from saved state or create new if not exists"""
-        return csRankStepper.load_utility(cls,folder=folder,name=name,percent=percent)
+        return csRankStepper.load_utility(cls, folder=folder, name=name, percent=percent)
 
-    def update(self, dt, dscode, serie,by=None,wgt=None):
+    def update(self, dt, dscode, serie, by=None, wgt=None):
         """
         Update difference values for each code and return the difference values for each input row
 
@@ -142,13 +141,12 @@ class csRankStepper(BaseStepper):
         if by is None:
             by = np.ones_like(serie)
 
-        self.validate_input(dt,dscode,serie,by=by,wgt=wgt)
+        self.validate_input(dt, dscode, serie, by=by, wgt=wgt)
 
-        # by must be integers 
+        # by must be integers
         by = by.astype('int64')
-        
-        # Update values and timestamps using numba function
-        return update_cs_rank_values(dscode, serie, by,wgt,dt.view(np.int64),
-                         self.last_timestamps,self.last_vals,self.last_ranks,self.last_cnts,
-                         self.percent)
 
+        # Update values and timestamps using numba function
+        return update_cs_rank_values(dscode, serie, by, wgt, dt.view(np.int64),
+                                     self.last_timestamps, self.last_vals, self.last_ranks, self.last_cnts,
+                                     self.percent)

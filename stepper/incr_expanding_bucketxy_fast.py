@@ -21,7 +21,7 @@ def try_to_save_png(tsave_graph_path):
     plt.close()
 
 
-@njit
+@njit(cache=True)
 def compute_bucketxy(dt, dscode, x_values, y_values,
                      qtls_x, bucket_cnt, bucket_sum, bucket_sum2,
                      results_mean, results_std):

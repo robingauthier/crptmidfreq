@@ -4,7 +4,8 @@ from numba.typed import Dict
 from numba import types
 from crptmidfreq.stepper.base_stepper import BaseStepper
 
-@njit
+
+@njit(cache=True)
 def update_diff_values(codes, values, timestamps, diff_values, last_timestamps):
     """
     Vectorized update of difference values and timestamps
@@ -56,10 +57,10 @@ def update_diff_values(codes, values, timestamps, diff_values, last_timestamps):
 
 
 class DiffStepper(BaseStepper):
-    
+
     def __init__(self, folder='', name='', window=1):
-        assert window==1
-        super().__init__(folder,name)
+        assert window == 1
+        super().__init__(folder, name)
         self.window = window
 
         # Initialize empty state
@@ -78,8 +79,7 @@ class DiffStepper(BaseStepper):
     @classmethod
     def load(cls, folder, name, window=1):
         """Load instance from saved state or create new if not exists"""
-        return DiffStepper.load_utility(cls,folder=folder,name=name,window=window)
-
+        return DiffStepper.load_utility(cls, folder=folder, name=name, window=window)
 
     def update(self, dt, dscode, serie):
         """
@@ -94,7 +94,7 @@ class DiffStepper(BaseStepper):
             numpy array of same length as input arrays containing difference values
         """
         # Input validation
-        self.validate_input(dt,dscode,serie)
+        self.validate_input(dt, dscode, serie)
         # Update values and timestamps using numba function
         return update_diff_values(
             dscode, serie, dt.view(np.int64),

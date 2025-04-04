@@ -6,7 +6,7 @@ from numba.typed import Dict
 from crptmidfreq.stepper.base_stepper import BaseStepper
 
 
-@njit
+@njit(cache=True)
 def calculate_restype(restype, price, entrylevel, maxlevel, minlevel, direction, nan):
     """
     Calculate the value for a specific restype.
@@ -30,7 +30,7 @@ def calculate_restype(restype, price, entrylevel, maxlevel, minlevel, direction,
     return nan
 
 
-@njit
+@njit(cache=True)
 def update_pfp_values(dts, dscodes, prices, nbrev, last_pfp_states):
     """
     Incremental update of PFP values for each dscode.

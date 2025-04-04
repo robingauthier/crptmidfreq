@@ -6,7 +6,7 @@ from numba.typed import Dict
 from crptmidfreq.stepper.base_stepper import BaseStepper
 
 
-@njit
+@njit(cache=True)
 def merge_asof_numba(
         left_timestamps, left_dscodes,
         right_timestamps, right_dscodes, right_values,
@@ -17,7 +17,7 @@ def merge_asof_numba(
     Numba-optimized merge_asof implementation with support for memory and last_right values.
 
     """
-    ### check that right_timestamps are increacing
+    # check that right_timestamps are increacing
     ots = np.nan
     for i in range(len(right_timestamps)):
         ts = right_timestamps[i]
@@ -108,9 +108,9 @@ def merge_asof_numba(
     last_right_dscodes2 = last_right_dscodes2[:j][::-1]
     last_right_values2 = last_right_values2[:j][::-1]
     return merged_values, \
-           last_right_timestamps2, \
-           last_right_dscodes2, \
-           last_right_values2
+        last_right_timestamps2, \
+        last_right_dscodes2, \
+        last_right_values2
 
 
 class MergeAsofStepper(BaseStepper):
@@ -124,22 +124,21 @@ class MergeAsofStepper(BaseStepper):
             direction: Merge direction ("backward", "forward", or "nearest")
             p: Number of most recent values to keep in memory per dscode
         """
-        super().__init__(folder,name)
+        super().__init__(folder, name)
         self.p = p  # Number of recent entries to retain
 
         # Store last right-side data
         self.right_timestamps = np.array([], dtype=np.int64)
         self.right_dscodes = np.array([], dtype=np.int64)
         self.right_values = np.array([], dtype=np.float64)
-    
+
     def save(self):
         self.save_utility()
 
     @classmethod
     def load(cls, folder, name):
         """Load instance from saved state or create new if not exists"""
-        return MergeAsofStepper.load_utility(cls,folder=folder,name=name)
-
+        return MergeAsofStepper.load_utility(cls, folder=folder, name=name)
 
     def update(self, left_timestamps, left_dscodes, right_timestamps, right_dscodes, right_values):
         """
@@ -157,23 +156,23 @@ class MergeAsofStepper(BaseStepper):
             Tuple of (merged_timestamps, merged_dscodes, merged_left_values, merged_right_values)
         """
         # Input validation
-        self.validate_input(left_timestamps,left_dscodes,np.zeros_like(left_dscodes))
-        self.validate_input(right_timestamps,right_dscodes,right_values)
-        
+        self.validate_input(left_timestamps, left_dscodes, np.zeros_like(left_dscodes))
+        self.validate_input(right_timestamps, right_dscodes, right_values)
+
         # Input validation and type conversion
         left_timestamps = self._to_int64(left_timestamps)
         right_timestamps = self._to_int64(right_timestamps)
 
         # Perform merge using Numba-accelerated function
         merged_values, \
-        last_right_timestamps2, \
-        last_right_dscodes2, \
-        last_right_values2 = merge_asof_numba(
-            left_timestamps, left_dscodes,
-            right_timestamps, right_dscodes, right_values,
-            self.right_timestamps, self.right_dscodes, self.right_values,
-            self.p
-        )
+            last_right_timestamps2, \
+            last_right_dscodes2, \
+            last_right_values2 = merge_asof_numba(
+                left_timestamps, left_dscodes,
+                right_timestamps, right_dscodes, right_values,
+                self.right_timestamps, self.right_dscodes, self.right_values,
+                self.p
+            )
         self.right_timestamps = last_right_timestamps2
         self.right_dscodes = last_right_dscodes2
         self.right_values = last_right_values2

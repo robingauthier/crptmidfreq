@@ -6,7 +6,7 @@ from numba.typed import Dict
 from crptmidfreq.stepper.base_stepper import BaseStepper
 
 
-@njit
+@njit(cache=True)
 def incremental_pivot(timestamps, codes, values, last_timestamps, result):
     """
     Incremental pivot function that organizes data by unique timestamps and 

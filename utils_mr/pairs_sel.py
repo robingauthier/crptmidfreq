@@ -4,7 +4,7 @@ from numba.typed import Dict, List
 from numba.core import types
 
 
-@njit
+@njit(cache=True)
 def pick_k_pairs_loc(dscode1, dscode2, distance, k,
                      rdscode1, rdscode2, rdistance):
     """

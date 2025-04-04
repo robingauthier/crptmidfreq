@@ -6,8 +6,8 @@ from numba.typed import Dict
 from crptmidfreq.stepper.base_stepper import BaseStepper
 
 
-@njit
-def groupby_last_values(codes, values, timestamps, last_values, last_timestamps,position):
+@njit(cache=True)
+def groupby_last_values(codes, values, timestamps, last_values, last_timestamps, position):
     """
     equivalent to groupby(['dscode','dt']).last() usuful for resampling the data
     """
@@ -67,7 +67,7 @@ class GroupbyLastStepper(BaseStepper):
             folder: folder for saving/loading state
             name: name for saving/loading state
         """
-        super().__init__(folder,name)
+        super().__init__(folder, name)
 
         # Initialize empty state
         self.last_values = Dict.empty(
@@ -83,14 +83,14 @@ class GroupbyLastStepper(BaseStepper):
             key_type=types.int64,
             value_type=types.int64
         )
-        
+
     def save(self):
         self.save_utility()
 
     @classmethod
     def load(cls, folder, name):
         """Load instance from saved state or create new if not exists"""
-        return GroupbyLastStepper.load_utility(cls,folder=folder,name=name)
+        return GroupbyLastStepper.load_utility(cls, folder=folder, name=name)
 
     def update(self, dt, dscode, serie):
         """
@@ -105,11 +105,11 @@ class GroupbyLastStepper(BaseStepper):
             numpy array of same length as input arrays containing forward-filled values
         """
         # Input validation
-        self.validate_input(dt,dscode,serie)
-        
+        self.validate_input(dt, dscode, serie)
+
         # Update values and timestamps using numba function
         result_ts, result_code, result = groupby_last_values(
             dscode, serie, dt.view(np.int64),
-            self.last_values, self.last_timestamps,self.last_position
+            self.last_values, self.last_timestamps, self.last_position
         )
         return result_ts, result_code, result

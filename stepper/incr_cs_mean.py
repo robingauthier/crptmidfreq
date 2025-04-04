@@ -5,7 +5,7 @@ from numba import types
 from crptmidfreq.stepper.base_stepper import BaseStepper
 
 
-@njit
+@njit(cache=True)
 def update_cs_mean_values(codes, values, bys, wgts, timestamps,
                           last_timestamps, last_sums, last_wgts,
                           is_sum):

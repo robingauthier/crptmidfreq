@@ -7,7 +7,7 @@ from numba.typed import Dict
 from crptmidfreq.stepper.base_stepper import BaseStepper
 
 
-@njit
+@njit(cache=True)
 def ridge_fit(x, y, lam):
     """
     Perform Ridge regression: y = alpha + beta * x + residual
@@ -49,7 +49,7 @@ def ridge_fit(x, y, lam):
     return alpha, beta, residuals
 
 
-@njit
+@njit(cache=True)
 def update_rolling_reg(timestamps,
                        dscode,
                        values1,
@@ -105,7 +105,7 @@ def update_rolling_reg(timestamps,
 
 class RollingRidgeStepper(BaseStepper):
     def __init__(self, folder='', name='', window=1, lam=0.):
-        super().__init__(folder,name)
+        super().__init__(folder, name)
 
         self.window = window
         self.lam = lam
@@ -130,14 +130,13 @@ class RollingRidgeStepper(BaseStepper):
         self.save_utility()
 
     @classmethod
-    def load(cls, folder, name='', window=1,lam=0.1):
+    def load(cls, folder, name='', window=1, lam=0.1):
         """Load instance from saved state or create new if not exists"""
-        return RollingRidgeStepper.load_utility(cls,folder=folder,name=name,
-                                                window=window,lam=lam)
-
+        return RollingRidgeStepper.load_utility(cls, folder=folder, name=name,
+                                                window=window, lam=lam)
 
     def update(self, dt, dscode, values1, values2):
-        self.validate_input(dt,dscode,values1,serie2=values2)
+        self.validate_input(dt, dscode, values1, serie2=values2)
         alpha, beta, resid = update_rolling_reg(dt.view(np.int64), dscode, values1, values2,
                                                 self.position, self.values1, self.values2,
                                                 self.last_ts, self.window, self.lam)

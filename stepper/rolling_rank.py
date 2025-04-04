@@ -4,7 +4,7 @@ from numba import njit
 from crptmidfreq.stepper.rolling_base import RollingStepper
 
 
-@njit
+@njit(cache=True)
 def update_rolling_rank(timestamps,
                         dscode,
                         values,

@@ -7,7 +7,7 @@ from numba.core import types
 from numba import njit
 
 
-@njit
+@njit(cache=True)
 def explode_pairs_increment(dts, dscode, serie,
                             sdts, sdscode1, sdscode2,
                             rdts, rdscode1, rdscode2, rserie1, rserie2,

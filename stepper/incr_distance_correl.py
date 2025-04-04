@@ -7,7 +7,7 @@ from numba.core import types
 from numba import njit
 
 
-@njit
+@njit(cache=True)
 def incremental_distance_correl(
     dts,
     xseriesd,

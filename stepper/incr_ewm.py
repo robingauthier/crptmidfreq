@@ -6,13 +6,14 @@ from numba.typed import Dict
 
 from crptmidfreq.stepper.base_stepper import BaseStepper
 
+
 def get_alpha(window=1.0):
     """Convert half-life to alpha"""
-    assert window>0
+    assert window > 0
     return 1 - np.exp(np.log(0.5) / window)
 
 
-@njit
+@njit(cache=True)
 def update_ewm_values(codes, values, timestamps, alpha, last_sum, last_wgt_sum, last_timestamps):
     """
     Vectorized update of EWM values and timestamps
@@ -65,8 +66,8 @@ def update_ewm_values(codes, values, timestamps, alpha, last_sum, last_wgt_sum, 
 class EwmStepper(BaseStepper):
 
     def __init__(self, folder='', name='', window=1):
-        super().__init__(folder,name)
-        assert not isinstance(window,list)
+        super().__init__(folder, name)
+        assert not isinstance(window, list)
         self.window = window
         self.alpha = get_alpha(window)
 
@@ -90,7 +91,7 @@ class EwmStepper(BaseStepper):
     @classmethod
     def load(cls, folder, name, window=1):
         """Load instance from saved state or create new if not exists"""
-        return EwmStepper.load_utility(cls,folder=folder,name=name,window=window)
+        return EwmStepper.load_utility(cls, folder=folder, name=name, window=window)
 
     def update(self, dt, dscode, serie):
         """
@@ -104,12 +105,11 @@ class EwmStepper(BaseStepper):
         Returns:
             numpy array of same length as input arrays containing EWM values
         """
-        self.validate_input(dt,dscode,serie)
-        
+        self.validate_input(dt, dscode, serie)
+
         # Update values and timestamps using numba function
         res = update_ewm_values(
             dscode, serie, dt.view(np.int64),
             self.alpha, self.last_sum, self.last_wgt_sum, self.last_timestamps
         )
         return res
-

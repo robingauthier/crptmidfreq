@@ -8,7 +8,7 @@ from crptmidfreq.utils.common import get_logger
 logger = get_logger()
 
 
-@njit
+@njit(cache=True)
 def max_values(codes, values, timestamps, last_values, last_timestamps):
     """
     Expanding Max

@@ -10,7 +10,7 @@ def get_alpha(window):
     return 1 - np.exp(np.log(0.5) / window)
 
 
-@njit
+@njit(cache=True)
 def update_ewmstd_values(codes, values, timestamps, alpha, last_sum,
                          last_wgt_sum, last_sum_sq, last_wgt_sum_sq, last_timestamps):
     """

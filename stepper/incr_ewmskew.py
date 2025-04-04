@@ -5,13 +5,13 @@ from numba import types
 from crptmidfreq.stepper.base_stepper import BaseStepper
 
 
-@njit
+@njit(cache=True)
 def get_alpha(window):
     """Convert half-life to alpha"""
     return 1 - np.exp(np.log(0.5) / window)
 
 
-@njit
+@njit(cache=True)
 def update_ewmskew_values(codes, values, timestamps, alpha, ewm_values, ewm_squared_values,
                           ewm_cubed_values, last_timestamps):
     """

@@ -5,7 +5,7 @@ from numba.typed import Dict
 from crptmidfreq.stepper.base_stepper import BaseStepper
 
 
-@njit
+@njit(cache=True)
 def update_cusum_values(codes, values, timestamps, target_mean, k, h,
                         cusum_dict, last_timestamps):
     """
@@ -57,7 +57,7 @@ def update_cusum_values(codes, values, timestamps, target_mean, k, h,
         # If new_cusum > threshold, you can:
         #  (1) reset to zero, so you detect further changes,
         #  (2) keep it so subsequent increments might detect further shifts,
-        #  or (3) store an alarm somewhere else.  
+        #  or (3) store an alarm somewhere else.
         if new_cusum > h:
             # For demo, we reset to 0
             new_cusum = 0.0

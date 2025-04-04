@@ -5,7 +5,7 @@ from numba.typed import Dict
 from crptmidfreq.stepper.base_stepper import BaseStepper
 
 
-@njit
+@njit(cache=True)
 def ffill_values(codes, values, timestamps, last_values, last_timestamps):
     """
     Forward fill values for each code, using last known values from memory.
@@ -56,7 +56,7 @@ class FfillStepper(BaseStepper):
             folder: folder for saving/loading state
             name: name for saving/loading state
         """
-        super().__init__(folder,name)
+        super().__init__(folder, name)
 
         # Initialize empty state
         self.last_values = Dict.empty(
@@ -74,8 +74,7 @@ class FfillStepper(BaseStepper):
     @classmethod
     def load(cls, folder, name, window=1):
         """Load instance from saved state or create new if not exists"""
-        return FfillStepper.load_utility(cls,folder=folder,name=name)
-
+        return FfillStepper.load_utility(cls, folder=folder, name=name)
 
     def update(self, dt, dscode, serie):
         """
@@ -90,8 +89,8 @@ class FfillStepper(BaseStepper):
             numpy array of same length as input arrays containing forward-filled values
         """
         # Input validation
-        self.validate_input(dt,dscode,serie)
-        
+        self.validate_input(dt, dscode, serie)
+
         # Update values and timestamps using numba function
         return ffill_values(
             dscode, serie, dt.view(np.int64),

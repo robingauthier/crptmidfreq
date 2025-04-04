@@ -7,7 +7,7 @@ from numba import types
 from numba.typed import Dict
 
 
-@njit
+@njit(cache=True)
 def incremental_pivot(dt, dscode, values):
     """
     Incremental pivot function that organizes data by unique timestamps and 
@@ -42,7 +42,6 @@ def incremental_pivot(dt, dscode, values):
         pivot_dict[dscode[i]][row_idx] = values[i]
 
     return unique_times, pivot_dict
-
 
 
 class PivotStepper:

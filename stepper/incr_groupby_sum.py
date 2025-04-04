@@ -9,7 +9,7 @@ from crptmidfreq.stepper.base_stepper import BaseStepper
 
 # It reduces the size of the data.. It is not a cs_sum
 
-# @njit
+# @njit(cache=True)
 def groupby_sum_values(dts, codes, bys, values,
                        bymap,
                        result_ts, result_by, result_sum, result_cnt

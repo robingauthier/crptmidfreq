@@ -9,8 +9,8 @@ from crptmidfreq.stepper.incr_ewmkurt import EwmKurtStepper as EwmKurtStepperNum
 def compare_speed_numba_cython():
     # Generate test data
     np.random.seed(42)
-    n_samples = 20_000_000
-    n_codes = 20
+    n_samples = 3_000_000
+    n_codes = 100
 
     # Create datetime range
     base_dt = datetime(2023, 1, 1)
@@ -30,6 +30,7 @@ def compare_speed_numba_cython():
     time1 = pd.to_datetime('now')
     # Calculate using our implementation
     stepper = EwmKurtStepperCython(window=100)
+    time1_1 = pd.to_datetime('now')
     result = stepper.update(df['datetime'].values, df['dscode'].values, df['value'].values)
     time2 = pd.to_datetime('now')
     stepper = EwmKurtStepperNumba(window=100)
@@ -40,16 +41,10 @@ def compare_speed_numba_cython():
     dtimeNumba = time3-time2
     pprint({
         'cython': dtimeCython,
+        'cython_init': time1_1-time1,
+        'cython_run': time2-time1_1,
         'numba': dtimeNumba,
     })
-
-    # for 1M
-    # {'cython': Timedelta('0 days 00:00:00.794260'),
-    # 'numba': Timedelta('0 days 00:00:01.447199')}
-
-    # for 20M
-    # {'cython': Timedelta('0 days 00:00:16.007647'),
-    # 'numba': Timedelta('0 days 00:00:06.333569')}
 
 
 # ipython -i -m crptmidfreq.res.speed_comp

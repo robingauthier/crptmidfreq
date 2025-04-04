@@ -7,9 +7,9 @@ import pickle
 from crptmidfreq.config_loc import get_data_folder
 
 
-@njit
+@njit(cache=True)
 def update_bar_values(codes, values, timestamps, period_ns, max_hist,
-                       bar_counts,bar_highs, bar_lows, bar_opens, bar_closes,
+                      bar_counts, bar_highs, bar_lows, bar_opens, bar_closes,
                       bar_times, bar_ids):
     """
     Update bar values for each code and return number of new bars per code
@@ -69,7 +69,7 @@ def update_bar_values(codes, values, timestamps, period_ns, max_hist,
             bar_closes[code] = np.append(bar_closes[code], value)
             bar_counts[code] = np.append(bar_counts[code], [1])
             if len(bar_times[code]) > max_hist:
-                bar_times[code]=bar_times[code][-max_hist:]
+                bar_times[code] = bar_times[code][-max_hist:]
                 bar_ids[code] = bar_ids[code][-max_hist:]
                 bar_opens[code] = bar_opens[code][-max_hist:]
                 bar_highs[code] = bar_highs[code][-max_hist:]
@@ -85,7 +85,7 @@ def update_bar_values(codes, values, timestamps, period_ns, max_hist,
             bar_highs[code][-1] = curr_high
             bar_lows[code][-1] = curr_low
             bar_closes[code][-1] = value
-            bar_counts[code][-1]=bar_counts[code][-1]+1
+            bar_counts[code][-1] = bar_counts[code][-1]+1
     return new_bars_count
 
 
@@ -137,6 +137,7 @@ class TimeBarStepper:
             key_type=types.int64,
             value_type=types.int64[:],  # Array of count values
         )
+
     def _period_to_ns(self, period):
         """Convert period string to nanoseconds"""
         unit = period[-1] if period[-1].isalpha() else period[-3:]
@@ -168,7 +169,7 @@ class TimeBarStepper:
             'bar_opens': dict(self.bar_opens),
             'bar_closes': dict(self.bar_closes),
             'bar_times': dict(self.bar_times),
-            'bar_counts':dict(self.bar_counts),
+            'bar_counts': dict(self.bar_counts),
             'bar_ids': dict(self.bar_ids),
             'period': self.period,
             'max_hist': self.max_hist,
@@ -185,7 +186,7 @@ class TimeBarStepper:
         filepath = os.path.join(folder, name + '.pkl')
 
         if not os.path.exists(filepath):
-            instance = cls(folder=folder, name=name, period=period,max_hist=max_hist)
+            instance = cls(folder=folder, name=name, period=period, max_hist=max_hist)
             return instance
 
         with open(filepath, 'rb') as f:
@@ -243,7 +244,7 @@ class TimeBarStepper:
         # Update values and get new bars count using numba function
         new_bars_count = update_bar_values(
             dscode, serie, timestamps, self.period_ns, self.max_hist,
-             self.bar_counts,
+            self.bar_counts,
             self.bar_highs, self.bar_lows, self.bar_opens, self.bar_closes,
             self.bar_times, self.bar_ids
         )

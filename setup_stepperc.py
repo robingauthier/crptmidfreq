@@ -4,6 +4,7 @@ from Cython.Build import cythonize
 import numpy
 import os
 import glob
+
 # python ./crptmidfreq/setup_stepperc.py build_ext --inplace
 
 # Define the folder containing your .pyx files (adjust as needed)
@@ -23,19 +24,16 @@ for pyx_file in pyx_files:
             sources=[pyx_file],
             include_dirs=[numpy.get_include()],
             language="c++",  # necessary otherwise include ios issue
+            extra_compile_args=["-O3", "-std=c++11"],  # to increase the speed of the code
         )
     )
-#        name="crptmidfreq.stepper.tdigest.tdigestloc",
-#       sources=["crptmidfreq/stepper/tdigest/tdigestloc.pyx"],
-# print(extensions)
-#pdb.set_trace()
+
 setup(
     name="my_package",
     version="0.1",
     packages=find_packages(),
     ext_modules=cythonize(
         extensions,
-        compiler_directives={'language_level': "3"},
         annotate=True  # Optional: generates an HTML annotation of the Cython code
     ),
 )

@@ -7,7 +7,7 @@ from numba.core import types
 from numba import njit
 
 
-@njit
+@njit(cache=True)
 def collapse_pairs_increment(dts, dscode1, dscode2, serie,
                              rpserie, rpcnt,
                              ):

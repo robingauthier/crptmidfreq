@@ -7,7 +7,7 @@ from numba.typed import Dict
 from crptmidfreq.stepper.base_stepper import BaseStepper
 
 
-@njit
+@njit(cache=True)
 def update_rolling_corr(timestamps,
                         dscode,
                         values1,
@@ -56,9 +56,9 @@ def update_rolling_corr(timestamps,
 
 class RollingCorrStepper(BaseStepper):
     def __init__(self, folder='', name='', window=1):
-        super().__init__(folder,name)
+        super().__init__(folder, name)
         self.window = window
-        
+
         self.position = Dict.empty(
             key_type=types.int64,
             value_type=types.int64
@@ -82,10 +82,10 @@ class RollingCorrStepper(BaseStepper):
     @classmethod
     def load(cls, folder, name='', window=1):
         """Load instance from saved state or create new if not exists"""
-        return RollingCorrStepper.load_utility(cls,folder=folder,name=name,window=window)
+        return RollingCorrStepper.load_utility(cls, folder=folder, name=name, window=window)
 
     def update(self, dt, dscode, values1, values2):
-        self.validate_input(dt,dscode,values1,serie2=values2)
+        self.validate_input(dt, dscode, values1, serie2=values2)
         res = update_rolling_corr(dt.view(np.int64), dscode, values1, values2,
                                   self.position, self.values1, self.values2,
                                   self.last_ts, self.window)

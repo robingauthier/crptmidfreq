@@ -4,7 +4,7 @@ from numba import njit
 from crptmidfreq.stepper.rolling_base import RollingStepper
 
 
-@njit
+@njit(cache=True)
 def update_rolling_mean(timestamps,
                         dscode,
                         values,
@@ -45,7 +45,7 @@ def update_rolling_mean(timestamps,
 
 class RollingMeanStepper(RollingStepper):
     def update(self, dt, dscode, values):
-        self.validate_input(dt,dscode,values)
+        self.validate_input(dt, dscode, values)
         res = update_rolling_mean(dt.view(np.int64), dscode, values,
                                   self.position, self.values, self.last_ts, self.window)
         return res

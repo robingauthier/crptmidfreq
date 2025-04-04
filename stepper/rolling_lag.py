@@ -4,7 +4,7 @@ from numba import njit
 from crptmidfreq.stepper.rolling_base import RollingStepper
 
 
-@njit
+@njit(cache=True)
 def update_rolling_lag(timestamps,
                        dscode,
                        values,
@@ -44,7 +44,7 @@ def update_rolling_lag(timestamps,
 
 class RollingLagStepper(RollingStepper):
     def update(self, dt, dscode, values):
-        self.validate_input(dt,dscode,values)
+        self.validate_input(dt, dscode, values)
         res = update_rolling_lag(dt.view(np.int64),
                                  dscode,
                                  values,

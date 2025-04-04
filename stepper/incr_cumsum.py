@@ -7,8 +7,7 @@ from numba.typed import Dict
 from crptmidfreq.stepper.base_stepper import BaseStepper
 
 
-
-@njit
+@njit(cache=True)
 def cumsum_values(codes, values, timestamps, last_values, last_timestamps):
     """
     Forward fill values for each code, using last known values from memory.
@@ -61,7 +60,7 @@ class CumSumStepper(BaseStepper):
             folder: folder for saving/loading state
             name: name for saving/loading state
         """
-        super().__init__(folder,name)
+        super().__init__(folder, name)
 
         # Initialize empty state
         self.last_values = Dict.empty(
@@ -79,7 +78,7 @@ class CumSumStepper(BaseStepper):
     @classmethod
     def load(cls, folder, name):
         """Load instance from saved state or create new if not exists"""
-        return CumSumStepper.load_utility(cls,folder=folder,name=name)
+        return CumSumStepper.load_utility(cls, folder=folder, name=name)
 
     def update(self, dt, dscode, serie):
         """
@@ -108,4 +107,3 @@ class CumSumStepper(BaseStepper):
             dscode, serie, timestamps,
             self.last_values, self.last_timestamps
         )
-

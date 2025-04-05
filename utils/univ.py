@@ -1,6 +1,9 @@
 
-
 hardcoded_universe_1 = ['BTCUSDT',
+                        'ETHUSDT',
+                        ]
+
+hardcoded_universe_2 = ['BTCUSDT',
                         'ETHUSDT',
                         'SOLUSDT',
                         'WBTCUSDT',  # wrapped BTC

@@ -39,12 +39,12 @@ def main_features(start_date='2025-03-01', end_date='2026-01-01', icfg={}):
     dcfg = dict(
         use_lazy_dict=True,
 
-        window_volume_wgt=60*24*30,
-        window_volume_univ=60*24*20,
+        window_volume_wgt=unit_day*30,
+        window_volume_univ=unit_day*20,
 
-        windows_ewm=[5, 20, 100, 200, 800],
+        windows_ewm=[5, 20, 100, 200, 800, 3*unit_day, 10*unit_day, 30*unit_day],
 
-        windows_forward=[10],
+        windows_forward=[60, unit_day],
         forward_xmkt=True,  # removes mkt from forward return TODO True
 
         sret_clip=0.005,  # we should not cut too much
@@ -75,10 +75,10 @@ def main_features(start_date='2025-03-01', end_date='2026-01-01', icfg={}):
 
         model_lookback=unit_day*400,  # I get into RAM issues otherwis
         model_minlookback=unit_day*20,
-        model_fitfreq=unit_day*100,
+        model_fitfreq=unit_day*200,
 
-        # ml_kind='mllgbm',
-        ml_kind='kbest',
+        ml_kind='mllgbm',
+        # ml_kind='kbest',
 
     )
     if dcfg['hardcoded_universe']:
@@ -241,7 +241,7 @@ def main_features(start_date='2025-03-01', end_date='2026-01-01', icfg={}):
     elif cfg.get('ml_kind') == 'mllgbm':
         featd = filter_dict_to_univ(featd)
         fcols = [f'forward_fh{win}_clip' for win in cfg.get('windows_forward')]
-        for win in [1]+cfg.get('windows_forward'):
+        for win in cfg.get('windows_forward'):
             featd, nfeats_ml = perform_model_batch(
                 featd,
                 feats=get_sigf_cols(featd),
@@ -354,7 +354,7 @@ def dump_extract(featd):
 
 def main(icfg={}):
     clean_folder(g_folder)
-    dts = pd.date_range('2022-01-01', '2025-05-01', freq='6MS')
+    dts = pd.date_range('2022-01-01', '2025-05-01', freq='12MS')
     #dts = pd.date_range('2022-01-01', '2025-05-01', freq='1MS')
     #dts = pd.date_range('2022-01-01', '2025-05-01', freq='20D')
     for i in range(len(dts)-1):
@@ -404,8 +404,9 @@ if __name__ == '__main__':
     if True:
         # this one below is good
         featd = main(icfg={
-            'forward_xmkt': False,
+            'forward_xmkt': True,
             'kmeans_or_svd_or_naive': 'mkt',
             'hardcoded_universe': True,
             'nb_fetures': 2,
+            'ml_kind': 'no_ml',
         })

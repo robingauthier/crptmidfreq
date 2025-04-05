@@ -97,3 +97,10 @@ P&L stats:- add sdt,edt and nb stocks
 ## TODO: add the day of the week
 
 bucketplot against the time of the day please !!!
+
+
+
+
+https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/overview#install-and-authenticate
+npm install -g @anthropic-ai/claude-code
+https://console.anthropic.com/settings/billing

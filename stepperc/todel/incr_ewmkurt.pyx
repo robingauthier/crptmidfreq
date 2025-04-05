@@ -13,6 +13,34 @@ ctypedef np.float64_t float64_t
 
 import numpy as np
 
+def sort_by_code_and_date(dt, dscode, serie):
+    """
+    Sort three arrays by dscode (primary key) and dt (secondary key)
+    
+    Parameters:
+    -----------
+    dt : numpy.ndarray
+        Array of dates/timestamps
+    dscode : numpy.ndarray
+        Array of codes
+    serie : numpy.ndarray
+        Array of values
+        
+    Returns:
+    --------
+    tuple of sorted arrays (sorted_dt, sorted_dscode, sorted_serie)
+    """
+    # Create sorting indices based on dscode (primary) and dt (secondary)
+    # Note: np.lexsort sorts by the last column first, so we put dt first, then dscode
+    sort_indices = np.lexsort((dt, dscode))
+    
+    # Apply the sort indices to all three arrays
+    sorted_dt = dt[sort_indices]
+    sorted_dscode = dscode[sort_indices]
+    sorted_serie = serie[sort_indices]
+    
+    return sorted_dt, sorted_dscode, sorted_serie
+
 # Helper: compute alpha from window (half-life formula)
 cdef inline double get_alpha(int window):
     return 1.0 - exp(log(0.5) / window)
@@ -45,8 +73,9 @@ cdef update_ewmkurt_values(int64_t[:] codes,
     cdef double value, squared_value, cubed_value, fourth_value
     cdef double new_value, new_squared_value, new_cubed_value, new_fourth_value
     cdef double variance, m4, kurt
-    cdef EWMState* s # we need to use references to prevent copying the struct
-    
+    cdef EWMState s
+    cdef int64_t prev_dscode=-1
+
     for i in range(n):
         code = codes[i]
         value = values[i]
@@ -56,9 +85,9 @@ cdef update_ewmkurt_values(int64_t[:] codes,
         ts = timestamps[i]
 
         # Using operator[] will insert a default EWMState (with last_timestamp==0) if not present.
-        #s = state_map[code]    
-        s = &state_map[code]  # Get pointer to the value
-
+        if prev_dscode!=code:
+            state_map[prev_dscode] = s  # Save updated state.
+            s = state_map[code]
         if s.last_timestamp == 0:
             # First occurrence: initialize state with current values.
             s.value = value
@@ -89,8 +118,9 @@ cdef update_ewmkurt_values(int64_t[:] codes,
             s.cubed_value   = new_cubed_value
             s.fourth_value  = new_fourth_value
             s.last_timestamp = ts
-        #state_map[code] = s  # Save updated state.
+        
         result[i] = kurt
+        prev_dscode = code
     return result
 
 #########################################################
@@ -168,8 +198,8 @@ cdef class EwmKurtStepper:
         dscode: numpy array of int64 codes.
         serie: numpy array of float64 values.
         """
+        dt,dscode,serie = sort_by_code_and_date(dt, dscode, serie)
         cdef np.ndarray[int64_t, ndim=1] ts_array = dt.view(np.int64)
         cdef int64_t[:] codes = dscode
         cdef double[:] values = serie
-        res= update_ewmkurt_values(codes, values, ts_array, self.alpha, self.state_map)
-        return np.array(res)
+        return update_ewmkurt_values(codes, values, ts_array, self.alpha, self.state_map)

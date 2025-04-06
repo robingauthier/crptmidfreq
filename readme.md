@@ -100,7 +100,13 @@ bucketplot against the time of the day please !!!
 
 
 
-
+https://console.anthropic.com/settings/billing
 https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/overview#install-and-authenticate
 npm install -g @anthropic-ai/claude-code
 https://console.anthropic.com/settings/billing
+
+there is a folder stepper/ that contains some numba Stepper classes. They all have a method update that enables me    │
+│   to backtest and quickly run in production some features that will be used to forecast stock/crypto prices. I then     │
+│   created a folder stepperc/ inside I worked on incr_ewmkurt.pyx which is a cython version of stepper/incr_ewmkurt.py   │
+│   ( numba) . So please read very carefully how I translated the numba code into a cython one. And please do the same    │
+│   for all the other numba codes in stepper/ folder.  

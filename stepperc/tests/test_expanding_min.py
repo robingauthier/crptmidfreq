@@ -1,9 +1,9 @@
 import pandas as pd
 
-from crptmidfreq.stepper.incr_expanding_min import *
-from crptmidfreq.stepper.tests.test_incr_ewm import generate_data
+from crptmidfreq.stepperc.incr_expanding_min import *
+from crptmidfreq.stepperc.tests.test_incr_ewm import generate_data
 
-# pytest ./crptmidfreq/stepper/tests/test_expanding_min.py --pdb --maxfail=1
+# pytest ./crptmidfreq/stepperc/tests/test_expanding_min.py --pdb --maxfail=1
 
 
 def test_against_pandas():

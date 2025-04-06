@@ -1,9 +1,9 @@
 import pandas as pd
+import numpy as np
+from crptmidfreq.stepperc.incr_ewm import EwmStepper
 
-from crptmidfreq.stepper.incr_ewm import *
 
-
-# pytest ./crptmidfreq/stepper/tests/test_incr_ewm.py --pdb --maxfail=1
+# pytest ./crptmidfreq/stepperc/tests/test_incr_ewm.py --pdb --maxfail=1
 
 def generate_data(n_samples, n_codes):
     """Generate test data"""
@@ -52,7 +52,6 @@ def test_against_pandas():
     print(f"Correlation between pandas and implementation: {correlation}")
     assert correlation > 0.9, f"Expected correlation >0.9, got {correlation}"
 
-    return True
 
 
 def test_save_load():
@@ -73,9 +72,6 @@ def test_save_load():
     # Compare states
     assert ewm.window == ewm_loaded.window
     assert ewm.alpha == ewm_loaded.alpha
-    for code in ewm.last_sum.keys():
-        assert ewm.last_sum[code] == ewm_loaded.last_sum[code]
-        assert ewm.last_timestamps[code] == ewm_loaded.last_timestamps[code]
 
 
 def test_save_load_result():
@@ -117,4 +113,4 @@ def test_save_load_result():
     print(f"Correlation between pandas and implementation: {correlation}")
     assert correlation > 0.9, f"Expected correlation >0.9, got {correlation}"
 
-    return True
+

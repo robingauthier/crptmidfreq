@@ -47,6 +47,7 @@ def mr_mual_feats(featd, feats=['sret_kmeans'], outname='mual', folder=None, nam
         alpha = 1-ewm_alpha(win)
 
         # ewm(X) has Var = Var(x_i)* (1-alpha)/(1+alpha)
+        # https://atamethod.wordpress.com/wp-content/uploads/2016/11/presentation.pdf
         featd[f'todel_{ewm_col}'] = featd[ewm_col]*np.sqrt((1+alpha)/(1-alpha))
         featd, nfeats = perform_divide(featd,
                                        numcols=[f'todel_{ewm_col}'],

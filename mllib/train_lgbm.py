@@ -33,20 +33,7 @@ def gen_lgbm_lin_params(n_samples=10e6):
         drop_rate=0.1,  # dart
         min_data_in_leaf=max(200, int(0.05*n_samples)),
     )
-    lgb_kwargs = dict(
-        objective='regression_l2',
-        learning_rate=1e-3,
-        n_jobs=10,
-        linear_tree=False,
-        verbosity=-1,
-        # feature_fraction=0.2,  # should make it a lot faster !
-        n_estimators=400,
-        max_bin=60,
-        num_leaves=15,
-        max_depth=15,
-        boosting='gbdt',
-        min_data_in_leaf=2000,
-    )
+
     return lgb_kwargs
 
 

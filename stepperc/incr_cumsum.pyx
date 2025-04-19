@@ -6,6 +6,7 @@ from libc.math cimport isnan
 from libcpp.unordered_map cimport unordered_map
 from crptmidfreq.config_loc import get_feature_folder
 from cython.operator import dereference, postincrement
+from crptmidfreq.stepperc.utils import load_instance, save_instance
 
 # Typedef C types for clarity
 ctypedef np.int64_t int64_t
@@ -15,14 +16,14 @@ ctypedef np.float64_t float64_t
 # Define a C++ struct to hold all state for one code
 #########################################################
 cdef struct CumSumState:
-    double value
+    float64_t value
     int64_t last_timestamp  # Sentinel: 0 indicates uninitialized
 
 #########################################################
 # Optimized update function using a combined state_map
 #########################################################
 cdef cumsum_values(int64_t[:] codes,
-                   double[:] values,
+                   float64_t[:] values,
                    int64_t[:] timestamps,
                    unordered_map[int64_t, CumSumState]& state_map):
     """
@@ -30,9 +31,9 @@ cdef cumsum_values(int64_t[:] codes,
     Uses one unordered_map that maps a code to its state.
     """
     cdef int64_t n = codes.shape[0]
-    cdef double[:] result = np.empty(n, dtype=np.float64)
+    cdef float64_t[:] result = np.zeros(n, dtype=np.float64)
     cdef int64_t i, code, ts
-    cdef double value, last_loc, res
+    cdef float64_t value, last_loc, res
     cdef CumSumState* s
     
     for i in range(n):
@@ -42,7 +43,7 @@ cdef cumsum_values(int64_t[:] codes,
 
         # Using operator[] will insert a default CumSumState if not present
         s = &state_map[code]  # Get pointer to the value
-        
+
         # Check timestamp is increasing for this code
         if s.last_timestamp != 0 and ts < s.last_timestamp:
             raise ValueError("DateTime must be strictly increasing per code")
@@ -55,13 +56,13 @@ cdef cumsum_values(int64_t[:] codes,
             res = last_loc
         else:
             res = value + last_loc
-            
+
         # Store updates
         s.value = res
         s.last_timestamp = ts
-        
         # Store result for this row
         result[i] = res
+
 
     return result
 
@@ -107,11 +108,14 @@ cdef class CumSumStepper:
         self.state_map = unordered_map[int64_t, CumSumState]()
 
     def save(self):
-        self.save_utility()
+        save_instance(self)
 
     @classmethod
     def load(cls, folder, name):
-        return cls.load_utility(cls, folder=folder, name=name)
+        """
+        Load an instance of the class from a pickle file.
+        """
+        return load_instance(cls, folder, name)
 
     def __getstate__(self):
         """
@@ -133,15 +137,8 @@ cdef class CumSumStepper:
         dscode: numpy array of int64 codes.
         serie: numpy array of float64 values.
         """
-        # Input validation
-        if not isinstance(dt, np.ndarray) or not isinstance(dscode, np.ndarray) or not isinstance(serie, np.ndarray):
-            raise ValueError("All inputs must be numpy arrays")
-
-        if len(dt) != len(dscode) or len(dt) != len(serie):
-            raise ValueError("All inputs must have the same length")
-            
         # Convert datetime64 to int64 nanoseconds
-        cdef np.ndarray[int64_t, ndim=1] ts_array = dt.astype('datetime64[ns]').astype('int64')
+        cdef np.ndarray[int64_t, ndim=1] ts_array = dt.view(np.int64)
         cdef int64_t[:] codes = dscode
         cdef double[:] values = serie
         

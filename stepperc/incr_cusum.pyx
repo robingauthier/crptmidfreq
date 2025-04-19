@@ -6,6 +6,7 @@ from libc.math cimport isnan, fmax
 from libcpp.unordered_map cimport unordered_map
 from crptmidfreq.config_loc import get_feature_folder
 from cython.operator import dereference, postincrement
+from crptmidfreq.stepperc.utils import load_instance, save_instance
 
 # Typedef C types for clarity
 ctypedef np.int64_t int64_t
@@ -131,12 +132,14 @@ cdef class CusumStepper:
         self.state_map = unordered_map[int64_t, CusumState]()
 
     def save(self):
-        self.save_utility()
+        save_instance(self)
 
     @classmethod
     def load(cls, folder, name, target_mean=0.0, k=0.5, h=5.0):
-        return cls.load_utility(cls, folder=folder, name=name, 
-                              target_mean=target_mean, k=k, h=h)
+        """
+        Load an instance of the class from a pickle file.
+        """
+        return load_instance(cls, folder, name, target_mean=target_mean, k=k, h=h)
 
     def __getstate__(self):
         """

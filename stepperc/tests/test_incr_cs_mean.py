@@ -3,7 +3,7 @@ import pandas as pd
 from crptmidfreq.stepper.incr_cs_mean import *
 
 
-# pytest ./crptmidfreq/stepper/tests/test_incr_cs_mean.py --pdb --maxfail=1
+# pytest ./crptmidfreq/stepperc/tests/test_incr_cs_mean.py --pdb --maxfail=1
 
 
 def generate_data(n_samples, n_codes):

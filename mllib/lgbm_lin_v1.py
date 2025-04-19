@@ -26,5 +26,6 @@ def gen_lgbm_lin_v1(n_samples):
         lambda_l2=0.0,  # not used
         drop_rate=0.1,  # dart
         min_data_in_leaf=max(200, int(0.05*n_samples)),
+        early_stopping_round=10,
     )
     return LGBMRegressor(**lgb_kwargs)

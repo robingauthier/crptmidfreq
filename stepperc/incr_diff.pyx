@@ -6,6 +6,7 @@ from libc.math cimport isnan
 from libcpp.unordered_map cimport unordered_map
 from crptmidfreq.config_loc import get_feature_folder
 from cython.operator import dereference, postincrement
+from crptmidfreq.stepperc.utils import load_instance, save_instance
 
 # Typedef C types for clarity
 ctypedef np.int64_t int64_t
@@ -100,7 +101,7 @@ cdef unordered_map[int64_t, DiffState] _pydict_to_umap_state(dict d):
 cdef class DiffStepper:
     cdef dict __dict__
     
-    cdef public int window
+    #cdef public int window
     cdef unordered_map[int64_t, DiffState] state_map
 
     def __init__(self, folder="", name="", window=1):
@@ -111,11 +112,14 @@ cdef class DiffStepper:
         self.state_map = unordered_map[int64_t, DiffState]()
 
     def save(self):
-        self.save_utility()
+        save_instance(self)
 
     @classmethod
     def load(cls, folder, name, window=1):
-        return cls.load_utility(cls, folder=folder, name=name, window=window)
+        """
+        Load an instance of the class from a pickle file.
+        """
+        return load_instance(cls, folder, name, window=window)
 
     def __getstate__(self):
         """

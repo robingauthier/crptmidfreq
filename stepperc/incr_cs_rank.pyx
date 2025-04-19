@@ -8,6 +8,7 @@ from libcpp.vector cimport vector
 from libcpp.algorithm cimport sort
 from crptmidfreq.config_loc import get_feature_folder
 from cython.operator import dereference, postincrement
+from crptmidfreq.stepperc.utils import load_instance, save_instance
 
 # Typedef C types for clarity
 ctypedef np.int64_t int64_t
@@ -310,11 +311,14 @@ cdef class csRankStepper:
         self.by_state_map = unordered_map[int64_t, RankByState]()
 
     def save(self):
-        self.save_utility()
+        save_instance(self)
 
     @classmethod
     def load(cls, folder, name, percent=0):
-        return cls.load_utility(cls, folder=folder, name=name, percent=percent)
+        """
+        Load an instance of the class from a pickle file.
+        """
+        return load_instance(cls, folder, name, percent=percent)
 
     def __getstate__(self):
         """

@@ -6,6 +6,7 @@ from libc.math cimport isnan, fmax, fmin
 from libcpp.unordered_map cimport unordered_map
 from crptmidfreq.config_loc import get_feature_folder
 from cython.operator import dereference, postincrement
+from crptmidfreq.stepperc.utils import load_instance, save_instance
 
 # Typedef C types for clarity
 ctypedef np.int64_t int64_t
@@ -107,11 +108,14 @@ cdef class ClipStepper:
         self.state_map = unordered_map[int64_t, ClipState]()
 
     def save(self):
-        self.save_utility()
+        save_instance(self)
 
     @classmethod
     def load(cls, folder, name, low_clip=float("nan"), high_clip=float("nan")):
-        return cls.load_utility(cls, folder=folder, name=name, low_clip=low_clip, high_clip=high_clip)
+        """
+        Load an instance of the class from a pickle file.
+        """
+        return load_instance(cls, folder, name, low_clip=low_clip, high_clip=high_clip)
 
     def __getstate__(self):
         """

@@ -1,7 +1,9 @@
 import pandas as pd
 
-from crptmidfreq.stepper.rolling_mean import *
-from crptmidfreq.stepper.tests.test_incr_ewm import generate_data
+from crptmidfreq.stepperc.rolling_mean import RollingMeanStepper
+from crptmidfreq.stepperc.tests.test_incr_ewm import generate_data
+
+# pytest ./crptmidfreq/stepperc/tests/test_rolling_mean.py --pdb --maxfail=1
 
 
 def test_against_pandas():

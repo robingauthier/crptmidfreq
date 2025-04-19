@@ -7,6 +7,7 @@ from libcpp.unordered_map cimport unordered_map
 from libcpp.vector cimport vector
 from crptmidfreq.config_loc import get_feature_folder
 from cython.operator import dereference, postincrement
+from crptmidfreq.stepperc.utils import load_instance, save_instance
 
 # Use the typedefs from the .pxd file - don't redefine them here
 
@@ -16,36 +17,48 @@ cdef update_rolling_values(int64_t[:] timestamps,
                            unordered_map[int64_t, RollingState]& state_map,
                            int window):
     """
-    Update rolling values for each code.
+    Update rolling values for all codes at once.
     Uses one unordered_map that maps a code to its rolling state.
     """
     cdef int64_t n = codes.shape[0]
-    cdef int64_t i, code, ts, position_loc
-    cdef double value
-    cdef RollingState* s
+    cdef int64_t i, code
     
+    # Loop through all values and update the state
     for i in range(n):
-        code = codes[i]
-        value = values[i]
-        ts = timestamps[i]
+        update_rolling_values_loc(i, timestamps, codes, values, state_map, window)
 
-        # Using operator[] will insert a default RollingState if not present
-        s = &state_map[code]  # Get pointer to the value
+cdef update_rolling_values_loc(
+    int64_t i,
+    int64_t[:] timestamps,
+                           int64_t[:] codes,
+                           double[:] values,
+                           unordered_map[int64_t, RollingState]& state_map,
+                           int window):
+    """
+    Update rolling values for each code.
+    Uses one unordered_map that maps a code to its rolling state.
+    """
+    code = codes[i]
+    value = values[i]
+    ts = timestamps[i]
+
+    # Using operator[] will insert a default RollingState if not present
+    s = &state_map[code]  # Get pointer to the value
+    
+    # Check timestamp is increasing for this code
+    if s.last_timestamp != 0 and ts < s.last_timestamp:
+        raise ValueError("DateTime must be strictly increasing per code")
+
+    # Initialize values vector if first occurrence 
+    if s.values.size() == 0:
+        s.values.resize(window, float('nan'))
+        s.position = 0
         
-        # Check timestamp is increasing for this code
-        if s.last_timestamp != 0 and ts < s.last_timestamp:
-            raise ValueError("DateTime must be strictly increasing per code")
-
-        # Initialize values vector if first occurrence 
-        if s.values.size() == 0:
-            s.values.resize(window, float('nan'))
-            s.position = 0
-            
-        # Update rolling window
-        position_loc = s.position
-        s.values[position_loc] = value
-        s.last_timestamp = ts
-        s.position = (position_loc + 1) % window
+    # Update rolling window
+    position_loc = s.position
+    s.values[position_loc] = value
+    s.last_timestamp = ts
+    s.position = (position_loc + 1) % window
 
 #########################################################
 # Helper functions for pickling the state_map
@@ -100,11 +113,14 @@ cdef class RollingStepper:
         self.state_map = unordered_map[int64_t, RollingState]()
 
     def save(self):
-        self.save_utility()
+        save_instance(self)
 
     @classmethod
     def load(cls, folder, name, window=1):
-        return cls.load_utility(cls, folder=folder, name=name, window=window)
+        """
+        Load an instance of the class from a pickle file.
+        """
+        return load_instance(cls, folder, name, window=window)
 
     def __getstate__(self):
         """
@@ -118,15 +134,3 @@ cdef class RollingStepper:
         self.__dict__.update(state)
         self.state_map = _pydict_to_umap_state(state["state_map"])
 
-    def update_memory(self, dt, dscode, values):
-        """
-        Update the rolling window without computing any result.
-        
-        dt: numpy array of datetime64 values.
-        dscode: numpy array of int64 codes.
-        values: numpy array of float64 values.
-        """
-        cdef np.ndarray[int64_t, ndim=1] ts_array = dt.view(np.int64)
-        cdef int64_t[:] codes = dscode
-        cdef double[:] vals = values
-        update_rolling_values(ts_array, codes, vals, self.state_map, self.window)

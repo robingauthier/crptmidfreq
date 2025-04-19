@@ -6,7 +6,7 @@ from libc.math cimport isnan
 from libcpp.unordered_map cimport unordered_map
 from libcpp.vector cimport vector
 from crptmidfreq.config_loc import get_feature_folder
-from crptmidfreq.stepperc.rolling_base cimport RollingStepper, RollingState, update_rolling_values
+from crptmidfreq.stepperc.rolling_base cimport RollingStepper, RollingState, update_rolling_values_loc
 
 # Typedef C types for clarity
 ctypedef np.int64_t int64_t
@@ -30,11 +30,11 @@ cdef update_rolling_mean(int64_t[:] timestamps,
     cdef double value, sum_val, count
     cdef RollingState* s
     
-    # First update the rolling window for all values
-    update_rolling_values(timestamps, codes, values, state_map, window)
-    
-    # Then compute the mean for each position
+    # Compute the mean for each position, updating the rolling window as we go
     for i in range(n):
+        # Update the rolling window at each position
+        update_rolling_values_loc(i, timestamps, codes, values, state_map, window)
+        
         code = codes[i]
         s = &state_map[code]
         

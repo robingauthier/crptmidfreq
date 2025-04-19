@@ -6,6 +6,7 @@ from libc.math cimport isnan
 from libcpp.unordered_map cimport unordered_map
 from crptmidfreq.config_loc import get_feature_folder
 from cython.operator import dereference, postincrement
+from crptmidfreq.stepperc.utils import load_instance, save_instance
 
 # Typedef C types for clarity
 ctypedef np.int64_t int64_t
@@ -37,16 +38,18 @@ cdef update_cs_mean_values(int64_t[:] codes,
     """
     cdef int64_t n = codes.shape[0]
     cdef double[:] result = np.empty(n, dtype=np.float64)
-    cdef int64_t i, j, code, by, ts, g_last_ts = 0
+    cdef int64_t i, j, code, by, by2, ts, g_last_ts = 0
     cdef double value, wgt
     cdef MeanTimestampState* ts_state
     cdef MeanByState* by_state
+    cdef unordered_map[int64_t, MeanTimestampState].iterator ts_it
+    cdef unordered_map[int64_t, MeanByState].iterator by_it
     
     # Get global last timestamp
-    cdef unordered_map[int64_t, MeanTimestampState].iterator it = ts_state_map.begin()
-    while it != ts_state_map.end():
-        g_last_ts = max(g_last_ts, (<int64_t>(dereference(it).second).timestamp))
-        postincrement(it)
+    ts_it = ts_state_map.begin()
+    while ts_it != ts_state_map.end():
+        g_last_ts = max(g_last_ts, (<int64_t>(dereference(ts_it).second).timestamp))
+        postincrement(ts_it)
     
     j = 0
     for i in range(n):
@@ -91,11 +94,11 @@ cdef update_cs_mean_values(int64_t[:] codes,
                 j += 1
                 
             # Reset all by states
-            it = by_state_map.begin()
-            while it != by_state_map.end():
-                (<MeanByState>(dereference(it).second)).sum = 0.0
-                (<MeanByState>(dereference(it).second)).weight = 0.0
-                postincrement(it)
+            by_it = by_state_map.begin()
+            while by_it != by_state_map.end():
+                (<MeanByState>(dereference(by_it).second)).sum = 0.0
+                (<MeanByState>(dereference(by_it).second)).weight = 0.0
+                postincrement(by_it)
                 
         # Store updates
         ts_state.timestamp = ts
@@ -180,11 +183,14 @@ cdef class csMeanStepper:
         self.by_state_map = unordered_map[int64_t, MeanByState]()
 
     def save(self):
-        self.save_utility()
+        save_instance(self)
 
     @classmethod
     def load(cls, folder, name, is_sum=False):
-        return cls.load_utility(cls, folder=folder, name=name, is_sum=is_sum)
+        """
+        Load an instance of the class from a pickle file.
+        """
+        return load_instance(cls, folder, name, is_sum=is_sum)
 
     def __getstate__(self):
         """

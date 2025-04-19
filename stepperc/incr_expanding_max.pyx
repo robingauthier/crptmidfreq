@@ -7,6 +7,7 @@ from libcpp.unordered_map cimport unordered_map
 from crptmidfreq.config_loc import get_feature_folder
 from cython.operator import dereference, postincrement
 from crptmidfreq.utils.common import get_logger
+from crptmidfreq.stepperc.utils import load_instance, save_instance
 
 logger = get_logger()
 
@@ -104,11 +105,14 @@ cdef class MaxStepper:
         self.state_map = unordered_map[int64_t, MaxState]()
 
     def save(self):
-        self.save_utility()
+        save_instance(self)
 
     @classmethod
     def load(cls, folder, name, n_buckets=8, freq=int(60*24*5)):
-        return cls.load_utility(cls, folder=folder, name=name)
+        """
+        Load an instance of the class from a pickle file.
+        """
+        return load_instance(cls, folder, name)
 
     def __getstate__(self):
         """

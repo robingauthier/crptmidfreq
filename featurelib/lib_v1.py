@@ -53,6 +53,56 @@ def perform_ewm(featd, feats=[], windows=[1], folder=None, name=None, r=g_reg):
             nfeats += [f'{col}_ewm{hl}']
     return featd, nfeats
 
+def perform_theta(featd, feats=[], windows=[1],thetas=[0.5],folder=None, name=None, r=g_reg):
+    """
+    featd is the feature dictionary where we put our result
+    """
+    assert 'dtsi' in featd.keys()
+    assert 'dscode' in featd.keys()
+    for col in feats:
+        assert col in featd.keys()
+    assert np.all(np.diff(featd['dtsi']) >= 0)
+    nfeats = []
+    for col in feats:
+        for hl in windows:
+            for theta in thetas:
+                cls_ewm = ThetaStepper \
+                    .load(folder=f"{folder}", name=f"{name}_{col}_theta{hl}x{theta}", window=hl,theta=theta)
+                ewm_val = cls_ewm.update(featd['dtsi'], featd['dscode'], featd[col])
+                r.add(cls_ewm)
+                featname=f'{col}_theta{hl}x{theta}'
+                featd[featname] = ewm_val
+                nfeats += [featname]
+    return featd, nfeats
+
+def perform_holt_winter(featd, feats=[], alphas=[1],betas=[0.5],gammas=[10],
+                        mems=[100],
+                        time_unit=1e9*60,
+                        use_seasonality=True,folder=None, name=None, r=g_reg):
+    """
+    featd is the feature dictionary where we put our result
+    """
+    assert 'dtsi' in featd.keys()
+    assert 'dscode' in featd.keys()
+    for col in feats:
+        assert col in featd.keys()
+    assert np.all(np.diff(featd['dtsi']) >= 0)
+    nfeats = []
+    for col in feats:
+        for a in alphas:
+            for b in betas:
+                for g in gammas:
+                    for mem in mems:
+                        cls_ewm = HoltWinterStepper \
+                            .load(folder=f"{folder}", name=f"{name}_{col}_{a}x{b}x{g}x{mem}_{use_seasonality}", 
+                                alpha=a*1.0, beta=b*1.0, gamma=g*1.0,use_seasonality=use_seasonality,seasonality=mem,time_unit=time_unit)
+                        ewm_val = cls_ewm.update(featd['dtsi'], featd['dscode'], featd[col])
+                        r.add(cls_ewm)
+                        featname=f'{col}_{a}x{b}x{g}x{mem}_{use_seasonality}'
+                        featd[featname] = ewm_val
+                        nfeats += [featname]
+    return featd, nfeats
+
 
 def perform_macd(featd, feats=[], windows=[[12, 26]], folder=None, name=None, r=g_reg):
     """
@@ -565,7 +615,6 @@ def perform_lag(featd, feats=[], windows=[1], folder=None, name=None, r=g_reg):
                 featd[f'{col}_lag{hl}'] = lag_val
                 nfeats += [f'{col}_lag{hl}']
     return featd, nfeats
-
 
 def perform_lag_forward(featd, feats=[], windows=[1], folder=None, name=None, r=g_reg):
     """

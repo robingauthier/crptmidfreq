@@ -1,9 +1,9 @@
 import pandas as pd
+import  numpy as np
+from crptmidfreq.stepperc.incr_cs_std import *
 
-from crptmidfreq.stepper.incr_cs_std import *
 
-
-# pytest ./crptmidfreq/stepper/tests/test_incr_cs_std.py --pdb --maxfail=1
+# pytest ./crptmidfreq/stepperc/tests/test_incr_cs_std.py --pdb --maxfail=1
 
 
 def generate_data(n_samples, n_codes):

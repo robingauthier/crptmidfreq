@@ -6,6 +6,7 @@ from libc.math cimport isnan, sqrt, pow
 from libcpp.unordered_map cimport unordered_map
 from crptmidfreq.config_loc import get_feature_folder
 from cython.operator import dereference, postincrement
+from crptmidfreq.stepperc.utils import load_instance, save_instance
 
 # Typedef C types for clarity
 ctypedef np.int64_t int64_t
@@ -43,7 +44,8 @@ cdef update_cs_std_values(int64_t[:] codes,
     cdef double value, wgt, vart
     cdef StdTimestampState* ts_state
     cdef StdByState* by_state
-    
+    cdef unordered_map[int64_t, StdByState].iterator it2
+
     # Get global last timestamp
     cdef unordered_map[int64_t, StdTimestampState].iterator it = ts_state_map.begin()
     while it != ts_state_map.end():
@@ -97,13 +99,13 @@ cdef update_cs_std_values(int64_t[:] codes,
                 j += 1
                 
             # Reset all by states
-            it = by_state_map.begin()
-            while it != by_state_map.end():
-                (<StdByState>(dereference(it).second)).sum = 0.0
-                (<StdByState>(dereference(it).second)).sum2 = 0.0
-                (<StdByState>(dereference(it).second)).weight = 0.0
-                (<StdByState>(dereference(it).second)).count = 0
-                postincrement(it)
+            it2 = by_state_map.begin()
+            while it2 != by_state_map.end():
+                (<StdByState>(dereference(it2).second)).sum = 0.0
+                (<StdByState>(dereference(it2).second)).sum2 = 0.0
+                (<StdByState>(dereference(it2).second)).weight = 0.0
+                (<StdByState>(dereference(it2).second)).count = 0
+                postincrement(it2)
                 
         # Store updates
         ts_state.timestamp = ts
@@ -196,11 +198,14 @@ cdef class csStdStepper:
         self.by_state_map = unordered_map[int64_t, StdByState]()
 
     def save(self):
-        self.save_utility()
+        save_instance(self)
 
     @classmethod
     def load(cls, folder, name, mincnt=1):
-        return cls.load_utility(cls, folder=folder, name=name, mincnt=mincnt)
+        """
+        Load an instance of the class from a pickle file.
+        """
+        return load_instance(cls, folder, name, mincnt=mincnt)
 
     def __getstate__(self):
         """
@@ -234,9 +239,6 @@ cdef class csStdStepper:
         # Ensure minimum count for standard deviation calculation 
         self.mincnt = max(2, self.mincnt)
             
-        # Validate inputs
-        self.validate_input(dt, dscode, serie, by=by, wgt=wgt)
-        
         # Ensure by is int64
         by_int = by.astype(np.int64)
         

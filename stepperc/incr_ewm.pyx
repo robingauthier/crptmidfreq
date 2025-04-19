@@ -6,8 +6,10 @@ from libc.math cimport exp, log, isnan
 from libcpp.unordered_map cimport unordered_map
 from crptmidfreq.config_loc import get_feature_folder
 from cython.operator import dereference, postincrement
+from crptmidfreq.stepperc.utils import load_instance,save_instance
 
 # Helper: compute alpha from window (half-life formula)
+
 cdef inline double get_alpha(double window):
     """Convert half-life to alpha"""
     assert window > 0
@@ -101,48 +103,24 @@ cdef class EwmStepper:
         self.state_map = unordered_map[int64_t, EWMState]()
         
     def save(self):
-        import os
-        import pickle
-
-        # Construct the full path for the pickle file.
-        cdef str filepath = os.path.join(self.folder, self.name + ".pkl")
-        
-        # Open the file in binary write mode and dump the object using pickle.
-        with open(filepath, "wb") as f:
-            pickle.dump(self, f, protocol=pickle.HIGHEST_PROTOCOL)
+        save_instance(self)
 
     @classmethod
     def load(cls, folder, name, window=1):
         """
         Load an instance of the class from a pickle file.
-
-        The file is expected to be located at:
-            <get_feature_folder()>/<folder>/<name>.pkl
         """
-        import os
-        import pickle
+        return load_instance(cls, folder, name,window=window)
 
-        # Construct the full file path
-        filepath = os.path.join(get_feature_folder(), folder, name + ".pkl")
-        if not os.path.exists(filepath):
-            return cls(folder=folder, name=name, window=window)
-        
-        # Open the file and load the pickled object
-        with open(filepath, "rb") as f:
-            instance = pickle.load(f)
-
-        return instance
     def __getstate__(self):
         """
         For pickling, convert state_map to a Python dict.
         """
         state = self.__dict__.copy()
         state["state_map"] = _umap_to_pydict_state(self.state_map)
-        print(state)
         return state
 
     def __setstate__(self, state):
-        print(state)
         self.__dict__.update(state)
         self.state_map = _pydict_to_umap_state(state["state_map"])
 

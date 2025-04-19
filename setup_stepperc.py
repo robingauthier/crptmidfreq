@@ -16,13 +16,17 @@ pyx_files = glob.glob(os.path.join(pyx_folder, "*.pyx"))
 # Create a list of Extension objects for each .pyx file
 extensions = []
 for pyx_file in pyx_files:
-    if not 'incr_ewm' in pyx_file:
-        continue
+    print(pyx_file)
+    # Build all pyx files
+    # Commented out to build all files: 
+    # if not 'rolling_mean' in pyx_file:
+    #     continue
+    #print(pyx_file)
     # The module name is based on the file name (without extension)
     module_name = os.path.splitext(os.path.basename(pyx_file))[0]
     extensions.append(
         Extension(
-            name=f'crptmidfreq.stepperc.{module_name}',
+            name='crptmidfreq.stepperc.{0}'.format(module_name),
             sources=[pyx_file],
             include_dirs=[numpy.get_include()],
             language="c++",  # necessary otherwise include ios issue

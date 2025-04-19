@@ -5,7 +5,7 @@ from crptmidfreq.utils.common import clean_folder
 from crptmidfreq.stepper.incr_groupby_sum import GroupbySumStepper
 
 
-# pytest ./crptmidfreq/stepper/tests/test_incr_groupby_sum.py --pdb --maxfail=1
+# pytest ./crptmidfreq/stepperc/tests/test_incr_groupby_sum.py --pdb --maxfail=1
 
 
 def test_groupby_last_stepper_update():

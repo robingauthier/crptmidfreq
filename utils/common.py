@@ -214,3 +214,9 @@ def get_day_of_week_unix(timestamps_sec):
     dow = (dow - 1) % 7  # Now 0 = Monday, ..., 6 = Sunday (matches pandas)
 
     return dow
+
+def pandas_to_dict(df):
+    r = {}
+    for col in df.columns:
+        r[col] = df[col].values
+    return r

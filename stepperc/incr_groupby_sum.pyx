@@ -6,6 +6,7 @@ from libc.math cimport isnan
 from libcpp.unordered_map cimport unordered_map
 from libcpp.vector cimport vector
 from crptmidfreq.config_loc import get_feature_folder
+from crptmidfreq.stepperc.utils import load_instance, save_instance
 
 # Typedef C types for clarity
 ctypedef np.int64_t int64_t
@@ -99,11 +100,14 @@ cdef class GroupbySumStepper:
         self.is_sum = is_sum
 
     def save(self):
-        self.save_utility()
+        save_instance(self)
 
     @classmethod
     def load(cls, folder, name, is_sum=True):
-        return cls.load_utility(cls, folder=folder, name=name, is_sum=is_sum)
+        """
+        Load an instance of the class from a pickle file.
+        """
+        return load_instance(cls, folder, name, is_sum=is_sum)
 
     def update(self, dt, dscode, by, serie):
         """

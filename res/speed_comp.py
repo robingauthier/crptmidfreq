@@ -2,8 +2,6 @@ import numpy as np
 import pandas as pd
 from pprint import pprint
 from datetime import datetime, timedelta
-from crptmidfreq.stepperc.incr_ewmkurt import EwmKurtStepper as EwmKurtStepperCython
-from crptmidfreq.stepper.incr_ewmkurt import EwmKurtStepper as EwmKurtStepperNumba
 
 
 def compare_speed_numba_cython():
@@ -29,11 +27,13 @@ def compare_speed_numba_cython():
 
     time1 = pd.to_datetime('now')
     # Calculate using our implementation
-    stepper = EwmKurtStepperCython(window=100)
+    #stepper = EwmKurtStepperCython(window=100)
+    stepper=EwmStepperCython(window=100)
     time1_1 = pd.to_datetime('now')
     result = stepper.update(df['datetime'].values, df['dscode'].values, df['value'].values)
     time2 = pd.to_datetime('now')
-    stepper = EwmKurtStepperNumba(window=100)
+    #stepper = EwmKurtStepperNumba(window=100)
+    stepper = EwmStepperNumba(window=100)
     result = stepper.update(df['datetime'].values, df['dscode'].values, df['value'].values)
     time3 = pd.to_datetime('now')
 

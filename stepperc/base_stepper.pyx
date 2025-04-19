@@ -6,6 +6,7 @@ from numba import types
 from crptmidfreq.config_loc import get_feature_folder
 from crptmidfreq.utils.common import validate_input
 from crptmidfreq.utils.common import get_logger
+from crptmidfreq.stepperc.utils import load_instance, save_instance
 
 logger = get_logger()
 
@@ -63,7 +64,15 @@ cdef class BaseStepper:
         # Save the state using pickle
         with open(filepath, 'wb') as f:
             pickle.dump(state, f)
+            
+    def save(self):
+        save_instance(self)
 
+    @classmethod
+    def load(cls, folder='', name='', **kwargs):
+        """Load an instance of the class from a pickle file."""
+        return load_instance(cls, folder, name, **kwargs)
+        
     @classmethod
     def load_utility(self, cls, folder='', name='', **kwargs):
         """Load instance from saved state or create new if not exists"""

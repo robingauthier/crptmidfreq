@@ -1,83 +1,75 @@
 import pandas as pd
-from pandas.tseries.offsets import DateOffset
-from dateutil.easter import easter
+from crptmidfreq.season.hols import generate_event_calendar_with_reverse
 
-def get_thanksgiving(year):
-    """Return US Thanksgiving date (4th Thursday in November) for a given year."""
-    nov1 = pd.Timestamp(year=year, month=11, day=1)
-    return nov1 + pd.offsets.WeekOfMonth(week=3, weekday=3)
+# only difference is that a holiday calendar is respected
 
-_holiday_fns = {
-    'easter': lambda y: pd.Timestamp(easter(y)),
-    'thanksgiving': lambda y: get_thanksgiving(y),
-}
 
-def _parse_holiday_entry(entry):
+def deseasonalize_yoy_hol(df,
+                          date_col='date',
+                          stock_col='dscode',
+                          serie_col='serie',
+                          caldf=None,
+                          operation='diff'):
     """
-    Parse strings like 'easter+2' or 'thanksgiving' → (fn, offset_days:int)
+    For each row in df, find the value of `serie_col` exactly 52 weeks before
+    (same day-of-week), and compute the percent residual:
+
+        residual_pct = (current - lag) / lag * 100
+
+    Assumes:
+      - df[date_col] can be cast to datetime
+      - df may have multiple stocks; lag is matched per stock
+      - if no lagged value is found, residual_pct will be NaN
     """
-    if '+' in entry:
-        name, offs = entry.split('+', 1)
-        offs = int(offs)
+    if caldf is None:
+        caldf = generate_event_calendar_with_reverse(start_year=2010, end_year=2030)
+
+    assert operation in ['diff', 'ratio', 'lag']
+    # compute "same weekday one year ago" as 52 weeks back
+    if 'date_p1y_th' not in df.columns:
+        df['date_p1y_th'] = df[date_col] + pd.DateOffset(weeks=52)
+    if 'date_m1y_th' not in df.columns:
+        df['date_m1y_th'] = df[date_col] - pd.DateOffset(weeks=52)
+    if 'date_o' not in df.columns:
+        df['date_o'] = df[date_col]
+    if 'date_p1y_ho' not in df.columns:
+        df = df.merge(caldf[['date', 'date_p1y']]
+                      .rename(columns={'date_p1y': 'date_p1y_ho'}), on='date', how='left')
+    if 'date_p1y' not in df.columns:
+        df['date_p1y'] = df['date_p1y_ho'].fillna(df['date_p1y_th'])
+
+    # prepare a helper table with (stock, lag_date) → lagged series value
+    df_lag = (
+        df[[stock_col, 'date_p1y', 'date_o', serie_col]]
+        .copy()
+        .rename(columns={'date_p1y': date_col, serie_col: f'{serie_col}_lag1y'})
+    )
+
+    df = df.sort_values(date_col)
+    df_lag = df_lag.sort_values(date_col)
+
+    # merge back on stock & date to bring in the lagged value
+    ndf = pd.merge_asof(df.drop(['date_o'], axis=1), df_lag,
+                        on=date_col,
+                        by=stock_col,
+                        direction='backward')
+
+    # compute percent residual
+    rfeats = []
+    if operation == 'ratio':
+        ndf[f'{serie_col}_yoy_pct'] = (
+            (ndf[serie_col] - ndf[f'{serie_col}_lag1y'])
+            / (ndf[serie_col] + ndf[f'{serie_col}_lag1y'])*2.0
+        )
+        rfeats += [f'{serie_col}_yoy_pct']
+    elif operation == 'diff':
+        ndf[f'{serie_col}_yoy'] = (ndf[serie_col] - ndf[f'{serie_col}_lag1y'])
+        rfeats += [f'{serie_col}_yoy']
+    elif operation == 'lag':
+        rfeats += [f'{serie_col}_lag1y']
     else:
-        name, offs = entry, 0
-    try:
-        fn = _holiday_fns[name]
-    except KeyError:
-        raise ValueError(f"Unknown holiday '{name}'")
-    return fn, offs
+        raise(ValueError('not possible'))
+    if 'is_yoy' in ndf.columns:
+        ndf[f'is_yoy'] = 1*(ndf['date_m1y'] == ndf['date_o'])
 
-def deseasonalize_yoy(df,
-                      date_col='date',
-                      stock_col='dscode',
-                      serie_col='serie',
-                      holidays=None):
-    """
-    YoY deseasonalization with special handling for configured moving holidays.
-    
-    Parameters
-    ----------
-    df : pd.DataFrame
-    date_col : str
-    stock_col : str
-    serie_col : str
-    holidays : list of str, e.g. ['easter','easter+1','thanksgiving','thanksgiving+1']
-    
-    Returns
-    -------
-    pd.DataFrame, with new column '{serie_col}_yoy_pct'
-    """
-    if holidays is None:
-        holidays = ['easter', 'thanksgiving']
-    # parse into list of (fn, offset_days)
-    holiday_rules = [_parse_holiday_entry(h) for h in holidays]
-
-    df = df.copy()
-    df[date_col] = pd.to_datetime(df[date_col])
-    df['year'] = df[date_col].dt.year
-
-    def _compute_lag(dt):
-        y = dt.year
-        # check each holiday rule
-        for fn, offs in holiday_rules:
-            hol = fn(y) + DateOffset(days=offs)
-            if dt == hol:
-                return fn(y-1) + DateOffset(days=offs)
-        # fallback → same weekday 52 weeks ago
-        return dt - DateOffset(weeks=52)
-
-    # vectorize lag computation
-    df['lag_date'] = df[date_col].map(_compute_lag)
-
-    # build lag lookup
-    df_lag = (df[[stock_col, 'lag_date', serie_col]]
-              .rename(columns={'lag_date': date_col, serie_col: 'serie_lag'}))
-
-    # merge on (stock, date) → brings in last‑year’s value where available
-    out = pd.merge(df, df_lag, on=[stock_col, date_col], how='left')
-
-    # compute % residual
-    out[f'{serie_col}_yoy_pct'] = ((out[serie_col] - out['serie_lag'])
-                                   / out['serie_lag']) * 100
-
-    return out.drop(columns=['year', 'lag_date'])
+    return ndf, rfeats

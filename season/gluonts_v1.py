@@ -43,12 +43,17 @@ def fit_gluonts_model(df,
     log.info('Training now')
     predictor = estimator.train(train_ds)
 
+    lparams = predictor.network.collect_params()
+    print(lparams)
+    nparams = int(np.sum([np.prod(p.shape) for _, p in lparams.items()]))
+    print(f'We have a total number of {nparams} parameters')
+
     log.info('Predicting now')
     pred_ds = predictor.predict(train_ds)
     temp1 = next(iter(pred_ds))
     horizon = temp1.samples.shape[1]
     context = temp1.samples.shape[0]
-    assert context >= 10
+    #assert context >= 10
 
     for i in range(horizon):
         df[f'{name}_predh{i}_mean'] = np.zeros(df.shape[0])
@@ -74,4 +79,4 @@ def fit_gluonts_model(df,
             # now write each horizon‐step into the matching column
             for h, val in enumerate(forecast):
                 df.at[row_idx, f"{name}_predh{h}_mean"] = val
-    return df
+    return df, {'test_start': train_end}

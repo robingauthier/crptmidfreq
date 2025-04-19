@@ -48,7 +48,7 @@ def train_model(folder_path,
                 weight_decay=1e-3,
                 batch_up=-1):
     """
-
+    The goal here is to train a LightGBM model using a streaming dataset.
     """
     dataset = ParquetIterableDataset(folder_path, target=target, filterfile=filterfile)
 

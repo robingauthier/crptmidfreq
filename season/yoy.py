@@ -41,13 +41,13 @@ def deseasonalize_yoy(df,
 
     # compute percent residual
     rfeats = []
-    if operation == 'divide':
+    if operation == 'ratio':
         ndf[f'{serie_col}_yoy_pct'] = (
             (ndf[serie_col] - ndf[f'{serie_col}_lag1y'])
             / (ndf[serie_col] + ndf[f'{serie_col}_lag1y'])*2.0
         )
         rfeats += [f'{serie_col}_yoy_pct']
-    elif operation == 'ratio':
+    elif operation == 'diff':
         ndf[f'{serie_col}_yoy'] = (ndf[serie_col] - ndf[f'{serie_col}_lag1y'])
         rfeats += [f'{serie_col}_yoy']
     elif operation == 'lag':

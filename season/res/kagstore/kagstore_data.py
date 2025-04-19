@@ -28,8 +28,7 @@ def get_data(agglevel='family'):
     """
     log.info('season - get data kaggle retail')
 
-    raw_data_dir = os.path.normpath(os.path.join(os.path.dirname(__file__), 'data/'))
-
+    raw_data_dir = os.path.normpath(os.path.join(os.path.dirname(__file__), './../../data/'))
     df = pd.read_csv(raw_data_dir+'/kag-store-sales-train.csv')
     if agglevel == 'family':
         df = df.groupby(['family', 'date']).agg({'sales': 'sum', 'onpromotion': 'sum'}).reset_index()
@@ -50,6 +49,8 @@ def get_data(agglevel='family'):
 
     df['dscode_str'] = df['family']+'_'+df['store_nbr'].astype(str)
     df['dscode'] = pd.Categorical(df['dscode_str']).codes
+
+    df['sales'] = df['sales'].fillna(0.0)
 
     # sorting now
     df = df.sort_values(['date'])
@@ -73,16 +74,7 @@ def get_data(agglevel='family'):
     return df, featnames
 
 
-def evaluate_model(df, name=''):
-    first_date = df['date'].min()
-    #mae = (df['wgt']*(df['sales']-df['pred_sales']).abs()).mean()
-    mae = (df['sales']-df['pred_sales']).abs().mean()
-    nbpoints = df.shape[0]
-    print(f'MAE model {name} is mae:{mae:.2f}  -- cnt:{nbpoints} -- date>={first_date}')
-    return mae
-
-
-# ipython -i -m crptmidfreq.season.kagstore_data
+# ipython -i -m crptmidfreq.season.res.kagstore.kagstore_data
 if __name__ == '__main__':
     df, f = get_data()
-    to_csv(df.loc[lambda x:x['family'] == 'LIQUOR,WINE,BEER'], 'example')
+    df2, f2 = get_data(agglevel=None)

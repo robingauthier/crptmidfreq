@@ -36,6 +36,7 @@ def create_synthetic_data(n=10000, m=20, k=3, noise_std=1.0):
     df.columns = header
     df['forward_fh1'] = y
     df['forward_fh2'] = true_signal
+    df['dtsi'] = np.arange(n)
     return df
 
 

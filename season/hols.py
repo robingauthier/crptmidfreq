@@ -1,11 +1,8 @@
-import pandas as pd
-from datetime import date, timedelta
-from dateutil.easter import easter
-from pandas.tseries.offsets import WeekOfMonth, DateOffset
-import convertdate.hebrew as hebrew
-import convertdate.islamic as islamic
+from datetime import date
+
 import convertdate.holidays as chols
-from dateutil.relativedelta import relativedelta, SU
+import pandas as pd
+from dateutil.relativedelta import SU, relativedelta
 
 
 def todate(tupleymd):
@@ -42,7 +39,16 @@ def generate_event_calendar_loc(y):
         (date(y,  5,  5), 'CincoDeMayo',       'Mid'),
 
 
+
     ]
+    for i in range(-10, 10):
+        # Days around Christmas
+        rows += [(todate(chols.christmas(y))+relativedelta(days=i), f'Christmas+{i}',   'Mid')]
+        # Days around Easter
+        rows += [(todate(chols.easter(y))+relativedelta(days=i), f'Easter+{i}',   'Mid')]
+        # Days around Thanksgiving
+        rows += [(todate(chols.thanksgiving(y))+relativedelta(days=i), f'Thanksgiving+{i}',   'Mid')]
+
     return rows
 
 
@@ -56,7 +62,7 @@ def generate_event_calendar(start_year=2010, end_year=2030):
     df.columns = ['date', 'evtname', 'evtimp']
     df['date'] = pd.to_datetime(df['date'])
     df = df.sort_values('date')
-
+    df = df.drop_duplicates(subset=['date'], keep='first')
     return df
 
 
@@ -66,9 +72,9 @@ def generate_event_calendar_with_reverse(start_year=2010, end_year=2030):
     for events in the base event calendar.
 
 
-    Returns a table with 
-    date        date_p1y    evtname  
-    2025-04-20  2024-03-31  Easter   
+    Returns a table with
+    date        date_p1y    evtname
+    2025-04-20  2024-03-31  Easter
     2025-03-30  2024-04-21  Easter-R     ### 2025-03-30 = 2024-03-31 + 52 weeks  and 2024-04-21 = 2025-04-20 - 52 weeks
     """
     # Base calendar

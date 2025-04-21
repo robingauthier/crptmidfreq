@@ -1,10 +1,12 @@
 import argparse
 import os
-import xmltodict
+
 import pandas as pd
 import requests
+import xmltodict
 
 from crptmidfreq.config_loc import get_data_folder
+
 
 def extract_base_loc(base,sym,restype,adj=''):
     """restype = 1 : base   (ex :USDT,BTC)

@@ -1,11 +1,12 @@
 
 import numpy as np
-from crptmidfreq.stepper.base_stepper import BaseStepper
-from crptmidfreq.utils.common import get_logger
-from numba.typed import Dict
 from numba.core import types
-from crptmidfreq.stepper.incr_model_timeclf import get_dts_max_before
-from crptmidfreq.stepper.incr_model_timeclf import TimeClfStepper
+from numba.typed import Dict
+
+from crptmidfreq.stepper.base_stepper import BaseStepper
+from crptmidfreq.stepper.incr_model_timeclf import (TimeClfStepper,
+                                                    get_dts_max_before)
+from crptmidfreq.utils.common import get_logger
 
 # Quite different from incr_model because of the way the Kmeans works
 # stocks are features.. but the nb of features can vary because I can add new stocks.

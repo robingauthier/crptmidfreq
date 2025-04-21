@@ -1,8 +1,10 @@
 cimport cython
 cimport numpy as np
-import numpy as np
-from crptmidfreq.stepper.tdigest.tdigestloc cimport TDigest # enables to have TDigest as a type
 
+import numpy as np
+
+from crptmidfreq.stepper.tdigest.\
+    tdigestloc cimport TDigest  # enables to have TDigest as a type
 
 
 def expanding_quantile( dt, dscode, serie, qs,tdigest_map,freq,last_values,last_i):

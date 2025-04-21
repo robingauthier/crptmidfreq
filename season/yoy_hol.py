@@ -1,4 +1,5 @@
 import pandas as pd
+
 from crptmidfreq.season.hols import generate_event_calendar_with_reverse
 
 # only difference is that a holiday calendar is respected
@@ -49,11 +50,13 @@ def deseasonalize_yoy_hol(df,
     df_lag = df_lag.sort_values(date_col)
 
     # merge back on stock & date to bring in the lagged value
-    ndf = pd.merge_asof(df.drop(['date_o'], axis=1), df_lag,
-                        on=date_col,
-                        by=stock_col,
-                        direction='backward')
-
+    if not f'{serie_col}_lag1y' in df.columns:
+        ndf = pd.merge_asof(df.drop(['date_o'], axis=1), df_lag,
+                            on=date_col,
+                            by=stock_col,
+                            direction='backward')
+    else:
+        ndf = df
     # compute percent residual
     rfeats = []
     if operation == 'ratio':

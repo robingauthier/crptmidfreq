@@ -34,11 +34,13 @@ def deseasonalize_yoy(df,
     )
 
     # merge back on stock & date to bring in the lagged value
-    ndf = pd.merge_asof(df.drop(['date_o'], axis=1), df_lag,
-                        on=date_col,
-                        by=stock_col,
-                        direction='backward')
-
+    if not f'{serie_col}_lag1y' in df.columns:
+        ndf = pd.merge_asof(df.drop(['date_o'], axis=1), df_lag,
+                            on=date_col,
+                            by=stock_col,
+                            direction='backward')
+    else:
+        ndf = df
     # compute percent residual
     rfeats = []
     if operation == 'ratio':
@@ -46,9 +48,11 @@ def deseasonalize_yoy(df,
             (ndf[serie_col] - ndf[f'{serie_col}_lag1y'])
             / (ndf[serie_col] + ndf[f'{serie_col}_lag1y'])*2.0
         )
+        ndf[f'{serie_col}_yoy_pct'] = ndf[f'{serie_col}_yoy_pct'].clip(lower=-0.5, upper=0.5)
         rfeats += [f'{serie_col}_yoy_pct']
     elif operation == 'diff':
         ndf[f'{serie_col}_yoy'] = (ndf[serie_col] - ndf[f'{serie_col}_lag1y'])
+        ndf[f'{serie_col}_yoy'] = ndf[f'{serie_col}_yoy'].clip(lower=-0.5, upper=0.5)
         rfeats += [f'{serie_col}_yoy']
     elif operation == 'lag':
         rfeats += [f'{serie_col}_lag1y']

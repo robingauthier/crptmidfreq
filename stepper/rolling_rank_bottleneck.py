@@ -1,5 +1,6 @@
 import numpy as np
 from bottleneck import move_rank
+
 from crptmidfreq.stepper.base_stepper import BaseStepper
 
 

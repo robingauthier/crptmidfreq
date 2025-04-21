@@ -1,11 +1,12 @@
 import os
 import shutil
-import numpy as np
 
+import numpy as np
 import pandas as pd
+
+from crptmidfreq.mllib.train_lgbm import gen_lgbm_lin_params
 # Adjust this import path to wherever your ModelStepper is defined
 from crptmidfreq.stepper.incr_model_batch import ModelBatchStepper
-from crptmidfreq.mllib.train_lgbm import gen_lgbm_lin_params
 
 # pytest ./crptmidfreq/stepper/tests/test_incr_model_batch_lgbm_update.py --pdb --maxfail=1
 

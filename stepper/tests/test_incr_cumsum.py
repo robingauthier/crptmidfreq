@@ -1,6 +1,7 @@
 import numpy as np
 
 from crptmidfreq.utils.common import clean_folder
+
 from ..incr_cumsum import CumSumStepper
 
 

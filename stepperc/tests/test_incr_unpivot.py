@@ -1,6 +1,8 @@
 import numpy as np
 import pandas as pd
+
 from crptmidfreq.utils.common import clean_folder
+
 from ..incr_pivot import PivotStepper
 from ..incr_unpivot import UnPivotStepper
 

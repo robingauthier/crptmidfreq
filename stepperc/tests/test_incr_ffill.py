@@ -4,6 +4,7 @@ from numba import types
 from numba.typed import Dict
 
 from ..incr_ffill import FfillStepper, ffill_values
+
 # pytest ./crptmidfreq/stepper/tests/test_incr_ffill.py --pdb --maxfail=1
 
 

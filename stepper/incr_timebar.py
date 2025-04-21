@@ -1,9 +1,10 @@
-import numpy as np
-from numba import njit
-from numba.typed import Dict
-from numba import types
 import os
 import pickle
+
+import numpy as np
+from numba import njit, types
+from numba.typed import Dict
+
 from crptmidfreq.config_loc import get_data_folder
 
 

@@ -1,5 +1,6 @@
-import pandas as pd
 import numpy as np
+import pandas as pd
+
 from crptmidfreq.stepper.base_stepper import BaseStepper
 from crptmidfreq.utils.common import get_logger
 

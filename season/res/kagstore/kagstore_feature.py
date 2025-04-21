@@ -1,19 +1,15 @@
-import pandas as pd
-import numpy as np
-import matplotlib
 import os
-import matplotlib.pyplot as plt
-import lightgbm as lgb
-from crptmidfreq.season.holswrap import event_distances
+
+import numpy as np
+import pandas as pd
+
+from crptmidfreq.config_loc import get_feature_folder
+from crptmidfreq.featurelib.lib_v1 import *
+from crptmidfreq.season.res.kagstore.kagstore_data import get_data
 from crptmidfreq.season.yoy import deseasonalize_yoy
 from crptmidfreq.season.yoy_hol import deseasonalize_yoy_hol
-from crptmidfreq.season.res.kagstore.kagstore_data import get_data
-from crptmidfreq.featurelib.lib_v1 import *
-from crptmidfreq.utils.common import to_csv
-from crptmidfreq.utils.common import pandas_to_dict
-from crptmidfreq.config_loc import get_feature_folder
+from crptmidfreq.utils.common import pandas_to_dict, to_csv
 from crptmidfreq.utils.log import get_logger
-import pickle
 
 log = get_logger()
 g_folder = os.path.join(get_feature_folder(), 'kagstore')+'/'
@@ -57,12 +53,47 @@ def add_features(df, f1, use_log=True, use_hols=False):
                         stock_col='dscode',
                         serie_col=f0[0],  # no need to use the lagged version
                         operation='lag')
-    nfeats = lagsales+salyoy+salyoy2+['sales_lag_vs_ewm']+['wgt']
+    ndf, salyoy3 = func(ndf,
+                        date_col='date',
+                        stock_col='dscode',
+                        serie_col=f0[0],  # no need to use the lagged version
+                        operation='diff')
+    ndf, salyoy4 = func(ndf,
+                        date_col='date',
+                        stock_col='dscode',
+                        serie_col=lagsales[0],  # no need to use the lagged version
+                        operation='diff')
+    nfeats = lagsales+salyoy+salyoy2+['sales_lag_vs_ewm']+['wgt']+salyoy4
 
     f2 = {
         'categorical': f1['categorical'],
         'numerical': nfeats,
         'agglevel': f1['agglevel'],
+    }
+
+    return ndf, f2
+
+
+def add_features_lag(df, f1, use_log=True, use_hols=False):
+
+    assert 'dtsi' in df.columns
+    assert 'dscode' in df.columns
+
+    df['dscode'] = df['dscode'].astype(np.int64)
+    df['dtsi'] = df['dtsi'].astype(np.int64)
+
+    defargs = {'folder': g_folder}
+    featd = pandas_to_dict(df)
+    list_lags = range(1, 400)
+    # lagging the target
+    f0 = ['sales_log'] if use_log else ['sales']
+    featd, lagsales = perform_lag(featd, feats=f0, windows=list_lags, **defargs)
+    ndf = pd.DataFrame(featd)
+
+    f2 = {
+        'categorical': [],
+        'numerical': lagsales,
+        'agglevel': [],
     }
 
     return ndf, f2

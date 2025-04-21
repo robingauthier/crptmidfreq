@@ -1,14 +1,14 @@
 import os
 import shutil
+
 import numpy as np
-from sklearn.cluster import KMeans
 import pandas as pd
-from numba.typed import Dict
 from numba.core import types
+from numba.typed import Dict
+from sklearn.cluster import KMeans
+
 # Adjust this import path to wherever your ModelStepper is defined
 from crptmidfreq.stepper.incr_model_pivoted import PivotModelStepper
-from crptmidfreq.stepper.incr_pivot import PivotStepper
-from crptmidfreq.utils.common import merge_dicts
 
 # pytest ./crptmidfreq/stepper/tests/test_incr_model_pivoted.py --pdb --maxfail=1
 

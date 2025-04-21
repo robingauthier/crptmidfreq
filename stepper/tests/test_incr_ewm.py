@@ -2,7 +2,6 @@ import pandas as pd
 
 from crptmidfreq.stepper.incr_ewm import *
 
-
 # pytest ./crptmidfreq/stepper/tests/test_incr_ewm.py --pdb --maxfail=1
 
 def generate_data(n_samples, n_codes):

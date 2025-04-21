@@ -1,7 +1,7 @@
 import numpy as np
 from numba import njit
-from numba.typed import Dict, List
 from numba.core import types
+from numba.typed import Dict, List
 
 
 @njit(cache=True)

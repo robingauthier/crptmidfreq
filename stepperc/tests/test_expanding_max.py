@@ -1,7 +1,7 @@
 import pandas as pd
 
-from crptmidfreq.stepperc.incr_expanding_max import *
 from crptmidfreq.stepper.tests.test_incr_ewm import generate_data
+from crptmidfreq.stepperc.incr_expanding_max import *
 
 # pytest ./crptmidfreq/stepperc/tests/test_expanding_max.py --pdb --maxfail=1
 

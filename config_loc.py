@@ -1,5 +1,7 @@
 import os
+
 import pandas as pd
+
 pd.set_option('display.max_rows', 500)
 
 def get_data_folder():

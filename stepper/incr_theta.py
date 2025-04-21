@@ -1,10 +1,7 @@
 
 import numpy as np
 from numba import njit
-from numba import types
-from numba.typed import Dict
 
-from crptmidfreq.stepper.base_stepper import BaseStepper
 from crptmidfreq.stepper.rolling_base import RollingStepper
 
 

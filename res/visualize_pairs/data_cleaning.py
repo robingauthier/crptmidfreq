@@ -1,17 +1,18 @@
-import pandas as pd
 import os
+
 import duckdb
+import pandas as pd
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
+
+from crptmidfreq.config_loc import get_data_db_folder
+from crptmidfreq.featurelib.lib_v1 import *
 from crptmidfreq.utils.common import to_csv
 from crptmidfreq.utils.log import get_logger
-
 
 #import sys
 # sys.path.append(os.path.abspath(os.getcwd()+'/..'))
 
-from crptmidfreq.config_loc import get_data_db_folder
-from crptmidfreq.featurelib.lib_v1 import *
 
 g_folder = 'res_kmeans_v1'
 logger = get_logger(__name__)  # Use module name for clarity

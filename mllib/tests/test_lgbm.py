@@ -1,6 +1,5 @@
-import numpy as np
 import lightgbm as lgb
-from crptmidfreq.mllib.iterable_data_lgbm import ParquetIterableDataset
+import numpy as np
 
 # pytest ./crptmidfreq/mllib/tests/test_lgbm.py --pdb --maxfail=1
 

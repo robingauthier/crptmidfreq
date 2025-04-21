@@ -1,10 +1,12 @@
 
 import numpy as np
-from crptmidfreq.stepper.base_stepper import BaseStepper
-from crptmidfreq.stepper.tdigest.exp_qtl2 import expanding_quantile
 from numba import types
 from numba.typed import Dict
+
+from crptmidfreq.stepper.base_stepper import BaseStepper
 from crptmidfreq.stepper.incr_ffill import ffill_values
+from crptmidfreq.stepper.tdigest.exp_qtl2 import expanding_quantile
+
 ## A FASTER VERSION RELYING ON CYTHON CODE ##
 
 

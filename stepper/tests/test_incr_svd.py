@@ -1,10 +1,11 @@
 import numpy as np
 import pandas as pd
-from crptmidfreq.utils.common import clean_folder
+
 from crptmidfreq.stepper.incr_pivot import PivotStepper
-from crptmidfreq.stepper.incr_unpivot import UnPivotStepper
 from crptmidfreq.stepper.incr_svd import SVDStepper
+from crptmidfreq.stepper.incr_unpivot import UnPivotStepper
 from crptmidfreq.stepper.tests.test_utils import generate_data
+from crptmidfreq.utils.common import clean_folder
 
 # pytest ./crptmidfreq/stepper/tests/test_incr_svd.py --pdb --maxfail=1
 

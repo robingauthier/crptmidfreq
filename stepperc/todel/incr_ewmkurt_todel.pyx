@@ -1,12 +1,16 @@
 # cython: boundscheck=False, wraparound=False, cdivision=True, nonecheck=False, initializedcheck=False, language_level=3
 import os
+
 import numpy as np
+
 cimport numpy as np
 from libc.math cimport exp, log
-from libcpp.vector cimport vector
-from libcpp.utility cimport pair
 from libcpp.algorithm cimport sort
+from libcpp.utility cimport pair
+from libcpp.vector cimport vector
+
 from cython.operator import dereference, postincrement
+
 from crptmidfreq.config_loc import get_feature_folder
 
 # Typedef C types for clarity

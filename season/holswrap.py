@@ -1,15 +1,7 @@
 import pandas as pd
-from datetime import date, timedelta
-from dateutil.easter import easter
-from pandas.tseries.offsets import WeekOfMonth, DateOffset
-import convertdate.hebrew as hebrew
-import convertdate.islamic as islamic
-import convertdate.holidays as chols
-from dateutil.relativedelta import relativedelta, SU
 
 from crptmidfreq.season.hols import generate_event_calendar
-import numpy as np
-import pandas as pd
+
 pd.set_option('display.max_rows', 500)
 
 

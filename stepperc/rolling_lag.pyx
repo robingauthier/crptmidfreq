@@ -1,12 +1,16 @@
 # cython: boundscheck=False, wraparound=False, cdivision=True, nonecheck=False, initializedcheck=False, language_level=3
 import os
+
 import numpy as np
+
 cimport numpy as np
 from libc.math cimport isnan
 from libcpp.unordered_map cimport unordered_map
 from libcpp.vector cimport vector
+
 from crptmidfreq.config_loc import get_feature_folder
-from crptmidfreq.stepperc.rolling_base cimport RollingStepper, RollingState
+
+from crptmidfreq.stepperc.rolling_base cimport RollingState, RollingStepper
 
 # Typedef C types for clarity
 ctypedef np.int64_t int64_t

@@ -1,4 +1,6 @@
 {
+  "workbench.editor.labelFormat": "short",
+  "breadcrumbs.enabled": true,
   "python.defaultInterpreterPath": "/Users/sachadrevet/anaconda3/bin/python",
   "python.analysis.extraPaths": [
     "${workspaceFolder}/venv/lib/python3.x/site-packages"

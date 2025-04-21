@@ -1,7 +1,8 @@
+from datetime import datetime, timedelta
+from pprint import pprint
+
 import numpy as np
 import pandas as pd
-from pprint import pprint
-from datetime import datetime, timedelta
 
 
 def compare_speed_numba_cython():

@@ -2,7 +2,6 @@ import pandas as pd
 
 from crptmidfreq.stepper.incr_cs_rank import *
 
-
 # pytest ./crptmidfreq/stepper/tests/test_incr_cs_rank.py --pdb --maxfail=1
 
 
@@ -44,6 +43,7 @@ def generate_data_hardcoded():
 
 def test_against_pandas():
     import pandas as pd
+
     # Generate test data
     n_samples = 1000
     n_codes = 10
@@ -80,6 +80,7 @@ def test_against_pandas():
 
 def test_against_pandas2():
     import pandas as pd
+
     # Generate test data
 
     dt, dscode, serie = generate_data_hardcoded()

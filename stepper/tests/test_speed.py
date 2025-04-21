@@ -1,10 +1,12 @@
 
-from crptmidfreq.utils.common import clean_folder
-from crptmidfreq.utils.log import get_logger
+import inspect
+
 import numpy as np
 import pandas as pd
-import inspect
-from crptmidfreq.stepper import *
+
+from crptmidfreq.utils.common import clean_folder
+from crptmidfreq.utils.log import get_logger
+
 logger = get_logger()
 # pytest ./crptmidfreq/stepper/tests/test_speed.py --pdb --maxfail=1
 

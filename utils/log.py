@@ -1,7 +1,5 @@
 
 import logging
-import logging
-
 
 
 def get_logger(name='crptmidfreq'):

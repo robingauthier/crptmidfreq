@@ -1,12 +1,12 @@
 # p2_expanding_quantile.pyx
 cimport cython
 cimport numpy as np
+
 import numpy as np
 
 # Import our Cython wrapper (adjust the import path as needed)
+
 from crptmidfreq.stepper.p2_algo.p2_quantile cimport P2Quantile
-
-
 
 
 @cython.boundscheck(False)

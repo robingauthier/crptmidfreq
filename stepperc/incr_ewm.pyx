@@ -1,12 +1,16 @@
 # cython: boundscheck=False, wraparound=False, cdivision=True, nonecheck=False, initializedcheck=False, language_level=3
 import os
+
 import numpy as np
+
 cimport numpy as np
-from libc.math cimport exp, log, isnan
+from libc.math cimport exp, isnan, log
 from libcpp.unordered_map cimport unordered_map
-from crptmidfreq.config_loc import get_feature_folder
+
 from cython.operator import dereference, postincrement
-from crptmidfreq.stepperc.utils import load_instance,save_instance
+
+from crptmidfreq.config_loc import get_feature_folder
+from crptmidfreq.stepperc.utils import load_instance, save_instance
 
 # Helper: compute alpha from window (half-life formula)
 

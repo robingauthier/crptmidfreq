@@ -1,10 +1,6 @@
-import os
-import shutil
 import numpy as np
-from sklearn.cluster import KMeans
 import pandas as pd
-from numba.typed import Dict
-from numba.core import types
+
 from crptmidfreq.stepper.incr_pairs_sel_k import PairsSelKStepper
 from crptmidfreq.utils.common import clean_folder
 

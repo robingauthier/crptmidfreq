@@ -24,3 +24,5 @@ torchensemble
 # to avoid some warnings
 dask
 dask-expr
+
+skorch # torch + sklearn

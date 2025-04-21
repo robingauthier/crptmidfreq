@@ -1,6 +1,5 @@
-from crptmidfreq.stepper import *
-
 from crptmidfreq.featurelib.lib_v1 import *
+from crptmidfreq.stepper import *
 from crptmidfreq.utils.common import merge_dicts
 from crptmidfreq.utils.lazy_dict import LazyDict
 
@@ -58,9 +57,9 @@ def pairs_feats(featd, incol='tret_xmkt',
 
 # ipython -i -m crptmidfreq.strats.pairs
 if __name__ == '__main__':
+    from crptmidfreq.stepper.zregistry import StepperRegistry
     from crptmidfreq.strats.prepare_klines import prepare_klines
     from crptmidfreq.utils.univ import hardcoded_universe_1
-    from crptmidfreq.stepper.zregistry import StepperRegistry
     g_r = StepperRegistry()
     cfg = {}
     defargs = {'folder': 'test_pairs', 'name': None, 'r': g_r, 'cfg': cfg}

@@ -1,6 +1,7 @@
 import numpy as np
 
 from crptmidfreq.utils.common import clean_folder
+
 from ..incr_pfp import PfPStepper
 
 # pytest ./crptmidfreq/stepper/tests/test_incr_pfp.py --pdb --maxfail=1

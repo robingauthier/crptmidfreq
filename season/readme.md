@@ -1,4 +1,5 @@
-
+# An important guide from a Timeseries point of view !
+https://www.kaggle.com/code/prashant111/complete-guide-on-time-series-analysis-in-python
 
 # Is it worth forecasting at the most granual level and aggregating  ? 
 
@@ -30,3 +31,7 @@ https://github.com/ibm-granite-community/granite-timeseries-cookbook/blob/main/r
 TODO : I am missing all the outlier detection techniques like hampel filter ... including cross sectional ones
 ALso I need to really dig on outlier filling, it is probably important ! 
 I had somes 
+
+
+
+For seismic data see : https://service.iris.edu/fdsnws/dataselect/1/

@@ -1,7 +1,7 @@
-import pandas as pd
 import numpy as np
-from crptmidfreq.stepperc.incr_ewm import EwmStepper
+import pandas as pd
 
+from crptmidfreq.stepperc.incr_ewm import EwmStepper
 
 # pytest ./crptmidfreq/stepperc/tests/test_incr_ewm.py --pdb --maxfail=1
 

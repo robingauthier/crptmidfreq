@@ -2,8 +2,8 @@ import numpy as np
 import pandas as pd
 
 from crptmidfreq.utils.common import clean_folder
-from ..incr_groupby_last import GroupbyLastStepper
 
+from ..incr_groupby_last import GroupbyLastStepper
 
 # pytest ./crptmidfreq/stepper/tests/test_incr_groupby_last.py --pdb --maxfail=1
 

@@ -1,11 +1,11 @@
-import os
-import psutil
-import pytest
-import numpy as np
 import gc
+import os
 
-from crptmidfreq.utils.lazy_dict import LazyDict  # <-- import your LazyDict class
+import numpy as np
+import psutil
 
+from crptmidfreq.utils.lazy_dict import \
+    LazyDict  # <-- import your LazyDict class
 
 # pytest ./crptmidfreq/utils/tests/test_lazy_dict.py --pdb --maxfail=1
 

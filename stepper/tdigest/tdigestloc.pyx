@@ -7,8 +7,8 @@ from copy import copy
 
 cimport cython
 cimport numpy as np
-import numpy as np
 
+import numpy as np
 
 np.import_array()
 
@@ -26,11 +26,12 @@ cdef inline void _cdf_to_hist(double[:] cdf, double[:]  hist, double size, int h
 
 
 # cython: boundscheck=False, wraparound=False, nonecheck=False
-cimport cython
 
+cimport cython
 # Import only what we need from the C standard library
-from libc.stdlib cimport malloc, free
+from libc.stdlib cimport free, malloc
 from libc.string cimport memcpy
+
 
 # Extern declarations for the underlying C T‑Digest implementation
 cdef extern from "tdigest_stubs.c":
@@ -188,7 +189,8 @@ cdef class TDigest:
     def __reduce__(self):
         # pickle method !
         #return (TDigest, (self.compression,), self.__getstate__())
-        from crptmidfreq.stepper.tdigest.pickle_helper import _reconstruct_TDigest
+        from crptmidfreq.stepper.tdigest.pickle_helper import \
+            _reconstruct_TDigest
         return (_reconstruct_TDigest, (self.compression,), self.__getstate__())
 
 

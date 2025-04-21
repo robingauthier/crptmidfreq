@@ -1,8 +1,8 @@
 import numpy as np
 
 from crptmidfreq.utils.common import clean_folder
-from ..rolling_reg import RollingRidgeStepper
 
+from ..rolling_reg import RollingRidgeStepper
 
 # pytest ./crptmidfreq/stepper/tests/test_rolling_reg.py --pdb --maxfail=1
 

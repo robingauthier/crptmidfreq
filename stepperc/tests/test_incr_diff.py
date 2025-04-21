@@ -1,7 +1,7 @@
-import pandas as pd
 import numpy as np
-from crptmidfreq.stepperc.incr_diff import DiffStepper
+import pandas as pd
 
+from crptmidfreq.stepperc.incr_diff import DiffStepper
 
 # pytest ./crptmidfreq/stepperc/tests/test_incr_diff.py --pdb --maxfail=1
 

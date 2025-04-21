@@ -1,7 +1,9 @@
 
 cimport cython
 cimport numpy as np
+
 import numpy as np
+
 
 # Declare the P² C++ class from your header.
 cdef extern from "p2.h" namespace "":

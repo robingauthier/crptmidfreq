@@ -1,10 +1,10 @@
-import pandas as pd
 import numpy as np
-from crptmidfreq.stepper.base_stepper import BaseStepper
-from crptmidfreq.utils.common import get_logger
-from crptmidfreq.stepper.incr_model_timeclf import TimeClfStepper
-from crptmidfreq.stepper.incr_model_timeclf import get_dts_max_before
+import pandas as pd
 
+from crptmidfreq.stepper.base_stepper import BaseStepper
+from crptmidfreq.stepper.incr_model_timeclf import (TimeClfStepper,
+                                                    get_dts_max_before)
+from crptmidfreq.utils.common import get_logger
 
 logger = get_logger()
 

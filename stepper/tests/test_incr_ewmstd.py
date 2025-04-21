@@ -1,8 +1,9 @@
+from datetime import datetime, timedelta
+
 import numpy as np
 import pandas as pd
-from datetime import datetime, timedelta
-from ..incr_ewmstd import EwmStdStepper
 
+from ..incr_ewmstd import EwmStdStepper
 
 # pytest ./crptmidfreq/stepper/tests/test_incr_ewmstd.py --pdb --maxfail=1
 

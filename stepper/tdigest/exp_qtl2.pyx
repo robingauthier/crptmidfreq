@@ -1,7 +1,11 @@
 cimport cython
 cimport numpy as np
+
 import numpy as np
-from crptmidfreq.stepper.tdigest.tdigestloc cimport TDigest # enables to have TDigest as a type
+
+from crptmidfreq.stepper.tdigest.\
+    tdigestloc cimport TDigest  # enables to have TDigest as a type
+
 
 @cython.boundscheck(False)
 @cython.wraparound(False)

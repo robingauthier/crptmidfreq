@@ -1,14 +1,11 @@
 import numpy as np
 import pandas as pd
+
 from crptmidfreq.stepper import *
-from crptmidfreq.utils.common import clean_folder
 from crptmidfreq.stepper.zregistry import StepperRegistry
-from crptmidfreq.utils.common import rename_key
-from crptmidfreq.utils.common import get_hash
-from crptmidfreq.utils.common import ewm_alpha
-from crptmidfreq.utils.common import get_logger
-from crptmidfreq.utils.common import get_sig_cols
-from crptmidfreq.utils.common import get_sigf_cols
+from crptmidfreq.utils.common import (clean_folder, ewm_alpha, get_hash,
+                                      get_logger, get_sig_cols, get_sigf_cols,
+                                      rename_key)
 
 g_reg = StepperRegistry()
 logger = get_logger()

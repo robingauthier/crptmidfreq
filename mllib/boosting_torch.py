@@ -1,9 +1,7 @@
-import torch
 import torch.nn as nn
-from functools import partial
 from torchensemble import GradientBoostingRegressor
-from crptmidfreq.mllib.feedforward_v1 import FeedForwardNet
 
+from crptmidfreq.mllib.feedforward_v1 import FeedForwardNet
 
 # https://ensemble-pytorch.readthedocs.io/en/latest/quick_start.html#choose-the-ensemble
 

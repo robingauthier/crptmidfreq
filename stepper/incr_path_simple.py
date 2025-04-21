@@ -2,8 +2,7 @@ import os
 import pickle
 
 import numpy as np
-from numba import njit
-from numba import types
+from numba import njit, types
 from numba.typed import Dict
 
 

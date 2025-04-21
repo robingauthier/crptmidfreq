@@ -1,10 +1,9 @@
 
 import numpy as np
-from crptmidfreq.stepper.base_stepper import BaseStepper
-from numba.typed import Dict
-from numba.typed import List
 from numba.core import types
-from numba import njit
+from numba.typed import List
+
+from crptmidfreq.stepper.base_stepper import BaseStepper
 from crptmidfreq.utils_mr.pairs_sel import pick_k_pairs_loc
 
 

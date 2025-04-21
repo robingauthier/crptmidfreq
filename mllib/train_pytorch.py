@@ -1,12 +1,10 @@
 
-import os
-import math
 
 import torch
 import torch.nn as nn
-from torch.utils.data import IterableDataset, DataLoader
+from torch.utils.data import DataLoader
+
 from crptmidfreq.mllib.iterable_data import ParquetIterableDataset
-import csv
 
 
 def train_model(folder_path, model,

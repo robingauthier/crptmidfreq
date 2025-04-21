@@ -2,7 +2,6 @@ import pandas as pd
 
 from crptmidfreq.stepper.incr_cs_mean import *
 
-
 # pytest ./crptmidfreq/stepperc/tests/test_incr_cs_mean.py --pdb --maxfail=1
 
 
@@ -25,6 +24,7 @@ def generate_data(n_samples, n_codes):
 
 def test_against_pandas():
     import pandas as pd
+
     # Generate test data
     n_samples = 100000
     n_codes = 10
@@ -63,6 +63,7 @@ def test_against_pandas():
 
 def test_against_pandas_withby():
     import pandas as pd
+
     # Generate test data
     n_samples = 100000
     n_codes = 10
@@ -102,7 +103,7 @@ def test_against_pandas_withby():
 
 
 def test_against_pandas_zero():
-    import pandas as pd
+    pass
     # Generate test data
 
     dt = np.array([1, 1, 1, 2, 2, 2, 3, 3, 3], dtype=np.int64)
@@ -119,7 +120,7 @@ def test_against_pandas_zero():
 
 
 def test_against_pandas_zero_wgt():
-    import pandas as pd
+    pass
 
     dt = np.array([1, 1, 1, 2, 2, 2, 3, 3, 3], dtype=np.int64)
     dscode = np.array([1, 2, 3, 1, 2, 3, 1, 2, 3], dtype=np.int64)

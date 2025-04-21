@@ -1,15 +1,14 @@
-import numpy as np
-import pandas as pd
 import os
+
 import lightgbm as lgb  # Super important otherwise crashes python
+import numpy as np
+
 from crptmidfreq.config_loc import get_feature_folder
-from crptmidfreq.mllib.iterable_data import ParquetIterableDataset
-from crptmidfreq.mllib.lgbm_lin_v1 import gen_lgbm_lin_v1
 from crptmidfreq.mllib.lgbm_sklearn_optuna import LGBMModelOptuna
-from crptmidfreq.mllib.train_lgbm import gen_lgbm_lin_params
+from crptmidfreq.mllib.tests.test_feedforward import (create_synthetic_data,
+                                                      save_some_parquet_files)
 from crptmidfreq.utils.common import clean_folder
-from crptmidfreq.mllib.tests.test_feedforward import save_some_parquet_files
-from crptmidfreq.mllib.tests.test_feedforward import create_synthetic_data
+
 np.random.seed(42)
 
 # pytest ./crptmidfreq/mllib/tests/test_lgbm_sklearn_optuna.py --pdb --maxfail=1

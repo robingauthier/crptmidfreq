@@ -1,10 +1,11 @@
 
 import numpy as np
-from crptmidfreq.stepper.base_stepper import BaseStepper
-from numba.typed import Dict
-from numba.typed import List
-from numba.core import types
 from numba import njit
+from numba.core import types
+from numba.typed import Dict
+
+from crptmidfreq.stepper.base_stepper import BaseStepper
+
 # because fitfreq can be a lot higher ( 1 or 2) we will not use TimeClf here
 
 

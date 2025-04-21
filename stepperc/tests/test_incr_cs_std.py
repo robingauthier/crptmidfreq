@@ -1,7 +1,7 @@
+import numpy as np
 import pandas as pd
-import  numpy as np
-from crptmidfreq.stepperc.incr_cs_std import *
 
+from crptmidfreq.stepperc.incr_cs_std import *
 
 # pytest ./crptmidfreq/stepperc/tests/test_incr_cs_std.py --pdb --maxfail=1
 
@@ -25,6 +25,7 @@ def generate_data(n_samples, n_codes):
 
 def test_against_pandas():
     import pandas as pd
+
     # Generate test data
     n_samples = 10000
     n_codes = 10

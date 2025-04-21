@@ -1,11 +1,15 @@
 # cython: boundscheck=False, wraparound=False, cdivision=True, nonecheck=False, initializedcheck=False, language_level=3
 import os
+
 import numpy as np
+
 cimport numpy as np
 from libc.math cimport exp, log
 from libcpp.unordered_map cimport unordered_map
-from crptmidfreq.config_loc import get_feature_folder
+
 from cython.operator import dereference, postincrement
+
+from crptmidfreq.config_loc import get_feature_folder
 from crptmidfreq.stepperc.utils import load_instance, save_instance
 
 # Typedef C types for clarity
@@ -13,6 +17,7 @@ ctypedef np.int64_t int64_t
 ctypedef np.float64_t float64_t
 
 import numpy as np
+
 
 # Helper: compute alpha from window (half-life formula)
 cdef inline double get_alpha(int window):

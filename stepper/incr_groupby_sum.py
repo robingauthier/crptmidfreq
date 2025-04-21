@@ -1,11 +1,9 @@
 
 import numpy as np
-from numba import njit
-from numba.typed import Dict
-from numba.typed import List
 from numba.core import types
-from crptmidfreq.stepper.base_stepper import BaseStepper
+from numba.typed import Dict, List
 
+from crptmidfreq.stepper.base_stepper import BaseStepper
 
 # It reduces the size of the data.. It is not a cs_sum
 

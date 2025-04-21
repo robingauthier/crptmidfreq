@@ -1,10 +1,5 @@
-import os
-import math
 
-import torch
 import torch.nn as nn
-from torch.utils.data import IterableDataset, DataLoader
-import csv
 
 
 class LinearNet(nn.Module):

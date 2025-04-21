@@ -1,6 +1,7 @@
 
 import numpy as np
 from tdigest import TDigest
+
 from crptmidfreq.stepper.base_stepper import BaseStepper
 
 ###############################################################################

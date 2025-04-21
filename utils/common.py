@@ -1,9 +1,11 @@
-import pandas as pd
-import numpy as np
-from crptmidfreq.config_loc import get_analysis_folder
-from crptmidfreq.utils.log import get_logger
 import hashlib
 import os
+
+import numpy as np
+import pandas as pd
+
+from crptmidfreq.config_loc import get_analysis_folder
+from crptmidfreq.utils.log import get_logger
 
 logger = get_logger()
 
@@ -39,8 +41,9 @@ def set_pandas_display():
 
 def clean_folder(folder='feats_simple_v1'):
     """cleans the feature folder"""
-    import shutil
     import os
+    import shutil
+
     from crptmidfreq.config_loc import get_feature_folder
     logger.info(f'Cleaning folder {folder}')
     path = os.path.join(get_feature_folder(), folder)

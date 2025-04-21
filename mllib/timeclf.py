@@ -1,12 +1,13 @@
 
-import numpy as np
-import pandas as pd
-from sklearn.base import BaseEstimator, RegressorMixin
-from pandas.tseries.offsets import BDay
-from joblib import delayed, Parallel
 from functools import partial
 
-from crptmidfreq.utils.common import lvals, filter_date_df
+import numpy as np
+import pandas as pd
+from joblib import Parallel, delayed
+from pandas.tseries.offsets import BDay
+from sklearn.base import BaseEstimator, RegressorMixin
+
+from crptmidfreq.utils.common import filter_date_df, lvals
 
 # This is the rolling train / predict class
 
@@ -60,7 +61,7 @@ def dts_split(dts, train_freq=250, min_train_size=400, max_train_days=600, train
 # the time TimeSplitClf will operate on pandas dataframes
 
 
-def run_fit_predict_loc(train_df, test_df, dtd, fct=None, is_transform=False):
+def run_fit_predict_loc(train_df, test_df, dtd, fct=None, is_transform=False, fit_colname_syntax=False):
     """
     Internal function used in the TimeSplitClf class
 
@@ -80,9 +81,15 @@ def run_fit_predict_loc(train_df, test_df, dtd, fct=None, is_transform=False):
 
     # calling fct will create a model that is empty/non fitted
     pipeloc = fct()
-    pipeloc.fit(train_df.drop(['todel_y', 'todel_w'], axis=1),
-                train_df['todel_y'],
-                train_df['todel_w'])
+    if not fit_colname_syntax:
+        pipeloc.fit(train_df.drop(['todel_y', 'todel_w'], axis=1),
+                    train_df['todel_y'],
+                    train_df['todel_w'])
+    else:
+        pipeloc.fit(train_df,
+                    'todel_y',
+                    'todel_w')
+
     if is_transform:
         rdfloc = pipeloc.transform(test_df.drop(['todel_y', 'todel_w'], axis=1))
     else:
@@ -111,6 +118,7 @@ class TimeSplitClf(BaseEstimator, RegressorMixin):
                  # other arguments
                  verbose=1,
                  extraindex=[],
+                 fit_colname_syntax=False,
                  is_transform=False):
         self.fct = fct
         self.train_freq = train_freq
@@ -124,6 +132,7 @@ class TimeSplitClf(BaseEstimator, RegressorMixin):
         self.verbose = verbose
         self.extraindex = extraindex
         self.is_transform = is_transform
+        self.fit_colname_syntax = fit_colname_syntax
 
     def fit_predict(self, X, y, w):
         """Easier to do the predict also in one go"""
@@ -152,7 +161,10 @@ class TimeSplitClf(BaseEstimator, RegressorMixin):
                 continue
             largs += [{'train_df': train_df, 'test_df': test_df, 'dtd': dtd}]
 
-        prun_fit_predict_loc = partial(run_fit_predict_loc, fct=self.fct, is_transform=self.is_transform)
+        prun_fit_predict_loc = partial(run_fit_predict_loc,
+                                       fct=self.fct,
+                                       is_transform=self.is_transform,
+                                       fit_colname_syntax=self.fit_colname_syntax)
         # Running in parrallel or not
         if self.n_jobs > 0:
             tasks = (delayed(prun_fit_predict_loc)(**args) for args in largs)
@@ -209,11 +221,3 @@ class TimeSplitClf(BaseEstimator, RegressorMixin):
         assert rdf.index.duplicated().sum() == 0
         return rdf
 
-
-# ipython -i -m featurelib.timeclf
-if __name__ == '__main__':
-    import pandas as pd
-    dts = pd.date_range('2010-01-01', '2020-01-01').tolist()
-    l1 = dts_split(dts)
-
-    example_TimeSplit()

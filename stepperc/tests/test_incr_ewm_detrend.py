@@ -1,4 +1,5 @@
 import pandas as pd
+
 from crptmidfreq.stepper.incr_ewm_detrend import *
 
 #pytest ./crptmidfreq/stepperc/tests/test_incr_diff.py --pdb --maxfail=1

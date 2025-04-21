@@ -1,12 +1,15 @@
-from filelock import FileLock
+import gc
+import hashlib
 import os
 import pickle
 import shutil
-import hashlib
-import gc
 from collections.abc import MutableMapping
+
+from filelock import FileLock
+
 from crptmidfreq.config_loc import get_feature_folder
 from crptmidfreq.utils.common import get_logger
+
 logger = get_logger()
 
 

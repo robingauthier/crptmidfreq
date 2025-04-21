@@ -1,7 +1,5 @@
 import timesfm
 
-
-
 # For Torch
 tfm = timesfm.TimesFm(
       hparams=timesfm.TimesFmHparams(
@@ -17,6 +15,7 @@ tfm = timesfm.TimesFm(
   )
 
 import numpy as np
+
 forecast_input = [
     np.sin(np.linspace(0, 20, 100)),
     np.sin(np.linspace(0, 20, 200)),

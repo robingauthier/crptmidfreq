@@ -1,8 +1,6 @@
 
-from crptmidfreq.utils.common import rename_key
 from crptmidfreq.featurelib.lib_v1 import *
-from crptmidfreq.utils.common import ewm_alpha
-from crptmidfreq.utils.common import merge_dicts
+from crptmidfreq.utils.common import ewm_alpha, merge_dicts, rename_key
 
 
 def mr_mual_feats(featd, feats=['sret_kmeans'], outname='mual', folder=None, name=None, r=None, cfg={}):

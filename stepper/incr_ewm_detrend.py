@@ -1,6 +1,7 @@
 import numpy as np
-from crptmidfreq.stepper.incr_ewm import EwmStepper
-from crptmidfreq.stepper.incr_ewm import update_ewm_values
+
+from crptmidfreq.stepper.incr_ewm import EwmStepper, update_ewm_values
+
 
 class DetrendEwmStepper(EwmStepper):
     def __init__(self, *args, **kwargs):

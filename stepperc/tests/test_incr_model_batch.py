@@ -1,11 +1,12 @@
 import os
 import shutil
+
 import numpy as np
-from sklearn.linear_model import LinearRegression
 import pandas as pd
+
+from crptmidfreq.mllib.feedforward_v1 import FeedForwardNet
 # Adjust this import path to wherever your ModelStepper is defined
 from crptmidfreq.stepper.incr_model_batch import ModelBatchStepper
-from crptmidfreq.mllib.feedforward_v1 import FeedForwardNet
 
 # pytest ./crptmidfreq/stepper/tests/test_incr_model_batch.py --pdb --maxfail=1
 

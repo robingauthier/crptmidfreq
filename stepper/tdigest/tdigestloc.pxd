@@ -6,7 +6,6 @@ cimport numpy as np
 from libc.stddef cimport size_t
 
 
-
 cdef extern from "tdigest_stubs.c":
     ctypedef struct centroid_t:
         double mean

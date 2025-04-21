@@ -1,8 +1,8 @@
-import pytest
-import pandas as pd
 import numpy as np
+import pandas as pd
 
-from crptmidfreq.season.yoy_hol import deseasonalize_yoy_hol  # replace with actual import path
+from crptmidfreq.season.yoy_hol import \
+    deseasonalize_yoy_hol  # replace with actual import path
 
 # pytest ./crptmidfreq/season/tests/test_yoy_hol.py --pdb --maxfail=1
 

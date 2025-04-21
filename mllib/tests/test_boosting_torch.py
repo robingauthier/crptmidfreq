@@ -1,14 +1,15 @@
-import numpy as np
-import pandas as pd
 import os
+
+import numpy as np
 import torch
+
 from crptmidfreq.config_loc import get_feature_folder
-from crptmidfreq.mllib.iterable_data import ParquetIterableDataset
 from crptmidfreq.mllib.boosting_torch import gen_boosting_torch
+from crptmidfreq.mllib.tests.test_feedforward import (create_synthetic_data,
+                                                      save_some_parquet_files)
 from crptmidfreq.mllib.train_pytorch import train_model
 from crptmidfreq.utils.common import clean_folder
-from crptmidfreq.mllib.tests.test_feedforward import save_some_parquet_files
-from crptmidfreq.mllib.tests.test_feedforward import create_synthetic_data
+
 np.random.seed(42)
 
 

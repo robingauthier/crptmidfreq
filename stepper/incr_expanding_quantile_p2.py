@@ -1,7 +1,9 @@
 
 import numpy as np
+
 from crptmidfreq.stepper.base_stepper import BaseStepper
 from crptmidfreq.stepper.p2_algo.exp_qtl2 import expanding_quantile
+
 
 class QuantileStepper(BaseStepper):
     """

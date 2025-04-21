@@ -1,9 +1,8 @@
-import pandas as pd
 import matplotlib.pyplot as plt
-
+import pandas as pd
 from neuralforecast import NeuralForecast
-from neuralforecast.models import NBEATS
 from neuralforecast.losses.pytorch import DistributionLoss
+from neuralforecast.models import NBEATS
 from neuralforecast.utils import AirPassengersPanel, AirPassengersStatic
 
 Y_train_df = AirPassengersPanel[AirPassengersPanel.ds<AirPassengersPanel['ds'].values[-12]] # 132 train

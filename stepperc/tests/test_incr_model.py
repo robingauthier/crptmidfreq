@@ -1,8 +1,10 @@
 import os
 import shutil
+
 import numpy as np
-from sklearn.linear_model import LinearRegression
 import pandas as pd
+from sklearn.linear_model import LinearRegression
+
 # Adjust this import path to wherever your ModelStepper is defined
 from crptmidfreq.stepper.incr_model import ModelStepper
 

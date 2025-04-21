@@ -1,12 +1,15 @@
 
 
-import requests
-import csv
 import argparse
-import os
-import pandas as pd
+import csv
 import json
+import os
+
+import pandas as pd
+import requests
+
 from crptmidfreq.config_loc import get_data_folder
+
 # there is an unofficial API 
 
 def download_univ2(date_str='2025-03-11'):

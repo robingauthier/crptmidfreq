@@ -1,7 +1,8 @@
-import pandas as pd
 import numpy as np
+import pandas as pd
 
-from ..bktester import  bktest_stats
+from ..bktester import bktest_stats
+
 # pytest ./utils/tests/test_bktester.py --pdb --maxfail=1
 
 def test_bktest_stats():

@@ -1,10 +1,13 @@
 # cython: boundscheck=False, wraparound=False, cdivision=True, nonecheck=False, initializedcheck=False, language_level=3
 import os
+
 import numpy as np
+
 cimport numpy as np
 from libc.math cimport isnan
 from libcpp.unordered_map cimport unordered_map
 from libcpp.vector cimport vector
+
 from crptmidfreq.config_loc import get_feature_folder
 from crptmidfreq.stepperc.utils import load_instance, save_instance
 

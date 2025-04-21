@@ -1,8 +1,7 @@
 import numpy as np
 
-from crptmidfreq.utils.common import clean_folder
 from crptmidfreq.stepperc.incr_cumsum import CumSumStepper
-
+from crptmidfreq.utils.common import clean_folder
 
 # pytest ./crptmidfreq/stepperc/tests/test_incr_cumsum.py --pdb --maxfail=1
 

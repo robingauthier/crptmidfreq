@@ -1,10 +1,7 @@
 from sklearn.cluster import KMeans
-from crptmidfreq.utils.common import rename_key
-from numba.typed import Dict
-from numba.core import types
-from crptmidfreq.featurelib.lib_v1 import *
 
-from crptmidfreq.utils.common import merge_dicts
+from crptmidfreq.featurelib.lib_v1 import *
+from crptmidfreq.utils.common import merge_dicts, rename_key
 
 
 def kmeans_sret(featd, incol='tret_xmkt', oucol='sret_kmeans',

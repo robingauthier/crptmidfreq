@@ -1,11 +1,11 @@
 import os
 import pickle
 
-from numba.typed import Dict
 from numba import types
+from numba.typed import Dict
+
 from crptmidfreq.config_loc import get_feature_folder
-from crptmidfreq.utils.common import validate_input
-from crptmidfreq.utils.common import get_logger
+from crptmidfreq.utils.common import get_logger, validate_input
 
 logger = get_logger()
 

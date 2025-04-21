@@ -1,10 +1,6 @@
-from sklearn.cluster import KMeans
-from crptmidfreq.utils.common import rename_key
-from numba.typed import Dict
-from numba.core import types
 from crptmidfreq.featurelib.lib_v1 import *
 from crptmidfreq.stepper.incr_svd import SVDStepper
-from crptmidfreq.utils.common import merge_dicts
+from crptmidfreq.utils.common import merge_dicts, rename_key
 
 
 def svd_sret(featd,

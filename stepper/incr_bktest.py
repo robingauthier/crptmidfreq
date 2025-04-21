@@ -1,13 +1,13 @@
 import os
-import pandas as pd
-import numpy as np
-from crptmidfreq.stepper.base_stepper import BaseStepper
-from crptmidfreq.utils.common import get_logger
-from crptmidfreq.utils.common import to_csv
-from crptmidfreq.utils.bktester import bktest_stats
-from crptmidfreq.utils.bktester import get_daily_stats
-from crptmidfreq.config_loc import get_analysis_folder
+
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+
+from crptmidfreq.config_loc import get_analysis_folder
+from crptmidfreq.stepper.base_stepper import BaseStepper
+from crptmidfreq.utils.bktester import bktest_stats, get_daily_stats
+from crptmidfreq.utils.common import get_logger, to_csv
 
 # Quite similar to the featurelib/timeclf.py
 

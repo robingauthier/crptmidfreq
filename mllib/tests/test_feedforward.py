@@ -1,13 +1,14 @@
+import os
+
 import numpy as np
 import pandas as pd
-import os
-import lightgbm as lgb
 import torch
+
 from crptmidfreq.config_loc import get_feature_folder
-from crptmidfreq.mllib.iterable_data import ParquetIterableDataset
 from crptmidfreq.mllib.feedforward_v1 import FeedForwardNet
 from crptmidfreq.mllib.train_pytorch import train_model
 from crptmidfreq.utils.common import clean_folder
+
 np.random.seed(42)
 
 

@@ -1,9 +1,7 @@
-import pytest
 import pandas as pd
-import numpy as np
 
 from crptmidfreq.season.holswrap import event_distances
-from crptmidfreq.utils.common import to_csv
+
 # pytest ./crptmidfreq/season/tests/test_holswrap.py --pdb --maxfail=1
 
 

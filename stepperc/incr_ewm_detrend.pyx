@@ -1,9 +1,13 @@
 # cython: boundscheck=False, wraparound=False, cdivision=True, nonecheck=False, initializedcheck=False, language_level=3
 import os
+
 import numpy as np
+
 cimport numpy as np
-from crptmidfreq.stepperc.incr_ewm cimport update_ewm_values, EwmStepper, EWMState
 from libcpp.unordered_map cimport unordered_map
+
+from crptmidfreq.stepperc.incr_ewm cimport (EWMState, EwmStepper,
+                                            update_ewm_values)
 
 # Typedef C types for clarity
 ctypedef np.int64_t int64_t

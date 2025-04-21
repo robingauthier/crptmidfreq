@@ -1,14 +1,16 @@
-import pandas as pd
 import argparse
+import os
 import random
 import time
-import os
+
 import duckdb
+import pandas as pd
 from dateutil.relativedelta import relativedelta
-from crptmidfreq.datahub.binance_univ import download_univ
-from crptmidfreq.datahub.binance_hist import download_data
-from crptmidfreq.datahub.binance_univ_startstop import  TokenQueryTracker
+
 from crptmidfreq.config_loc import get_data_db_folder
+from crptmidfreq.datahub.binance_hist import download_data
+from crptmidfreq.datahub.binance_univ import download_univ
+from crptmidfreq.datahub.binance_univ_startstop import TokenQueryTracker
 
 
 def stats_on_univ(dfuniv):

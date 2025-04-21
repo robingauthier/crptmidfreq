@@ -1,7 +1,9 @@
-import numpy as np
 import os
 import pickle
+
+import numpy as np
 from tdigest import TDigest
+
 from crptmidfreq.stepper.base_stepper import BaseStepper
 
 # ipython -i stepper/incr_expanding_bucketxy.py

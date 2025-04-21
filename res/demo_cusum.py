@@ -1,6 +1,7 @@
 
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+
 
 def generate_synthetic_data(n=400, change_point=200, mu1=0.0, mu2=2.0, sigma=1.0, seed=42):
     """

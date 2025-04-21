@@ -1,9 +1,9 @@
-import pdb
-from setuptools import setup, Extension, find_packages
-from Cython.Build import cythonize
-import numpy
-import os
 import glob
+import os
+
+import numpy
+from Cython.Build import cythonize
+from setuptools import Extension, find_packages, setup
 
 # python ./crptmidfreq/setup_stepperc.py build_ext --inplace
 

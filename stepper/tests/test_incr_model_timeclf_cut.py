@@ -1,12 +1,12 @@
 
 import os
 import shutil
-import numpy as np
 
+import numpy as np
 import pandas as pd
+
 # Adjust this import path to wherever your ModelStepper is defined
 from crptmidfreq.stepper.incr_model_timeclf import TimeClfStepper
-from crptmidfreq.mllib.train_lgbm import gen_lgbm_lin_params
 
 # pytest ./crptmidfreq/stepper/tests/test_incr_model_timeclf_cut.py --pdb --maxfail=1
 

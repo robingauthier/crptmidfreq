@@ -22,6 +22,7 @@ def generate_data(n_samples, n_codes):
 
 def test_against_pandas():
     import pandas as pd
+
     # Generate test data
     n_samples = 1000
     n_codes = 10

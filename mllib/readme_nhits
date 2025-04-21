@@ -1,0 +1,13 @@
+
+
+https://github.com/Nixtla/neuralforecast/blob/main/neuralforecast/models/nhits.py#L187
+
+
+https://github.com/sktime/pytorch-forecasting/blob/main/pytorch_forecasting/models/nhits/_nhits.py
+https://github.com/sktime/pytorch-forecasting/blob/main/pytorch_forecasting/models/nhits/sub_modules.py
+
+https://github.com/philipperemy/n-beats/blob/master/nbeats_pytorch/model.py
+
+https://github.com/awslabs/gluonts/blob/dev/src/gluonts/mx/model/n_beats/_estimator.py
+
+https://github.com/ServiceNow/N-BEATS/blob/master/models/nbeats.py

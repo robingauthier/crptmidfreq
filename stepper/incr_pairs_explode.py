@@ -1,10 +1,10 @@
 
 import numpy as np
-from crptmidfreq.stepper.base_stepper import BaseStepper
-from numba.typed import Dict
-from numba.typed import List
-from numba.core import types
 from numba import njit
+from numba.core import types
+from numba.typed import List
+
+from crptmidfreq.stepper.base_stepper import BaseStepper
 
 
 @njit(cache=True)

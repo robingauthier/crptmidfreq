@@ -1,11 +1,12 @@
 
-import numpy as np
-import pandas as pd
 from math import sqrt
 
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+
 from crptmidfreq.stepper.incr_diff import DiffStepper
-from .common import clean_folder
+
 # python ./utils/bktester.py
 
 

@@ -1,8 +1,8 @@
-from setuptools import setup, Extension
-from Cython.Build import cythonize
-import numpy as np
-
 import Cython.Compiler.Options
+import numpy as np
+from Cython.Build import cythonize
+from setuptools import Extension, setup
+
 Cython.Compiler.Options.annotate = True
 # python setup.py build_ext --inplace 
 # python ./crptmidfreq/setup.py build_ext --inplace --force

@@ -1,7 +1,5 @@
-from crptmidfreq.utils.common import rename_key
 from crptmidfreq.featurelib.lib_v1 import *
-from crptmidfreq.utils.common import get_logger
-from crptmidfreq.utils.common import merge_dicts
+from crptmidfreq.utils.common import get_logger, merge_dicts, rename_key
 
 logger = get_logger()
 

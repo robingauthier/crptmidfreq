@@ -9,7 +9,7 @@ from typing import Tuple
 import pandas as pd
 import numpy as np
 import torch as t
-
+from skorch.callbacks import EarlyStopping
 from skorch import NeuralNetRegressor
 # https://github.com/ServiceNow/N-BEATS/blob/master/models/nbeats.py
 
@@ -214,6 +214,7 @@ def make_nbeats_blocks(
                 layer_size=generic_layer_size,
             )
         )
+
     return nn.ModuleList(blocks)
 
 
@@ -224,6 +225,7 @@ class NBeatsNet(NeuralNetRegressor):
     def __init__(
         self,
         input_size: int,
+
         output_size: int = 1,
         # stack sizes
         trend_blocks: int = 1,
@@ -241,7 +243,7 @@ class NBeatsNet(NeuralNetRegressor):
         lr: float = 1e-3,
         weight_decay: float = 1e-5,
         betas: tuple = (0.9, 0.999),
-        max_epochs: int = 20,
+        max_epochs: int = 15,
         batch_size: int = 64,
         device: str = 'cpu',
         **kwargs,
@@ -278,6 +280,7 @@ class NBeatsNet(NeuralNetRegressor):
             max_epochs=max_epochs,
             batch_size=batch_size,
             device=device,
+            # callbacks=[EarlyStopping(patience=10)],
             **kwargs,
         )
 

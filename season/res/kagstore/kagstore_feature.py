@@ -15,13 +15,19 @@ log = get_logger()
 g_folder = os.path.join(get_feature_folder(), 'kagstore')+'/'
 
 
-def add_features(df, f1, use_log=True, use_hols=False):
+def add_features(df, f1, use_log=True, use_hols=False, use_norm=False):
 
     assert 'dtsi' in df.columns
     assert 'dscode' in df.columns
 
     df['dscode'] = df['dscode'].astype(np.int64)
     df['dtsi'] = df['dtsi'].astype(np.int64)
+
+    if use_norm:
+        mdf = df.groupby('dscode')[['sales']].mean().reset_index()\
+            .rename(columns={'sales': 'mean_sales'})
+        df = df.merge(mdf, on='dscode', how='left')
+        df['sales'] = np.where(df['mean_sales'] > 1, df['sales']/df['mean_sales'], 1.0)
 
     defargs = {'folder': g_folder}
     featd = pandas_to_dict(df)
@@ -74,17 +80,20 @@ def add_features(df, f1, use_log=True, use_hols=False):
     return ndf, f2
 
 
-def add_features_lag(df, f1, use_log=True, use_hols=False):
-
+def add_features_lag(df, f1, use_log=True, use_hols=False, n_lags=20):
     assert 'dtsi' in df.columns
     assert 'dscode' in df.columns
 
     df['dscode'] = df['dscode'].astype(np.int64)
     df['dtsi'] = df['dtsi'].astype(np.int64)
-
+    df['sales'] = df['sales'].replace(0.0, np.nan)
     defargs = {'folder': g_folder}
     featd = pandas_to_dict(df)
-    list_lags = range(1, 400)
+    list_lags = range(1, n_lags)
+
+    featd, ff = perform_ffill(featd, feats=['sales'], **defargs)
+    featd = rename_key(featd, ff[0], 'sales')
+
     # lagging the target
     f0 = ['sales_log'] if use_log else ['sales']
     featd, lagsales = perform_lag(featd, feats=f0, windows=list_lags, **defargs)

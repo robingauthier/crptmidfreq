@@ -4,62 +4,49 @@ import optuna
 import sklearn.metrics
 from sklearn.base import BaseEstimator, RegressorMixin
 import pandas as pd
-from crptmidfreq.mllib.lgbm_sklearn import LGBMModel, check_cols, lgb_params
+import numpy as np
+from crptmidfreq.mllib.feedforward_sklearn import FeedForwardRegressor
 from crptmidfreq.utils.log import get_logger
 from crptmidfreq.mllib.nbeats2_sklearn import NBeatsNet
 log = get_logger()
 optuna.logging.set_verbosity(optuna.logging.WARNING)
 
 
-def get_optuna_nbeats2_params(trial):
+def get_optuna_ff_params(trial):
     """
     Generate a set of hyperparameters for LightGBM using Optuna.
     """
+    # 1) sample number of hidden layers
+    n_layers = trial.suggest_int("n_layers", 1, 4)
+
+    # 2) for each layer, sample its width from a shortlist
+    hidden_units = []
+    for i in range(n_layers):
+        size = trial.suggest_categorical(
+            f"hidden_units_layer_{i}", [32, 64, 128, 256, 512]
+        )
+        hidden_units.append(size)
+    hidden_units = tuple(hidden_units)
 
     optuna_lgb_params = {
-
-        # stack sizes
-        "trend_blocks": trial.suggest_int("trend_blocks", 1, 5),
-        "trend_layers": trial.suggest_int("trend_layers", 1, 4),
-        "trend_layer_size": trial.suggest_categorical(
-            "trend_layer_size", [20, 64, 128]
-        ),
-        "degree_of_polynomial": trial.suggest_int("degree_of_polynomial", 1, 5),
-
-        "seasonality_blocks": trial.suggest_int("seasonality_blocks", 1, 5),
-        "seasonality_layers": trial.suggest_int("seasonality_layers", 1, 4),
-        "seasonality_layer_size": trial.suggest_categorical(
-            "seasonality_layer_size", [64, 128, 256, 512]
-        ),
-        "num_of_harmonics": trial.suggest_int("num_of_harmonics", 1, 20),
-
-        "generic_blocks": trial.suggest_int("generic_blocks", 0, 3),
-        "generic_layers": trial.suggest_int("generic_layers", 1, 4),
-        "generic_layer_size": trial.suggest_categorical(
-            "generic_layer_size", [64, 128, 256, 512]
-        ),
-
+        "hidden_units": hidden_units,
         # optimizer & training
-        "lr": trial.suggest_float("lr", 1e-5, 1e-1, log=True),
+        "lr": trial.suggest_float("lr", 1e-6, 1e-1, log=True),
         "weight_decay": trial.suggest_float("weight_decay", 1e-8, 1e-2, log=True),
         # sample each Adam beta and pack into a tuple
         "max_epochs": trial.suggest_int("max_epochs", 10, 100),
-        "batch_size": trial.suggest_categorical(
-            "batch_size", [16, 32, 64, 128]
-        ),
+        "batch_size": trial.suggest_categorical("batch_size", [16, 32, 64, 128]),
     }
     return optuna_lgb_params
 
 
-class NBeatsNetOptuna(BaseEstimator, RegressorMixin):
+class FeedForwardRegressorOptuna(BaseEstimator, RegressorMixin):
     """the fit performs the optuna model selection"""
 
     def __init__(self,
-                 input_size: int,
-                 output_size: int = 1,
+                 input_dim,
                  n_trials=20):
-        self.input_size = input_size
-        self.output_size = output_size
+        self.input_dim = input_dim
         self.model = None
         self.n_trials = n_trials
 
@@ -74,9 +61,8 @@ class NBeatsNetOptuna(BaseEstimator, RegressorMixin):
         test_y = y.iloc[train_stop:]
 
         def fit_model(params):
-            model = NBeatsNet(
-                input_size=self.input_size,
-                output_size=self.output_size,
+            model = FeedForwardRegressor(
+                input_dim=self.input_dim,
                 **params,
             )
             model.fit(train_X, train_y, **fit_params)
@@ -84,7 +70,7 @@ class NBeatsNetOptuna(BaseEstimator, RegressorMixin):
             return ypred
 
         def objective(trial):
-            param = get_optuna_nbeats2_params(trial)
+            param = get_optuna_ff_params(trial)
             ypred = fit_model(param)
             if pd.isna(ypred).mean() > 0.6:
                 print('Issue of nan in NBEats2 optuna ')
@@ -99,11 +85,19 @@ class NBeatsNetOptuna(BaseEstimator, RegressorMixin):
         print("Best trial:")
         trial = study.best_trial
         pprint(trial.params)
+        n_layers = trial.params['n_layers']
+        trial.params.pop('n_layers')
+        hidden_units = []
+        for i in range(n_layers):
+            size = trial.params[f"hidden_units_layer_{i}"]
+            trial.params.pop(f"hidden_units_layer_{i}")
+            hidden_units.append(size)
+        hidden_units = tuple(hidden_units)
+        trial.params['hidden_units'] = hidden_units
 
         # fit the model with the best params
-        model = NBeatsNet(
-            input_size=self.input_size,
-            output_size=self.output_size,
+        model = FeedForwardRegressor(
+            input_dim=self.input_dim,
             **trial.params,
         )
         model.fit(X, y, **fit_params)

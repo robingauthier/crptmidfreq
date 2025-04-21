@@ -1,6 +1,5 @@
 import os
 import pandas as pd
-import lightgbm as lgb  # Super important otherwise crashes python
 import numpy as np
 
 from crptmidfreq.config_loc import get_feature_folder
@@ -20,14 +19,6 @@ g_folder = os.path.join(get_feature_folder(), 'test_ml')+'/'
 def generate_seasonal_data(n_samples, n_codes, season_period=10):
     """
     Generate synthetic data with strong seasonality of a given period.
-    Args:
-        n_samples (int): Number of time steps in the time series.
-        n_codes (int): Number of different codes (e.g., for multiple time series).
-        season_period (int): The period of the seasonal cycle (default 10).
-    Returns:
-        dt (numpy array): Dates of the time series.
-        dscode (numpy array): Categorical codes for each time series.
-        serie (numpy array): The generated seasonal data with noise.
     """
     np.random.seed(42)
 
@@ -75,10 +66,6 @@ def test_train():
     )
 
     model.fit(dftrain[numfeats], dftrain['forward'])
-    print(model)
-    ee = model.get_params()['module']()
-    total_params = sum(p.numel() for p in ee.parameters() if p.requires_grad)
-    print(f"Total trainable params: {total_params}")
 
     # TrendBlock will operate on a batch_size x len(numfeats)
     ypred = model.predict(dftest[numfeats])
@@ -89,4 +76,3 @@ def test_train():
     correlation = dftest[['ypred', 'forward']].corr().iloc[0, 1]
     assert correlation > 0.8
     assert mae < 3
-    #to_csv(dftest, 'test_nbeats2_sklearn_cos.csv')

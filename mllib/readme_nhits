@@ -11,3 +11,20 @@ https://github.com/philipperemy/n-beats/blob/master/nbeats_pytorch/model.py
 https://github.com/awslabs/gluonts/blob/dev/src/gluonts/mx/model/n_beats/_estimator.py
 
 https://github.com/ServiceNow/N-BEATS/blob/master/models/nbeats.py
+
+https://github.com/timeseriesAI/tsai
+{'batch_size': 64,
+ 'degree_of_polynomial': 5,
+ 'generic_blocks': 1,
+ 'generic_layer_size': 256,
+ 'generic_layers': 2,
+ 'lr': 8.383512481393092e-05,
+ 'max_epochs': 46,
+ 'num_of_harmonics': 3,
+ 'seasonality_blocks': 3,
+ 'seasonality_layer_size': 128,
+ 'seasonality_layers': 2,
+ 'trend_blocks': 5,
+ 'trend_layer_size': 128,
+ 'trend_layers': 4,
+ 'weight_decay': 7.1395720999399405e-06}

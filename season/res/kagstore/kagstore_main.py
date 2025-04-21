@@ -326,6 +326,63 @@ def main_nbeats2():
     return {'mae': mae, 'name': 'nbeats'}
 
 
+def main_nbeats2_optuna():
+    from crptmidfreq.mllib.nbeats2_sklearn_optuna import NBeatsNetOptuna
+    df, f1 = get_data()
+    df, f2 = add_features_lag(df, f1, use_log=False)
+
+    df_train = df.loc[lambda x: x['date'] <= test_start].copy()
+
+    feats = f2['numerical']+f2['categorical']
+    model = NBeatsNetOptuna(
+        input_size=len(feats),
+    )
+
+    model.fit(df_train[feats].fillna(0.0), df_train['sales'].fillna(0.0))
+
+    # print(model)
+    #ee = model.get_params()['module']()
+    #total_params = sum(p.numel() for p in ee.parameters() if p.requires_grad)
+    #print(f"Total trainable params: {total_params}")
+
+    df['pred_sales'] = model.predict(df[feats].fillna(0.0))
+
+    df_test = df.loc[lambda x:x['date'] > test_start]
+    mae = evaluate_model(df_test, name='kaggle-store', verbose=True)
+    dump_data(df, name='nbeats_optuna')
+    return {'mae': mae, 'name': 'nbeats_optuna'}
+
+
+def main_feedforward_optuna():
+    """
+    {'batch_size': 128,
+    'hidden_units_layer_0': 64,
+    'hidden_units_layer_1': 512,
+    'lr': 0.0009709254655737814,
+    'max_epochs': 44,
+    'n_layers': 2,
+    'weight_decay': 1.3661188068702066e-07}
+    """
+    from crptmidfreq.mllib.feedforward_sklearn_optuna import FeedForwardRegressorOptuna
+    df, f1 = get_data()
+    df, f2 = add_features(df, f1, use_log=False, use_norm=True)
+
+    df, categorical = LGBMModelOptuna.preprocess_data(df, f2['categorical'])
+    f2['categorical'] = categorical
+
+    df_train = df.loc[lambda x: x['date'] <= test_start].copy()
+
+    feats = f2['numerical']+f2['categorical']
+    model = FeedForwardRegressorOptuna(input_dim=len(feats))
+    model.fit(df_train[feats].fillna(0.0), df_train['sales'].fillna(0.0))
+    df['pred_sales'] = model.predict(df[feats].fillna(0.0))
+
+    df_test = df.loc[lambda x:x['date'] > test_start]
+    mae = evaluate_model(df_test, name='kaggle-store', verbose=True)
+    dump_data(df, name='feedforward_optuna')
+    return {'mae': mae, 'name': 'feedforward_optuna'}
+
+
 def main_lgbm_relativeyoy():
     df, f1 = get_data()
     df, f2 = add_features(df, f1, use_log=True)
@@ -365,7 +422,22 @@ def main():
     7    5058.685658              naive_cst
     11  19455.578270                 nbeats
 
+    with sales normalisatoin
 
+                 mae                   name
+    8       0.312568           lgbm_rolling
+    10      0.315330            feedforward
+    0       0.323637                   lgbm
+    9       0.410889            lgbm_family
+    7       0.434093              naive_cst
+    6       0.529435  naive_1y_lag_absolute
+    1       0.667763            lgbm_optuna
+    2      31.251471         lgbm_bottom_up
+    11  21093.437322                 nbeats
+    3   25197.033628          lgbm_relative
+    4   25483.270049           naive_1y_lag
+    5   25704.183936      naive_1y_lag_hols
+    12  26204.215351       lgbm_relativeyoy
     """
     r = []
     r += [main_lgbm()]
@@ -396,5 +468,8 @@ if __name__ == '__main__':
     # main_lgbm_bottom_up()
     # main_feedforward()
     # main_lgbm_relativeyoy()
-    main_nbeats2()
+    # main_nbeats2()
+    # main_nbeats2_optuna()
+    # main()
+    main_feedforward_optuna()
     # main_lgbm_bottom_up()

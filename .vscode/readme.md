@@ -41,3 +41,9 @@ du -sh /Users/sachadrevet/Library/Containers/com.docker.docker/Data
 this should remove 6GB
 docker system prune -a 
 ```
+
+
+## OVH Cloud
+https://www.ovhcloud.com/en-gb/vps/configurator/?pricing=degressivity24&processor=AMD&vcore=16__vCore&storage=160__SSD__NVMe
+VPS : virtual private server is what we need.
+Faut clicker sur le catalogue ! 
